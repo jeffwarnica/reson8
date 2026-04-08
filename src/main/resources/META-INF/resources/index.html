@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reson8 Audio Engine</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; color: #333; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .control-group { margin: 10px 0; }
+        label { display: inline-block; width: 150px; font-weight: bold; }
+        .status { color: #666; font-size: 0.9em; font-weight: bold; }
+        .channel-strip { 
+            display: flex; flex-direction: column; gap: 5px; padding: 10px; 
+            border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; 
+        }
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { width: 60px; font-size: 0.8em; }
+        .slider-row input { flex-grow: 1; }
+        .slider-row span { min-width: 30px; font-family: monospace; }
+        .channel-name { font-weight: bold; color: #0056b3; margin-bottom: 5px; }        
+    </style>
+</head>
+<body>
+    <h1>Reson8 Engine</h1>
+
+    <div class="card">
+        <h3>Master Output</h3>
+        <button id="startBtn">▶ Start Listening</button>
+        <button id="stopBtn" disabled>■ Stop</button>
+        <div class="control-group">
+            <label>Master Volume:</label>
+            <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.1">
+            <span id="masterVolVal">0.1</span>
+        </div>
+        <audio id="audioPlayer"></audio>
+        <div id="connectionStatus" class="status">Status: Disconnected</div>
+    </div>
+
+    <div id="channelsContainer" class="card">
+        <h3>Mixer Input Channels</h3>
+    </div>
+
+    <div id="dropsContainer" class="card">
+        <h3>Sound Drops</h3>
+        <div id="dropsList"></div>
+    </div>
+
+<script>
+    const audio = document.getElementById('audioPlayer');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('connectionStatus');
+    
+    // FIX 1: Declare the streaming state variable
+    let isStreaming = false;
+
+    // --- STREAM LOGIC ---
+
+    startBtn.onclick = () => {
+        status.innerText = "Status: Connecting...";
+        
+        // FIX 2: Clear the source before setting a new one to force a fresh TCP connection
+        audio.src = '';
+        audio.load();
+
+        audio.src = '/audio/stream?t=' + Date.now();
+        audio.play().then(() => {
+            isStreaming = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            status.innerText = "Status: Streaming Live Assets...";
+            status.style.color = "green";
+        }).catch(e => {
+            console.error("Autoplay blocked or stream error:", e);
+            status.innerText = "Status: Error (Check Console)";
+            status.style.color = "red";
+        });
+    };
+
+    stopBtn.onclick = () => {
+        isStreaming = false;
+        audio.pause();
+        audio.removeAttribute('src'); 
+        audio.load();                 
+        
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        status.innerText = "Status: Disconnected";
+        status.style.color = "#666";
+    };
+
+    // --- MASTER CONTROLS ---
+
+    document.getElementById('masterVolume').oninput = (e) => {
+        const vol = e.target.value;
+        document.getElementById('masterVolVal').innerText = vol;
+        audio.volume = vol;
+    };
+
+    // --- DYNAMIC CHANNEL SLIDERS ---
+
+   async function initChannelControls() {
+    try {
+        const res = await fetch('/audio/control/channels');
+        const channels = await res.json(); // Now an array of objects
+        const container = document.getElementById('channelsContainer');
+        container.innerHTML = '<h3>Mixer Input Channels</h3>'; // Clear previous
+
+        channels.forEach(ch => {
+            const strip = document.createElement('div');
+            strip.className = 'channel-strip';
+            
+            // Logic: only show GAIN if the channel supports it
+            const gainHtml = ch.supportsGain ? `
+                <div class="slider-row">
+                    <label>GAIN</label>
+                    <input type="range" class="gain-slider" min="0" max="1" step="0.01" value="1.0">
+                    <span class="gain-val">1.0</span>
+                </div>` : '';
+
+            strip.innerHTML = `
+                <div class="channel-name">${ch.name.toUpperCase()}</div>
+                ${gainHtml}
+                <div class="slider-row">
+                    <label>FADER</label>
+                    <input type="range" class="fader-slider" min="0" max="1" step="0.01" value="1.0">
+                    <span class="fader-val">1.0</span>
+                </div>
+            `;
+            container.appendChild(strip);
+
+            // Conditional event listener for GAIN
+            if (ch.supportsGain) {
+                const gainSlider = strip.querySelector('.gain-slider');
+                gainSlider.oninput = async (e) => {
+                    const val = e.target.value;
+                    strip.querySelector('.gain-val').innerText = val;
+                    await fetch('/audio/control/gain', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ channel: ch.name, volume: parseFloat(val) })
+                    });
+                };
+            }
+
+            // FADER event (Always present)
+            const faderSlider = strip.querySelector('.fader-slider');
+            faderSlider.oninput = async (e) => {
+                const val = e.target.value;
+                strip.querySelector('.fader-val').innerText = val;
+                await fetch('/audio/control/fader', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel: ch.name, volume: parseFloat(val) })
+                });
+            };
+        });
+    } catch (e) {
+        console.error("Mixer not ready yet...");
+    }
+}
+
+    async function initDropControls() {
+        try {
+            const res = await fetch('/audio/drop');
+            const drops = await res.json();
+            const container = document.getElementById('dropsList');
+
+            drops.forEach(dropName => {
+                const row = document.createElement('div');
+                row.className = 'control-group';
+                row.style = "border-bottom: 1px solid #eee; padding: 10px 0;";
+                row.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <strong style="width: 120px;">${dropName}</strong>
+                        <button class="trigger-btn">Play</button>
+                        <label>Vol:</label>
+                        <input type="range" class="drop-vol" min="0" max="1" step="0.01" value="0.8">
+                        <span class="vol-val">0.8</span>
+                    </div>
+                `;
+                container.appendChild(row);
+
+                row.querySelector('.trigger-btn').onclick = async () => {
+                    const vol = parseFloat(row.querySelector('.drop-vol').value);
+                    await fetch('/audio/drop', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dropName, volume: vol })
+                    });
+                };
+
+                row.querySelector('.drop-vol').oninput = (e) => {
+                    row.querySelector('.vol-val').innerText = e.target.value;
+                };
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    initChannelControls();
+    initDropControls();
+</script>
+</body>
+</html>
