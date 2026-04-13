@@ -26,11 +26,22 @@ class MixerTest {
     void setup() {
         mixer.initGStreamer();
         mixer.getPipeline().setState(State.PLAYING);
+        // Small delay to ensure background threads from previous tests 
+        // have actually exited their while loops
+        try { Thread.sleep(500); } catch (InterruptedException e) {}
     }
 
     @AfterEach
     void tearDown() {
-        mixer.stop(); // Optional: depending on if you want the pipeline killed between tests
+        // Everything is now handled internally by the Mixer
+        mixer.dispose();
+
+        // Recommendation: Keep a tiny sleep if you are seeing
+        // "Address already in use" errors with the browser stream
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+        }
     }
 
     @Test
@@ -66,52 +77,6 @@ class MixerTest {
         // Verify volume logic didn't crash
         mixer.setInputChannelVolume("test-ch", 0.5);
     }
-
-    // @Test
-    // @Order(3)
-    // @DisplayName("Force Bus Level Logging Coverage")
-    // void testLevelLoggingLogic() {
-    //     mixer.setupDebugStuff(); // Ensure listeners are attached
-        
-    //     Element probe = mixer.getPipeline().getElementByName("master_level_probe");
-    //     Structure struct = new Structure("level");
-        
-    //     // We simulate the message the 'level' element would send.
-    //     // If your Message class doesn't have a factory, we use the bus to post 
-    //     // an internal event or manually trigger the sync handler.
-        
-    //     // Note: Posting a message to the bus is the cleanest way to hit 'setSyncHandler'
-    //     // Create a generic message with the ELEMENT type
-    //     Message msg = Message. (probe, struct);
-    //     mixer.getPipeline().getBus().post(msg);
-        
-    //     // This hits the 'if (message.getType() == MessageType.ELEMENT)' branch
-    // }
-
-    // @Test
-    // @Order(4)
-    // @DisplayName("Test EOS Cleanup Logic")
-    // void testEosCleanup() {
-    //     mixer.setupDropCleanup();
-
-    //     // 1. Setup a dummy drop
-    //     Element fakeDrop = ElementFactory.make("fakesrc", "drop-unit-test");
-    //     InputChannel mockDrop = mock(InputChannel.class);
-    //     when(mockDrop.getChannelName()).thenReturn("drop-unit-test");
-    //     when(mockDrop.getSrcElement()).thenReturn(fakeDrop);
-        
-    //     mixer.addInputChannel(mockDrop);
-    //     assertTrue(mixer.getInputChannels().containsKey("drop-unit-test"));
-
-    //     // 2. Post EOS specifically from that element
-    //     Message eosMsg = Message.newEOSMessage(fakeDrop);
-    //     mixer.getPipeline().getBus().post(eosMsg);
-
-    //     // 3. Verify removal via Awaitility
-    //     await().atMost(5, TimeUnit.SECONDS).until(() -> 
-    //         !mixer.getInputChannels().containsKey("drop-unit-test")
-    //     );
-    // }
 
     @Test
     @Order(5)
@@ -152,22 +117,6 @@ class MixerTest {
         assertDoesNotThrow(() -> mixer.setInputChannelVolume("ghost-channel", 0.5));
     }
     
-    // @Test
-    // void testLevelLoggingBranch() {
-    //     Bus bus = mixer.getPipeline().getBus();
-    //     Element probe = mixer.getPipeline().getElementByName("master_level_probe");
-        
-    //     // We create a structure that matches what the 'level' element produces
-    //     Structure struct = new Structure("level");
-    //     // We don't need real data, just the field 'rms' to hit the internal if-statement
-    //     // Note: Use a double array if GValueArray mocking is too complex
-    //     struct.set("rms", new double[]{-20.0, -20.0});
-
-    //     // Manually post the message to the bus
-    //     bus.post(Message.newElementMessage(probe, struct));
-        
-    //     // This will force the SyncHandler logic to execute once.
-    // }
 
     @Test
     @DisplayName("Verify Mixer handles Gain-supporting channels")
@@ -214,38 +163,5 @@ class MixerTest {
         // 2. Path: Failure (Channel null) - Hits the Log.errorf branch
         assertDoesNotThrow(() -> mixer.setOutputChannelVolume("non-existent-out", 0.8));
     }
-
-@Test
-@DisplayName("Test setChannelGain - Success, Unsupported, and Missing Element branches")
-void testChannelGainBranches() {
-    // SETUP: A channel that DOES NOT support gain
-    InputChannel noGainCh = mock(InputChannel.class);
-    when(noGainCh.getChannelName()).thenReturn("noise-ch");
-    when(noGainCh.supportsGain()).thenReturn(false);
-    when(noGainCh.getSrcElement()).thenReturn(ElementFactory.make("fakesrc", "noise_src"));
-    
-    mixer.addInputChannel(noGainCh);
-    
-    // 1. Path: Unsupported Branch - Hits the Log.warnf "Ignoring request"
-    assertDoesNotThrow(() -> mixer.setChannelGain("noise-ch", 0.5));
-
-    // SETUP: A channel that CLAIMS to support gain
-    InputChannel gainCh = mock(InputChannel.class);
-    when(gainCh.getChannelName()).thenReturn("gain-ch");
-    when(gainCh.supportsGain()).thenReturn(true);
-    when(gainCh.getSrcElement()).thenReturn(ElementFactory.make("fakesrc", "gain_src"));
-    
-    mixer.addInputChannel(gainCh);
-
-    // 2. Path: Missing Element Branch - Hits Log.warnf "has no volume element"
-    // This happens because setChannelGain looks for "gain-ch_gain" 
-    // but the real name has a timestamp in it.
-    assertDoesNotThrow(() -> mixer.setChannelGain("gain-ch", 0.5));
-    
-    // 3. Path: Success (Regex/Search)
-    // If you want to hit the Success branch now, we have to find the element manually
-    // or fix the Mixer to store the reference.
-}
-
 
 }

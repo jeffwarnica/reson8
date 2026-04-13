@@ -2,11 +2,18 @@ package com.coherentnetworksolutions.reson8.rest;
 
 import java.util.List;
 
-import com.coherentnetworksolutions.reson8.audio.factory.OneShotDropFactory;
-import com.coherentnetworksolutions.reson8.controllers.DropController;
+import com.coherentnetworksolutions.reson8.audio.factories.DropFactory;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.signal.MappingManager;
+import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -14,38 +21,68 @@ import jakarta.ws.rs.core.Response;
 public class OneShotDropResource {
 
     @Inject
-    OneShotDropFactory oneShotDropFactory;
-    
+    Reson8Config config;
 
     @Inject
-    DropController dropController;
+    DropFactory dropFactory;
 
-
-    // Return a list of available WAV files from resources/sounds/
+    @Inject
+    MappingManager mappingManager;
+    
+        // Return a list of available drops
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> listDrops() {
-        return dropController.getDrops();
+        List<String> drops = mappingManager.getEndpoints().entrySet().stream()
+            .filter(entry -> {
+                SignalEndpoint endpoint = entry.getValue();
+                return endpoint.getSoundType() == Reson8Config.SoundType.DROP;
+            })
+            .map(
+                // entry -> new EndpointInfo(entry.getValue().getName(), entry.getValue().getFullSoundPath())
+                entry -> entry.getValue().getName()
+                )
+            .toList();
+
+        Log.debugf("Registered drops: [%s]", drops);
+        return drops;
     }
+
+    // private Reson8Config.SoundDefinition findDefinition(String soundPath) {
+    //     Log.debugf("Looking for SoundDefinition [%s]", soundPath);
+
+    //     return config.soundscapes().stream()
+    //             // Flatten the hierarchy so we have a stream of (Scape, Sound) pairs
+    //             // conceptually
+    //             .flatMap(scape -> scape.sounds().stream()
+    //                     // Now 'scape' and 'sound' are both in scope for this filter
+    //                     .filter(sound -> {
+    //                         String currentPath = scape.name() + "/" + sound.name();
+    //                         return currentPath.equals(soundPath);
+    //                     }))
+    //             .findFirst()
+    //             .orElseThrow(() -> new RuntimeException("Could not find sound definition for path: " + soundPath));
+    // }
+
+    public record EndpointInfo(String alias, String soundPath) {}
     /*
     *
      * Trigger a one-shot WAV drop in the mixer
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response triggerDrop(DropRequest req) {
-        if (req.dropName == null || req.dropName.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("dropName is required").build();
-        }
+    public Response triggerDrop(DropRequest dropRequest) {
+        
+        Log.debugf("triggerDrop([%s])", dropRequest.drop);
 
-        oneShotDropFactory.playDrop(req.dropName, 1.0);
+        SignalEndpoint endpoint = mappingManager.getEndpoint(dropRequest.drop);
+
+        endpoint.trigger();
 
         return Response.ok().build();
     }
 
     public static class DropRequest {
-        public String dropName;
-        public double volume = 1.0;
+        public String drop;
     }
 }

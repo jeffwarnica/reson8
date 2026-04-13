@@ -10,9 +10,13 @@ public interface InputChannel {
         boolean supportsGain();
         
         /**
-         * @param volume 0-1, unscaled
+         * @param volume coming out of input channel 0-1, unscaled
          */
         void setGain(double volume);
         // Element getElement();
         Element getSrcElement();
+        boolean supportsIntensity();
+        void dispose();
+        void setIntensity(double d);
+        double getIntensity();
 }

@@ -15,4 +15,12 @@ public class VolumeScaler {
         // Cubic scaling: Slider at 0.5 results in 0.125 amplitude (~ -18dB)
         return Math.pow(uiValue, 3);
     }
+    
+    public double gstToUiVolume(double gstValue) {
+        if (gstValue <= 0) return 0.0;
+        if (gstValue >= 1.0) return 1.0;
+        
+        // Inverse of cubic scaling (x^3) is the cube root (∛x)
+        return Math.cbrt(gstValue);
+    }
 }

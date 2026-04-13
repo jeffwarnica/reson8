@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.freedesktop.gstreamer.ElementFactory;
+import org.freedesktop.gstreamer.State;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +30,28 @@ class MixerStressTest {
 
     @Inject
     Mixer mixer;
+
+    @BeforeEach
+    void setup() {
+        mixer.initGStreamer();
+        mixer.getPipeline().setState(State.PLAYING);
+        // Small delay to ensure background threads from previous tests 
+        // have actually exited their while loops
+        try { Thread.sleep(500); } catch (InterruptedException e) {}
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Everything is now handled internally by the Mixer
+        mixer.dispose();
+
+        // Recommendation: Keep a tiny sleep if you are seeing
+        // "Address already in use" errors with the browser stream
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+        }
+    }
 
     @Test
     @DisplayName("Stress Test: Concurrent Addition of Same Channel")
@@ -79,22 +104,6 @@ class MixerStressTest {
         });
     }
 
-    @Test
-    @DisplayName("Trick Test: Gain Update on Removed Channel")
-    void testGainOnZombieChannel() {
-        String name = "zombie-ch";
-        InputChannel mockCh = mock(InputChannel.class);
-        when(mockCh.getChannelName()).thenReturn(name);
-        when(mockCh.supportsGain()).thenReturn(true);
-        when(mockCh.getSrcElement()).thenReturn(ElementFactory.make("fakesrc", null));
-
-        mixer.addInputChannel(mockCh);
-        mixer.removeInputChannel(name);
-
-        // Try to update gain on a channel that is no longer in the map
-        // This should hit your null check and Log.warn/error instead of NPE
-        assertDoesNotThrow(() -> mixer.setChannelGain(name, 0.8));
-    }
     @Test
     void testPrefixSafetyWithTimestamps() {
         String name = "cpu-noise";

@@ -1,0 +1,88 @@
+package com.coherentnetworksolutions.reson8.manager;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.InputMapping;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
+
+import io.quarkus.logging.Log;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+@ApplicationScoped
+public class SignalRegistry {
+    @Inject
+    Reson8Config config;
+
+    // Map of "Signal Name" -> Route Metadata
+    private final Map<String, SignalRoute> routes = new ConcurrentHashMap<>();
+    private final Map<String, InputChannel> channels = new ConcurrentHashMap<>();
+
+    public void addRoute(InputMapping mapping, InputChannel inputChannel) {
+        routes.put(mapping.name(), new SignalRoute(mapping));
+        channels.put(mapping.name(), inputChannel);
+        Log.debugf("Adding signal named [%s] to sound [%s], pulling from [%s] with query [%s]",
+            mapping.name(), mapping.sound(), mapping.type(), mapping.query());        
+    }
+
+    public Map<String, SignalRoute> allRoutes() {
+        return routes;
+    }
+
+    public Map<String, InputChannel> allChannels() {
+        return channels; 
+    }
+
+    public InputChannel getInputChannel(String signalName) {
+        return channels.get(signalName);
+    }
+
+    @Override
+    public String toString() {
+    return routes.entrySet()
+              .stream()
+              .map(e -> e.getKey() + "=" + e.getValue())
+              .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * TODO: Not even sure we need this, and can't just use the interface from config
+     */
+    public class SignalRoute {
+        private String name;
+        private SourceType type;
+        private String soundPath;
+        private Optional<String> query;
+    
+        
+
+        public SignalRoute(InputMapping mapping) {
+            this.name = mapping.name();
+            this.type = mapping.type().orElseThrow(() -> new RuntimeException("Unknown type"));
+            this.query = mapping.query();
+            String effectivePath = mapping.sound().contains("/")
+                    ? mapping.sound()
+                    : config.signalMap().defaultSoundscape() + "/" + mapping.sound();
+
+            this.soundPath = effectivePath;
+        }
+
+        public String toString() {
+            return this.name + "[" + this.type + "/" + this.query + "] -> [" + this.soundPath +"]";
+        }
+
+        public SourceType type() {
+            return type;
+        }
+
+        public String soundPath() {
+            return soundPath;
+        }
+    }
+}

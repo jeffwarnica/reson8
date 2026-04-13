@@ -32,8 +32,8 @@ class AudioControlResourceTest {
           .when().get("/audio/control/channels")
           .then()
              .statusCode(200)
-             .contentType(ContentType.JSON)
-             .body("name", hasItems("cpu-noise", "mem-noise"))
+             .contentType(ContentType.JSON) 
+             .body("name", hasItems("Ambient Temp", "Pod Startup", "Total Cluster Memory", "Pod Crash", "CPU Load"))
              .body("find { it.name == 'cpu-noise' }.supportsGain", is(false));
             // Check for the name property inside the array of objects
             // Optionally verify that noise channels correctly report no gain support

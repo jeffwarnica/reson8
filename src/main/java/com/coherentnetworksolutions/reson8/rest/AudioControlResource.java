@@ -6,23 +6,39 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
-
 import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
+import com.coherentnetworksolutions.reson8.audio.input.GaugeChannel;
+import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
+import com.coherentnetworksolutions.reson8.signal.MappingManager;
+import io.quarkus.logging.Log;
 
 @Path("/audio/control")
 public class AudioControlResource {
 
-
     @Inject 
     Mixer mixer;
+
+    @Inject
+    MappingManager mappingManager;
 
     @GET
     @Path("/channels")
     @Produces(MediaType.APPLICATION_JSON)
     public List<ChannelInfo> getChannels() {
-        return mixer.getInputChannels().values().stream()
-                .map(ch -> new ChannelInfo(ch.getChannelName(), ch.supportsGain()))
-                .toList();
+        return mappingManager.getEndpoints().entrySet().stream()
+            .map( entry -> 
+                    new ChannelInfo(entry.getValue().getName(),entry.getValue().getVolume(),
+                        entry.getValue().getInputChannel().supportsIntensity(), entry.getValue().getIntensity())
+            )
+            .toList();
+    // public List<ChannelInfo> getChannels() {
+        // return mappingManager.getEndpoints();
+        // return mixer.getInputChannels().values().stream()
+        //         .map(ch -> new ChannelInfo(ch.getChannelName(), 
+        //             mixer.getInputChannelVolume(ch.getChannelName()), 
+        //             mixer.getInputChannelGain(ch.getChannelName()),
+        //             ch.supportsGain(), ch.supportsIntensity()))
+        //         .toList();
     }
 
     /**
@@ -32,8 +48,8 @@ public class AudioControlResource {
     @Path("/gain")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response setChannelGain(ChannelVolumeRequest req) {
-        // This targets the source element (e.g., the pink noise generator or file source)
-        mixer.setChannelGain(req.channel, req.volume);
+        mappingManager.getEndpoint(req.channel).setVolume(req.volume);
+        // mixer.setInputChannelGain(req.channel, req.volume);
         return Response.ok().build();
     }
 
@@ -44,9 +60,23 @@ public class AudioControlResource {
     @Path("/fader")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response setChannelFader(ChannelVolumeRequest req) {
-        // This targets the audiomixer sink pad
+        Log.debugf("[%s].setVolume([%s])", req.channel, req.volume);
         mixer.setInputChannelVolume(req.channel, req.volume);
         return Response.ok().build();
+    }
+
+
+    @PATCH
+    //http://localhost:8090/audio/control/channels/cpu-wind/intensity/0.6
+    @Path("/channels/{name}/intensity/{value}")
+    public Response setIntensity(@PathParam("name") String name, @PathParam("value") double value) {
+        Log.info("setIntensity()");
+        InputChannel channel = mixer.getInputChannel(name);
+        if (channel instanceof GaugeChannel gauge) {
+            gauge.setIntensity(value);
+            return Response.ok().build();
+        }
+        return Response.status(404).build();
     }
 
     public static class ChannelVolumeRequest {
@@ -56,11 +86,16 @@ public class AudioControlResource {
 
     public static class ChannelInfo {
         public String name;
-        public boolean supportsGain;
+        public boolean supportsIntensity;
+        public double volume;
+        public double intensity;
 
-        public ChannelInfo(String name, boolean supportsGain) {
+        public ChannelInfo(String name, double volume, boolean supportsIntensity, double intensity) {
             this.name = name;
-            this.supportsGain = supportsGain;
+            this.volume = volume;
+            this.supportsIntensity = supportsIntensity;
+            this.intensity = intensity;
+
         }
     }
 }

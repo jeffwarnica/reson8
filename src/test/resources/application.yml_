@@ -1,0 +1,88 @@
+---
+# 2026-04-12: This is now about the same as the config in src/main/resources, but presumably 
+#             will begin to differ as this is tuned for test cases.
+#             TBH, this seems a bit fragile, but perfect is the enemy of done.
+reson8:
+  audio-path: ${RESON8_AUDIO_PATH:${quarkus.project.root}/src/main/resources/sounds}
+  k8s:
+    cluster: self # uses standard kube env vars 
+    namespaces:
+      all: false
+      include: 
+        - "openshift-*" #wildcards OK
+        - "my_cool_project"
+      exclude:
+        - "openshift-node"
+        - "openshift-oper*"
+    map: test_map
+  signal-map:
+    name: test_map
+    default-soundscape: forest    # define default for unqualified names
+    inputs:
+      - name: "CPU Load"
+        sound: babblingBrook
+        type: DUMMY_LOOP #PROMETHEUS
+        query: "avg(node_cpu_utilization)"
+        unit: "percent"
+      - name: "Total Cluster Memory"
+        sound: "custom/campfire" 
+        type: DUMMY_LOOP #PROMETHEUS
+        query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
+        unit: "percent"
+      - name: "Ambient Temp"
+        sound: "wind" 
+        type: DUMMY_PROCEDURE #PROMETHEUS
+        query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
+        unit: "percent"
+      - name: Pod Startup
+        sound: chirp_short1
+        type: DUMMY_DROP #KUBERNETES_EVENT
+        query: "involvedObject.kind=Pod,reason=Started"
+      - name: Pod Crash
+        sound: chirp_long1
+        type: DUMMY_DROP #KUBERNETES_EVENT
+        query: reason=BackOff
+  soundscapes:
+    - name: forest
+      sounds:
+      - name: chirp_long1
+        type: DROP
+        drop:
+          filename: "sounds/chirp_long1.wav"
+          gain: 1.0
+      - name: chirp_short1
+        type: DROP
+        drop:
+          filename: "sounds/chirp_short1.wav"
+      - name: babblingBrook
+        type: LOOP 
+        loop:
+          filename: "sounds/trickling_water.wav"
+      - name: wind
+        type: PROCEDURAL
+        procedural:
+          type: WindGaugeChannel
+          intensity: 0.5
+          phase: 0.02
+          cutoffmin: 300
+          cutoffscale: 4000
+          smoothingrate: 0.1
+          curve:
+            interpolation: LINEAR
+            points:
+              - {in: 0.0, out: 0.0}
+              - {in: 100, out: 100}
+    - name: custom
+      sounds:
+        - name: campfire
+          type: PROCEDURAL
+          procedural:
+            type: WindGaugeChannel #CracklingfireGaugeChannel
+            curve:
+                interpolation: SMOOTH #smooth, linear, step
+                points:
+                  - { in: 0,   out: 0.0 }
+                  - { in: 20,  out: 0.0 }
+                  - { in: 35,  out: 0.6 }
+                  - { in: 50,  out: 0.9 }
+                extrapolate: true #do ... something ... for values >50
