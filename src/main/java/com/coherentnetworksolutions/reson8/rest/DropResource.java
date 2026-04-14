@@ -18,7 +18,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 @Path("/audio/drop")
-public class OneShotDropResource {
+public class DropResource {
 
     @Inject
     Reson8Config config;
@@ -47,22 +47,6 @@ public class OneShotDropResource {
         Log.debugf("Registered drops: [%s]", drops);
         return drops;
     }
-
-    // private Reson8Config.SoundDefinition findDefinition(String soundPath) {
-    //     Log.debugf("Looking for SoundDefinition [%s]", soundPath);
-
-    //     return config.soundscapes().stream()
-    //             // Flatten the hierarchy so we have a stream of (Scape, Sound) pairs
-    //             // conceptually
-    //             .flatMap(scape -> scape.sounds().stream()
-    //                     // Now 'scape' and 'sound' are both in scope for this filter
-    //                     .filter(sound -> {
-    //                         String currentPath = scape.name() + "/" + sound.name();
-    //                         return currentPath.equals(soundPath);
-    //                     }))
-    //             .findFirst()
-    //             .orElseThrow(() -> new RuntimeException("Could not find sound definition for path: " + soundPath));
-    // }
 
     public record EndpointInfo(String alias, String soundPath) {}
     /*

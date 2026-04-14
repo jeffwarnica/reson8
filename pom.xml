@@ -102,11 +102,14 @@
                 <version>${surefire-plugin.version}</version>
                 <configuration>
                     <systemPropertyVariables>
+                        <!-- JW: limit the entire test suite to 300 seconds,
+                                 to deal with possible deep c-level gstreamer fuckups -->
+                        <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <quarkus.log.level>DEBUG</quarkus.log.level>
                         <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
-                    <argLine>@{argLine}</argLine>
+                    <argLine>@{argLine} -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
                 </configuration>
             </plugin>
             <plugin>
@@ -121,8 +124,11 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <argLine>@{argLine}</argLine>
+                    <argLine>@{argLine} -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
                     <systemPropertyVariables>
+                        <!-- JW: limit the entire test suite to 300 seconds,
+                                 to deal with possible deep c-level gstreamer fuckups -->
+                        <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
@@ -133,6 +139,14 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.14</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <excludes>
                         <exclude>org/freedesktop/gstreamer/**</exclude>

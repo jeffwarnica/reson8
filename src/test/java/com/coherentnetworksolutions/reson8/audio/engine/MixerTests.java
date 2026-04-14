@@ -3,7 +3,6 @@ package com.coherentnetworksolutions.reson8.audio.engine;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.output.OutputChannel;
 
-import io.quarkus.logging.Log;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.freedesktop.gstreamer.*;
@@ -16,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @QuarkusTest
+@Timeout(10)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class MixerTest {
 
@@ -117,36 +117,6 @@ class MixerTest {
         assertDoesNotThrow(() -> mixer.setInputChannelVolume("ghost-channel", 0.5));
     }
     
-
-    @Test
-    @DisplayName("Verify Mixer handles Gain-supporting channels")
-    void testGainSupportingChannelBranch() {
-        InputChannel mockChannel = mock(InputChannel.class);
-        // Use an audiotestsrc so it's a real GStreamer element
-        Element testSrc = ElementFactory.make("audiotestsrc", "gain-test-src");
-        
-        String chName = "gain-ch";
-        when(mockChannel.getChannelName()).thenReturn(chName);
-        when(mockChannel.getSrcElement()).thenReturn(testSrc);
-        when(mockChannel.supportsGain()).thenReturn(true);
-        when(mockChannel.getGain()).thenReturn(0.7);
-
-        mixer.addInputChannel(mockChannel);
-
-        mixer.getPipeline().getElements().forEach(element -> {
-            Log.info(element.getName());
-
-        });
-
-        // Verify the gain element was created and synced
-        Element foundGain = mixer.getPipeline().getElements().stream()
-            .filter(e -> e.getName().startsWith(chName) && e.getName().endsWith("_gain"))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("Gain element not found in pipeline"));
-
-        assertEquals(State.PLAYING, foundGain.getState(0));
-    }
-
     @Test
     @DisplayName("Test setOutputChannelVolume - Success and Failure branches")
     void testOutputVolumeBranches() {

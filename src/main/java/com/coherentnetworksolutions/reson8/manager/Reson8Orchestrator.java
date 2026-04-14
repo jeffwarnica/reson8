@@ -37,8 +37,8 @@ public class Reson8Orchestrator {
 
         mixer.initGStreamer();
         mixer.setupDebugStuff();
-        OutputChannel browserOutput = outputChannelFactory.create("browser", "browser-out",1.0);
         
+        OutputChannel browserOutput = outputChannelFactory.create("browser", "browser-out",1.0);
         mixer.addOutputChannel(browserOutput);        
 
         // processSoundscapes();

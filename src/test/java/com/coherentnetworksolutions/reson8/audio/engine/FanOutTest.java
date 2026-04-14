@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import com.coherentnetworksolutions.reson8.audio.output.BrowserOutputChannel;
 import com.coherentnetworksolutions.reson8.audio.output.BrowserSessionManager;
@@ -25,6 +27,7 @@ import io.quarkus.test.junit.mockito.InjectSpy;
 import jakarta.inject.Inject;
 
 @QuarkusTest
+@Timeout(10)
 class FanOutTest {
 
     @InjectSpy
@@ -88,12 +91,14 @@ class FanOutTest {
         byte[] testPayload = new byte[100];
         for (int i = 0; i < 100; i++) testPayload[i] = (byte) i;
 
-        
         // Manual Broadcast
         outputChannel.broadcast(testPayload);
 
         assertEquals(100, browserA.size(), "Browser A did not receive exactly 100 bytes");
-        assertArrayEquals(testPayload, browserA.toByteArray());
+        //.reset() above only resets an internal counter; does not actually clear the contents
+        byte[] browserAByteArray = browserA.toByteArray();
+        byte[] first100 = Arrays.copyOfRange(browserAByteArray, 0, 100);
+        assertArrayEquals(testPayload, first100);
 
         // ... rest of the test ...
 

@@ -14,9 +14,10 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import org.freedesktop.gstreamer.Caps;
+
 import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
-import com.coherentnetworksolutions.reson8.audio.input.OneShotChannel;
-import com.coherentnetworksolutions.reson8.audio.utils.GstFormatMapper;
+import com.coherentnetworksolutions.reson8.audio.input.DropChannel;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
 
@@ -34,20 +35,19 @@ public class DropFactory {
 
     // private Map<String, SoundDefinition> soundConfigs = new HashMap<>();
     
-    @Inject GstFormatMapper mapper;
     // @Inject DropFactory dropController;
     @Inject Mixer mixer;
 
     @Inject Reson8Config config;
 
-    public OneShotChannel createDropDefinition(SignalEndpoint signalEndpoint) {
+    public DropChannel createDropDefinition(SignalEndpoint signalEndpoint) {
         String filename = signalEndpoint.getSoundDefinition().drop().orElseThrow().filename();
 
         if (!preloadedSounds.containsKey(filename)) {
             cacheFile(filename);
         }
 
-        return new OneShotChannel(signalEndpoint, this, mixer);
+        return new DropChannel(signalEndpoint, this, mixer);
     }
 
     private void cacheFile(String filePathFragment) {
@@ -75,11 +75,8 @@ public class DropFactory {
             Log.debugf("File [%s] is of format [%s]", filePathFragment, af);
 
             byte[] pcmData = ais.readAllBytes();
-            CachedWav cached = new CachedWav(
-                    pcmData,
-                    (int) af.getSampleRate(),
-                    af.getChannels(),
-                    mapper.mapToGstFormat(af));
+            
+            CachedWav cached = CachedWav.create(pcmData,af);
 
             preloadedSounds.put(filePathFragment, cached);
 
@@ -100,22 +97,74 @@ public class DropFactory {
         return new ArrayList<>(preloadedSounds.keySet());
     }
     public CachedWav getDataFor(String dropName) {
-        Log.debugf("getDatFor([%s]", dropName);
+        Log.debugf("getDataFor([%s]", dropName);
         return preloadedSounds.get(dropName);
     }
 
-    public class CachedWav {
-        public final byte[] pcmData;
-        public final int sampleRate;
-        public final int channels;
-        public final String format; // e.g., "S16LE"
+    public record CachedWav(byte[] pcmData, AudioFormat audioFormat, String capsString, Caps caps) {
+        
+        public static CachedWav create(byte[] pcmData, AudioFormat audioFormat) { 
+            if (pcmData == null)
+                throw new IllegalArgumentException("pcmData cannot be null");
+            if (audioFormat == null)
+                throw new IllegalArgumentException("audioFormat cannot be null");
+            String capsString = generateCapsString(audioFormat);
+            Log.debugf("Creating cachedWav with format: [%s]", audioFormat);
+            return new CachedWav(pcmData, audioFormat, capsString, Caps.fromString(capsString));
 
-        public CachedWav(byte[] pcmData, int sampleRate, int channels, String format) {
-            this.pcmData = pcmData;
-            this.sampleRate = sampleRate;
-            this.channels = channels;
-            this.format = format;
         }
+
+        // --- Helper Getters for easier GStreamer integration ---
+
+        public double sampleRate() {
+            return audioFormat.getSampleRate();
+        }
+
+        public int channels() {
+            return audioFormat.getChannels();
+        }
+
+        public int sampleSizeInBits() {
+            int bits = audioFormat.getSampleSizeInBits();
+            if (bits <= 0 && audioFormat.getFrameSize() > 0) {
+                bits = (audioFormat.getFrameSize() / audioFormat.getChannels()) * 8;
+            }
+
+            // Final fallback to 16 if metadata is totally missing
+            return (bits > 0) ? bits : 16;
+        }
+
+        /**
+         * Bulletproof frame size calculation.
+         * Uses manual math if audioFormat.getFrameSize() is invalid.
+         */
+        public int bytesPerFrame() {
+            int fs = audioFormat.getFrameSize();
+            if (fs <= 0) {
+                // If getFrameSize() is invalid, we calculate it:
+                // (Bits / 8) * Channels.
+                // We use Math.max to ensure we never return 0.
+                int bits = audioFormat.getSampleSizeInBits();
+                if (bits <= 0)
+                    bits = 16; // Default fallback
+
+                fs = (bits / 8) * channels();
+            }
+            return Math.max(1, fs);
+        }
+
+        private static String generateCapsString(AudioFormat fmt) {
+            int bits = fmt.getSampleSizeInBits();
+            boolean signed = fmt.getEncoding().equals(AudioFormat.Encoding.PCM_SIGNED);
+            String endian = fmt.isBigEndian() ? "BE" : "LE";
+            String gstFmt = (signed ? "S" : "U") + bits + endian;
+            String mask = (fmt.getChannels() == 1) ? "0x0" : "0x3";
+
+            return String.format(
+                    "audio/x-raw,format=%s,channels=%d,rate=%d,layout=interleaved,channel-mask=(bitmask)%s",
+                    gstFmt, fmt.getChannels(), (int) fmt.getSampleRate(), mask);
+        }
+
     }
 
 

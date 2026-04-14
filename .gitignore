@@ -43,3 +43,9 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+#JVM Crashes
+hs_e*
+
+# vscode UML plugin (likely more) dumps stuff to
+output/

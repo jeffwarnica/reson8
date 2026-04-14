@@ -1,13 +1,6 @@
 package com.coherentnetworksolutions.reson8.audio.providers;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import org.junit.jupiter.api.Test;
-
-import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
-
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
 
 @QuarkusTest
 class ProviderTest {

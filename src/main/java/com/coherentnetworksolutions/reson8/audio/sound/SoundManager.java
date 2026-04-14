@@ -13,7 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * SoundManager holds our SoundDefinitions, direct from user config files, but with "path" expansion
+ * SoundManager holds our SoundDefinitions, allowing for lookup by "path"
  */
 @ApplicationScoped
 public class SoundManager {
@@ -34,7 +34,6 @@ public class SoundManager {
                         registry.put(effectivePath, soundDef);
                     });
             });
-    
     }
 
     public void register(String path, SoundDefinition def) {
@@ -42,6 +41,11 @@ public class SoundManager {
         registry.put(path, def);
     }
 
+    
+    /**
+     * @param path To get {@SoundDefinition} by path
+     * @return
+     */
     public SoundDefinition get(String path) {
         Log.debugf("Looking for sound definition: [%s]", path);
         return registry.get(path);

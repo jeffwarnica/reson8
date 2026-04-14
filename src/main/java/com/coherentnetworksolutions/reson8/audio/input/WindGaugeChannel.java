@@ -11,6 +11,7 @@ import org.freedesktop.gstreamer.ElementFactory;
 import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.State;
 
+import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
 
@@ -118,6 +119,12 @@ public class WindGaugeChannel implements GaugeChannel {
         // We use a square or cube curve for volume so it feels more natural
         double intensityFactor = Math.pow(currentIntensity, 2); 
         volume.set("volume", baseGain * intensityFactor);
+    }
+
+    @Override
+    public Caps getCaps() {
+        // Procedural wind is generated to match the mixer exactly
+        return Caps.fromString(Mixer.CAPS);
     }
     
     @Override

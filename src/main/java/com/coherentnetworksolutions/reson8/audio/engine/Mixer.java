@@ -32,7 +32,8 @@ import jakarta.inject.Singleton;
 @Singleton
 public class Mixer {
     public final static String CAPS="audio/x-raw,format=S16LE,layout=interleaved,channels=2,rate=48000,channel-mask=(bitmask)0x3";
-
+                                    //  audio/x-raw,format=S16LE,rate=48000,channels=2,channel-mask=(bitmask)0x3
+    public final static String CHANNEL_DELINEATOR = "::";
     private volatile boolean initialized = false;
 
     private Element mixerElement; // The GStreamer mixer element (e.g., 'audiomixer')
@@ -62,8 +63,10 @@ public class Mixer {
         }
         this.pipeline = new Pipeline("audioPipeline");
         this.mixerElement = ElementFactory.make("audiomixer", "main_mixer");
+        Element mixerCaps = ElementFactory.make("capsfilter", "mixer_output_caps");
+        mixerCaps.setCaps(Caps.fromString(CAPS));
         
-        mixerElement.set("start-time-selection", 0); // 0 = 'first' 
+        mixerElement.set("start-time-selection", 1); // 0 = 'first' 
         mixerElement.set("min-upstream-latency", 0);
         mixerElement.set("latency", 200000000L); // 200ms
 
@@ -71,13 +74,13 @@ public class Mixer {
 
         // Safety converters for the master output
         Element outConv = ElementFactory.make("audioconvert", "master_conv");
+        
         Element outRes = ElementFactory.make("audioresample", "master_resample");
         Element outVol = ElementFactory.make("volume", "master_volume");
         this.masterVolumeElement = outVol;
         outVol.set("volume", 1.0f);
         
-
-        setupDropCleanup();
+        // setupDropCleanup();
 
         // The "Splitter" - every output channel will connect to this
         this.masterTee = ElementFactory.make("tee", "master_tee");
@@ -88,12 +91,13 @@ public class Mixer {
         levelProbe.set("message", true);
         levelProbe.set("interval", 1000000000L);  //1 second?
 
-        pipeline.addMany(mixerElement, outConv, outRes, masterTee, levelProbe, outVol);
+        pipeline.addMany(mixerElement, outConv, outRes, mixerCaps, masterTee, levelProbe, outVol);
 
         // Link: Mixer -> Convert -> Resample -> Tee
         mixerElement.link(outConv);
         outConv.link(outRes);
-        outRes.link(outVol);
+        outRes.link(mixerCaps);
+        mixerCaps.link(outVol);
         outVol.link(masterTee);
         
         // Attach the level probe to one branch of the Tee permanently
@@ -137,114 +141,44 @@ public class Mixer {
     public synchronized void addInputChannel(InputChannel inputChannel) {
         if (inputChannels.containsKey(inputChannel.getChannelName()))
             return;
-
         inputChannels.put(inputChannel.getChannelName(), inputChannel);
-        Element srcBin = inputChannel.getSrcElement();
 
-        String prefix = inputChannel.getChannelName() + "::" + System.nanoTime() + "::";
-        Element capsFilter = ElementFactory.make("capsfilter", prefix + "caps");
-        capsFilter.setCaps(Caps.fromString(CAPS));
+        Element srcBin = inputChannel.getSrcElement();
+        String prefix = inputChannel.getChannelName() + CHANNEL_DELINEATOR + System.nanoTime() + CHANNEL_DELINEATOR;
+
         Element convert = ElementFactory.make("audioconvert", prefix + "conv");
         Element resample = ElementFactory.make("audioresample", prefix + "res");
+        Element capsFilter = ElementFactory.make("capsfilter", prefix + "caps");
+        capsFilter.setCaps(Caps.fromString(CAPS));
         Element inputQueue = ElementFactory.make("queue", prefix + "queue");
 
-        pipeline.addMany(srcBin, capsFilter, convert, resample, inputQueue);
+        pipeline.addMany(srcBin, convert, resample, capsFilter, inputQueue);
 
-        // Link the chain
+        // 1. Link the GLUE logic first
         srcBin.link(convert);
         convert.link(resample);
         resample.link(capsFilter);
         capsFilter.link(inputQueue);
 
-        // Request the pad from the mixer and link the end of our glue chain
         Pad mixerSinkPad = mixerElement.getRequestPad("sink_%u");
         inputQueue.getStaticPad("src").link(mixerSinkPad);
 
-        // Set the Fader (on the Mixer Pad) to 1.0
+        // 2. Sync the GLUE elements to the pipeline state FIRST
+        // This paves the road so when the source starts, the road is open
+        Stream.of(convert, resample, capsFilter, inputQueue)
+                .forEach(Element::syncStateWithParent);
+
+        // 3. Set the fader
         mixerSinkPad.set("volume", 1.0);
         channelPads.put(inputChannel.getChannelName(), mixerSinkPad);
 
-        // SYNC EVERYTHING TO THE RUNNING PIPELINE
-        Stream.of(srcBin, capsFilter, convert, resample, inputQueue)
-                .forEach(Element::syncStateWithParent);
-
-        // Start the generator (Loop/Drop/Proc)
+        // 4. NOW start the source.
+        // This triggers the internal appsrc/playbin to start pushing.
+        srcBin.syncStateWithParent();
         inputChannel.start();
 
-        Log.debugf("Channel [%s] is now live and synced.", inputChannel.getChannelName());
+        Log.debugf("Channel [%s] is now live.", inputChannel.getChannelName());
     }
-
-    // public synchronized void addInputChannel(InputChannel inputChannel) {
-    //     if (inputChannels.containsKey(inputChannel.getChannelName())) return;
-    //     Log.debugf("addInputChannel([%s])", inputChannel.getChannelName());
-    //     inputChannels.put(inputChannel.getChannelName(), inputChannel);
-    //     Element src = inputChannel.getSrcElement();
-        
-    //     // Ensure unique names for internal translators to avoid the "Name not unique" warning
-    //     String prefix = inputChannel.getChannelName() + "::" + System.nanoTime() + "::";
-
-    //     Element gainElement = ElementFactory.make("volume", prefix + "_gain");
-    //     gainElements.put(inputChannel.getChannelName(), gainElement);
-                
-    //     // Create the 'Glue' elements
-    //     Element capsFilter = ElementFactory.make("capsfilter", prefix + "caps");
-    //     capsFilter.setCaps(Caps.fromString(CAPS)); 
-        
-    //     Element convert = ElementFactory.make("audioconvert", prefix + "conv");
-    //     Element resample = ElementFactory.make("audioresample", prefix + "res");
-
-    //     Element inputQueue = ElementFactory.make("queue", prefix + "queue");
-    //     inputQueue.set("max-size-time", 200000000L); // Limit the queue size to keep latency low (200ms)
-
-    //     pipeline.addMany(src, gainElement, capsFilter, convert, resample, inputQueue);
-
-    //     Pad mixerSinkPad = mixerElement.getRequestPad("sink_%u");
-    //     // mixerSinkPad.set("async", 0);
-    //     //channelPads.put(inputChannel.getChannelName(), mixerSinkPad);
-
-    //     boolean linked = false;
-    //     if (inputChannel.supportsGain()) {
-    //         if (src.link(gainElement)) {
-    //              linked = gainElement.link(convert); 
-    //         } 
-    //     } else { 
-    //         linked = src.link(convert); 
-    //     }
-
-    //     if (linked) {
-    //     linked = convert.link(resample) && 
-    //              resample.link(capsFilter) && 
-    //              capsFilter.link(inputQueue);
-    //     }
-
-    //     if (linked) {
-    //         try {
-    //             inputQueue.getStaticPad("src").link(mixerSinkPad);
-    //             // SUCCESS PATH
-    //             double unscaledVol = inputChannel.getGain();
-    //             double scaledVol = volumeScaler.uiToGstVolume(unscaledVol);
-    //             mixerSinkPad.set("volume", scaledVol);
-    //             gainElement.set("volume", scaledVol);
-
-    //             channelPads.put(inputChannel.getChannelName(), mixerSinkPad);
-                
-    //             Stream.of(src, gainElement, capsFilter, convert, resample, inputQueue)
-    //                 .forEach(Element::syncStateWithParent);
-    //             inputChannel.start();
-
-    //             // src.publishClock() ; // Force the bin to look for the pipeline clock
-    //             src.setBaseTime(pipeline.getBaseTime()); // Align the '0' point
-
-    //             Log.debugf("Connected input channel: [%s]", inputChannel.getChannelName());
-    //         } catch (PadLinkException e) {
-    //             Log.errorf("Link failed for [%s]: %s. Cleaning up.", inputChannel.getChannelName(), e.getMessage());
-    //             pipeline.removeMany(src, gainElement, capsFilter, convert, resample, inputQueue);
-    //             // Important: Release the request pad if the link failed, otherwise the mixer keeps it reserved
-    //             mixerElement.releaseRequestPad(mixerSinkPad);
-    //             Stream.of(gainElement, capsFilter, convert, resample, inputQueue).forEach(Element::dispose);
-    //         }
-    //     }
-    // }
 
     public void addOutputChannel(OutputChannel outputChannel) {
         outputChannels.put(outputChannel.getChannelName(), outputChannel);
@@ -253,19 +187,25 @@ public class Mixer {
         Element sinkElement = outputChannel.getElement(); 
         sinkElement.setState(State.PAUSED);
 
-        String prefix = outputChannel.getChannelName() + "::" + System.nanoTime() + "::";
+        String prefix = outputChannel.getChannelName() + CHANNEL_DELINEATOR + System.nanoTime() + CHANNEL_DELINEATOR;
 
         Element outConv = ElementFactory.make("audioconvert", prefix + "_outconv");
+        
         Element outRes = ElementFactory.make("audioresample", prefix + "_outres");
         Element outVol = ElementFactory.make("volume", prefix + "_outvol");
 
-        pipeline.addMany(outConv, outRes, outVol, sinkElement);
+        // Create a caps filter for the output branch
+        Element outBranchCaps = ElementFactory.make("capsfilter", prefix + "_outcaps");
+        outBranchCaps.setCaps(Caps.fromString(CAPS));
+
+        pipeline.addMany(outConv, outRes, outBranchCaps, outVol, sinkElement);
 
         Pad teeSrcPad = masterTee.getRequestPad("src_%u");
         teeSrcPad.link(outConv.getStaticPad("sink"));
         
         outConv.link(outRes);
-        outRes.link(outVol);
+        outRes.link(outBranchCaps);
+        outBranchCaps.link(outVol);
         outVol.link(sinkElement);
         outVol.set("volume", 1.0f);
 
@@ -276,7 +216,7 @@ public class Mixer {
         outConv.syncStateWithParent();
 
         sinkElement.setState(State.PLAYING);
-        Log.infof("Output channel [%s] is now live and connected to the master mixer, with gs state [%s",
+        Log.infof("Output channel [%s] is now live and connected to the master mixer, with gs state [%s]",
              outputChannel.getChannelName(), sinkElement.getState());
     }
    
@@ -347,40 +287,6 @@ public class Mixer {
         return outputChannels;
     }
 
-    // public double getInputChannelGain(String channelName) {
-    //     InputChannel channel = inputChannels.get(channelName);
-    //     if (!channel.supportsGain()) {
-    //         Log.warnf("Source [%s] has no gain support...", channelName);
-    //         return 0.0;
-    //     }
-    //     Element gainElement = gainElements.get(channelName);
-    //     Double gstGain = (double) gainElement.get("volume");
-    //     return gstGain;
-
-    // }
-
-    // public void setInputChannelGain(String channelName, double uiVolume) {
-    //     InputChannel channel = inputChannels.get(channelName);
-    //     if (channel == null) return; // Guard for null
-
-    //     double scaledVol = volumeScaler.uiToGstVolume(uiVolume);
-    //     if (!channel.supportsGain()) {
-    //         Log.warnf("Source [%s] has no gain support...", channelName);
-    //         return;
-    //     }
-
-    //     // Direct lookup is 100x faster and timestamp-proof
-    //     Element gainElement = gainElements.get(channelName);
-        
-    //     if (gainElement != null) {
-    //         gainElement.set("volume", scaledVol);
-    //         Log.debugf("Gain for source [%s] set to %f", channelName, scaledVol);
-    //     } else {
-    //         Log.warnf("Source [%s] claims to support gain, yet has no 'volume' element", channelName);
-    //     }
-    // }
-
-
     public Element getMixerElement() {
         return mixerElement;
     }
@@ -438,9 +344,9 @@ public class Mixer {
                 }
             }
 
-            // The Cleanup Vacuum (using your new :: convention)
+            // The Cleanup Vacuum
             pipeline.getElements().stream()
-                .filter(e -> e.getName().startsWith(channelName + "::"))
+                .filter(e -> e.getName().startsWith(channelName + CHANNEL_DELINEATOR))
                 .forEach(e -> {
                     e.setState(State.NULL);
                     pipeline.remove(e);

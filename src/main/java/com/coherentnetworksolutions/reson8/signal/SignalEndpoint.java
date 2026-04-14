@@ -3,7 +3,7 @@ package com.coherentnetworksolutions.reson8.signal;
 import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
 import com.coherentnetworksolutions.reson8.audio.factories.ChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
-import com.coherentnetworksolutions.reson8.audio.input.OneShotChannel;
+import com.coherentnetworksolutions.reson8.audio.input.DropChannel;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundManager;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
@@ -65,7 +65,7 @@ public class SignalEndpoint {
     public void trigger() {
         Log.debugf("SignalEndpoint[%s] is type[%s]", name, soundType);
         if (soundType == SoundType.DROP) {
-            ((OneShotChannel) inputChannel).trigger();
+            ((DropChannel) inputChannel).trigger(inputChannel.getGain());
         }
     }
 

@@ -3,11 +3,13 @@ package com.coherentnetworksolutions.reson8.audio.input;
 import java.nio.file.Path;
 
 import org.freedesktop.gstreamer.Bin;
+import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.ElementFactory;
 import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.PlayBin;
+
 
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
@@ -25,64 +27,54 @@ public class LoopingGaugeChannel implements GaugeChannel {
     private String gsUri;
 
     public LoopingGaugeChannel(SignalEndpoint signalEndpoint, Reson8Config config) {
-        Log.debugf("creating a channel named [%s]", signalEndpoint.getName());
         this.name = signalEndpoint.getName();
-        // this.config = config;
-        String filePath = signalEndpoint.getSoundDefinition().loop().map(l -> l.filename()).orElseThrow();
-        Log.debugf("Source file: [%s]", filePath);
-
         this.bin = new Bin(name + "_bin");
         String prefix = name + "::" + System.nanoTime() + "::";
 
-        // 1. Setup Playbin
+        // 1. Setup Playbin (The Source)
         playBin = (PlayBin) ElementFactory.make("playbin", prefix + "playbin");
+        String filePath = signalEndpoint.getSoundDefinition().loop().map(l -> l.filename()).orElseThrow();
         gsUri = Path.of(config.audioPath()).resolve(filePath).toAbsolutePath().toUri().toString();
-        Log.debugf("Source Uri: [%s]", gsUri);
         playBin.set("uri", gsUri);
 
-        // 2. IMPORTANT: Tell playbin we only want the audio, and we want to process it
-        // This makes playbin output raw audio to an 'audio-sink' we provide
+        // 2. Setup the Processing Chain (The Sink Bin)
         Bin sinkBin = new Bin(prefix + "sink_bin");
         filter = ElementFactory.make("audiocheblimit", prefix + "filter");
-        filter.set("mode", 0); // High Pass for machinery whine
-        
+        filter.set("mode", 0);
+
         volume = ElementFactory.make("volume", prefix + "vol");
         double initialGain = signalEndpoint.getSoundDefinition().loop().orElseThrow().gain();
-        volume.set("volume", initialGain * 0.2); // Start at 20% weather intensity
-        
-        sinkBin.addMany(filter, volume);
-        filter.link(volume);
+        volume.set("volume", initialGain * 0.2);
 
-        // Add a ghost pad so the playbin can "plug into" this mini-bin
+        Element endPoint = ElementFactory.make("identity", prefix + "end");
+
+        // Add them to the sinkBin (DO NOT add playBin here)
+        sinkBin.addMany(filter, volume, endPoint);
+        filter.link(volume);
+        volume.link(endPoint);
+
+        // Add the GHOST SINK pad so playbin has somewhere to plug in
         sinkBin.addPad(new GhostPad("sink", filter.getStaticPad("sink")));
-        
-        // Assign our processing chain as the sink for playbin
+
+        // 3. Attach the chain to playbin
         playBin.set("audio-sink", sinkBin);
 
-        playBin.connect(new PlayBin.ABOUT_TO_FINISH() {
-            @Override
-            public void aboutToFinish(PlayBin playbin) {
-                Log.debugf("[%s] ABOUT_TO_FINISH. Looping file...", name);
-                playbin.set("uri", gsUri);
-            }
+        playBin.connect((PlayBin.ABOUT_TO_FINISH) (pb) -> {
+            Log.debugf("[%s] ABOUT_TO_FINISH. Looping file...", name);
+            pb.set("uri", gsUri);
         });
-        
+
+        // 4. Add playBin to our main outer bin
         bin.add(playBin);
-        
-        // We ghost the volume's SRC pad to the outside world
-        // Note: We have to wait for playbin to actually have a pad to ghost it,
-        // OR we use a trick: add a fake sink/identity inside sinkBin and ghost that.
-        // Easiest: Add an 'identity' element at the very end of sinkBin.
-        Element endPoint = ElementFactory.make("identity", prefix + "end");
-        sinkBin.add(endPoint);
-        volume.link(endPoint);
-        
+
+        // 5. EXTREMELY IMPORTANT:
+        // We need to ghost the "src" of our processing chain to the outside of our main
+        // bin.
+        // Since sinkBin is now INSIDE playbin, we have to ghost from playbin's
+        // internal sinkBin endpoint to the outer world.
         bin.addPad(new GhostPad("src", endPoint.getStaticPad("src")));
-        
-        Log.debugf("Bin pads are: [%s]", bin.getPads());
-        Log.debugf("Bin elements are: [%s]", bin.getElements());
+
         bin.setState(State.READY);
-        
     }
     
     @Override
@@ -111,6 +103,11 @@ public class LoopingGaugeChannel implements GaugeChannel {
     public double getIntensity() { return intensity; }
 
     @Override
+    public Caps getCaps() {
+        return Caps.fromString("audio/x-raw");
+    }
+
+    @Override
     public Element getSrcElement() { return bin; }
     
     @Override public String getChannelName() { return name; }
@@ -134,5 +131,6 @@ public class LoopingGaugeChannel implements GaugeChannel {
         playBin.setState(State.NULL); // Releases file locks and native decoders
         bin.setState(State.NULL);
     }
+
 
 }
