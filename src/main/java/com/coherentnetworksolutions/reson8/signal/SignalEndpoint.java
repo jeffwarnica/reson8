@@ -1,46 +1,48 @@
 package com.coherentnetworksolutions.reson8.signal;
 
-import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
-import com.coherentnetworksolutions.reson8.audio.factories.ChannelFactory;
+import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
+import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.input.DropChannel;
-import com.coherentnetworksolutions.reson8.audio.sound.SoundManager;
+import com.coherentnetworksolutions.reson8.audio.sound.SoundRegistry;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 
 import io.quarkus.logging.Log;
-
+import jakarta.inject.Inject;
 
 public class SignalEndpoint {
     private final String name;
-    private final String fullSoundPath; // The "Calculated" path
     private final SourceType sourceType;
     private final String query;
     private final InputChannel inputChannel;
     // We can even store the resolved SoundDefinition here later
     private Reson8Config.SoundDefinition soundDefinition;
     private SoundType soundType;
-    private Mixer mixer;
 
-    public SignalEndpoint(Reson8Config.InputMapping mapping, String defaultScape, ChannelFactory channelFactory, SoundManager soundManager, Mixer mixer) {
+    // @Inject
+    InputChannelFactory channelFactory;
+
+    // @Inject
+    SoundRegistry soundRegistry;
+
+    public SignalEndpoint(Reson8Config.InputMapping mapping, SoundDefinition soundDefinition, 
+            InputChannelFactory channelFactory, SoundRegistry soundRegistry) {
         this.name = mapping.name();
         this.sourceType = mapping.type().orElse(SourceType.PROMETHEUS);
         this.query = mapping.query().orElse("");
-        this.mixer = mixer;
-        
-        // Logic: Calculate the full path once and store it
-        String rawSound = mapping.sound();
-        fullSoundPath = rawSound.contains("/") ? rawSound : defaultScape + "/" + rawSound;
-        soundDefinition = soundManager.get(fullSoundPath);
+        this.soundDefinition = soundDefinition;
+        this.channelFactory = channelFactory;
+        this.soundRegistry = soundRegistry;
+
         this.soundType = soundDefinition.type();
 
         inputChannel = channelFactory.buildChannel(this);
     }
 
-    // Getters...
-    public String getFullSoundPath() { return fullSoundPath; }
 
     public Reson8Config.SoundDefinition getSoundDefinition(){
         return soundDefinition;

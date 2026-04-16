@@ -11,7 +11,7 @@ import org.freedesktop.gstreamer.ElementFactory;
 import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.State;
 
-import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
+import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
 

@@ -6,10 +6,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
-import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
+import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.audio.input.GaugeChannel;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
-import com.coherentnetworksolutions.reson8.signal.MappingManager;
+import com.coherentnetworksolutions.reson8.signal.SignalMapRegistry;
 import io.quarkus.logging.Log;
 
 @Path("/audio/control")
@@ -19,7 +19,7 @@ public class AudioControlResource {
     Mixer mixer;
 
     @Inject
-    MappingManager mappingManager;
+    SignalMapRegistry mappingManager;
 
     @GET
     @Path("/channels")

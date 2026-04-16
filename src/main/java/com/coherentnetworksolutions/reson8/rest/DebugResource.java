@@ -1,6 +1,6 @@
 package com.coherentnetworksolutions.reson8.rest;
 
-import com.coherentnetworksolutions.reson8.audio.engine.Mixer;
+import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;

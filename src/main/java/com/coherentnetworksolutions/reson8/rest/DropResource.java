@@ -2,9 +2,9 @@ package com.coherentnetworksolutions.reson8.rest;
 
 import java.util.List;
 
-import com.coherentnetworksolutions.reson8.audio.factories.DropFactory;
+import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
-import com.coherentnetworksolutions.reson8.signal.MappingManager;
+import com.coherentnetworksolutions.reson8.signal.SignalMapRegistry;
 import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
 
 import io.quarkus.logging.Log;
@@ -24,10 +24,10 @@ public class DropResource {
     Reson8Config config;
 
     @Inject
-    DropFactory dropFactory;
+    WavCache dropFactory;
 
     @Inject
-    MappingManager mappingManager;
+    SignalMapRegistry mappingManager;
     
         // Return a list of available drops
     @GET
