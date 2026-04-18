@@ -1,0 +1,1 @@
+kubectl run stress-test --image=polinux/stress-ng -- --cpu 2 --cpu-method matrixprod --timeout 60s

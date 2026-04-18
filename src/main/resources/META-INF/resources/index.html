@@ -2,202 +2,225 @@
 <html>
 
 <head>
-    <title>Reson8 Audio Engine</title>
+    <title>Reson8 | Audio Signal Flow</title>
     <style>
+        :root {
+            --primary: #0056b3;
+            --k8s: #326ce5;
+            --accent: #ff5722;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
-            background: #f4f4f4;
+            background: #eceff1;
             color: #333;
         }
 
         .card {
             background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .control-group {
-            margin: 10px 0;
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
 
-        label {
-            display: inline-block;
-            width: 150px;
-            font-weight: bold;
-        }
-
-        .status {
-            color: #666;
-            font-size: 0.9em;
-            font-weight: bold;
+        /* Flow Layout */
+        .signal-chain {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
         .channel-strip {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .channel-header {
             display: flex;
-            flex-direction: column;
-            gap: 5px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
+        }
+
+        .channel-name {
+            font-weight: bold;
+            font-size: 1.1em;
         }
 
         .slider-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            margin: 8px 0;
         }
 
         .slider-row label {
-            width: 60px;
-            font-size: 0.8em;
+            width: 100px;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: bold;
         }
 
-        .slider-row input {
+        .slider-row input[type=range] {
             flex-grow: 1;
         }
 
         .slider-row span {
-            min-width: 30px;
+            min-width: 35px;
             font-family: monospace;
+            font-size: 0.9em;
+            background: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
         }
 
-        .channel-name {
-            font-weight: bold;
-            color: #0056b3;
-            margin-bottom: 5px;
-        }
-
-        .intensity-row {
-            background: #eef6ff;
-            padding: 5px;
+        /* Status Colors */
+        .intensity-bar-container {
+            height: 8px;
+            background: #ddd;
             border-radius: 4px;
-            margin-top: 5px;
+            overflow: hidden;
+            margin: 5px 0;
         }
 
-        .intensity-row label {
-            color: #0056b3;
+        .intensity-bar-fill {
+            height: 100%;
+            background: var(--k8s);
+            width: 0%;
+            transition: width 0.3s;
         }
 
-        /* --- DEBUG CONSOLE STYLES --- */
-        .debug-header {
+        .k8s-toggle {
+            background: #e3f2fd;
+            border: 1px solid var(--k8s);
+            padding: 10px;
+            border-radius: 8px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         #debugLog {
             width: 100%;
-            height: 250px;
-            background: #1e1e1e;
-            color: #00ff00;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
+            height: 180px;
+            background: #263238;
+            color: #81c784;
+            font-family: 'Consolas', monospace;
             padding: 10px;
-            border-radius: 4px;
-            box-sizing: border-box;
-            resize: vertical;
-            white-space: pre;
-            overflow-x: auto;
-        }
-
-        .debug-btn {
-            background: #ff5722;
-            color: white;
             border: none;
-            padding: 8px 12px;
             border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        button {
             cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            transition: 0.2s;
         }
 
-        .debug-btn:hover {
-            background: #e64a19;
+        .btn-play {
+            background: var(--primary);
+            color: white;
         }
 
-        .secondary-btn {
-            background: #607d8b;
-            margin-left: 5px;
+        .btn-drop {
+            background: #673ab7;
+            color: white;
+            font-size: 0.8em;
+        }
+
+        .btn-stop {
+            background: #d32f2f;
+            color: white;
         }
     </style>
 </head>
 
 <body>
-    <h1>Reson8 Engine</h1>
 
     <div class="card">
-        <h3>Master Output</h3>
-        <button id="startBtn">▶ Start Listening</button>
-        <button id="stopBtn" disabled>■ Stop</button>
-        <div class="control-group">
-            <label>Master Volume:</label>
-            <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.1">
-            <span id="masterVolVal">0.1</span>
-        </div>
-        <audio id="audioPlayer"></audio>
-        <div id="connectionStatus" class="status">Status: Disconnected</div>
-    </div>
-
-    <div id="channelsContainer" class="card">
-        <h3>Mixer Input Channels</h3>
-    </div>
-
-    <div id="dropsContainer" class="card">
-        <h3>Sound Drops</h3>
-        <div id="dropsList"></div>
-    </div>
-
-    <div class="card">
-        <div class="debug-header">
-            <h3>Pipeline Debug Console</h3>
+        <h2>Global Control</h2>
+        <div style="display: flex; gap: 20px; align-items: center;">
+            <div class="k8s-toggle">
+                <strong>K8s Signal Sync:</strong>
+                <input type="checkbox" id="k8sActive" checked>
+                <span id="k8sStatusText" style="color:var(--k8s)">ACTIVE</span>
+            </div>
             <div>
-                <label style="width: auto; font-size: 12px;">Auto-Refresh (5s)</label>
-                <input type="checkbox" id="autoDebug">
-                <button id="dumpBtn" class="debug-btn">Dump Mixer State</button>
-                <button id="clearDebug" class="debug-btn secondary-btn">Clear</button>
+                <button id="startBtn" class="btn-play">▶ Start Stream</button>
+                <button id="stopBtn" class="btn-stop" disabled>■ Stop</button>
+            </div>
+            <audio id="audioPlayer"></audio>
+            <div id="connectionStatus" class="status">Status: Disconnected</div>
+        </div>
+
+        <div class="slider-row" style="background: #fff3e0; padding: 10px; border-radius: 8px;">
+            <label>OUTPUT (Server)</label>
+            <input type="range" id="serverMasterVol" min="0" max="100" step="0.01">
+            <span id="serverMasterVolVal">0.00</span>
+            <small>Global for all users</small>
+        </div>
+
+        <div class="slider-row" style="background: #f1f8e9; padding: 10px; border-radius: 8px;">
+            <label>LOCAL (Browser)</label>
+            <input type="range" id="localVol" min="0" max="100" step="0.01" value="0.2">
+            <span id="localVolVal">0.20</span>
+        </div>
+    </div>
+
+    <div class="signal-chain">
+        <div id="channelsContainer">
+            <div class="card">
+                <h2>Mixer Channels</h2>
+                <div id="chList"></div>
             </div>
         </div>
-        <textarea id="debugLog" readonly placeholder="GStreamer pipeline state will appear here..."></textarea>
+
+        <div>
+            <!--
+                <div class="card">
+                    <h2>Sound Drops</h2>
+                    <div id="dropsList"></div>
+                </div>
+            -->
+
+            <div class="card">
+                <h2>Pipeline Log</h2>
+                <button onclick="fetchMixerDump()" style="font-size: 10px;">Refresh Dump</button>
+                <textarea id="debugLog" readonly></textarea>
+            </div>
+        </div>
     </div>
+
+    <audio id="audioPlayer"></audio>
 
     <script>
         const audio = document.getElementById('audioPlayer');
+        const k8sCheck = document.getElementById('k8sActive');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const status = document.getElementById('connectionStatus');
-        const debugLog = document.getElementById('debugLog');
-        const dumpBtn = document.getElementById('dumpBtn');
-        const autoDebug = document.getElementById('autoDebug');
-
-        let isStreaming = false;
-
-        // --- DEBUG LOGIC ---
-
-        async function fetchMixerDump() {
-            try {
-                const res = await fetch('/api/debug/mixer-dump');
-                const text = await res.text();
-                const timestamp = new Date().toLocaleTimeString();
-                debugLog.value = `[${timestamp}] Updated:\n${text}\n\n` + debugLog.value;
-                debugLog.scrollTop = debugLog.scrollHeight;
-            } catch (e) {
-                debugLog.value = `ERROR: Failed to fetch mixer dump. Is the endpoint /api/debug/mixer-dump ready?\n` + debugLog.value;
-            }
-        }
-
-        dumpBtn.onclick = fetchMixerDump;
-        document.getElementById('clearDebug').onclick = () => debugLog.value = '';
-
-        // Auto-refresh logic
-        setInterval(() => {
-            if (autoDebug.checked) fetchMixerDump();
-        }, 5000);
+        let activeSliders = new Set(); // Tracks sliders the user is currently touching
 
         // --- STREAM LOGIC ---
 
-        startBtn.onclick = () => {
+            startBtn.onclick = () => {
             status.innerText = "Status: Connecting...";
             audio.src = '';
             audio.load();
@@ -226,131 +249,152 @@
             status.style.color = "#666";
         };
 
-        // --- MASTER CONTROLS ---
+        // --- CORE SYNC LOGIC ---
 
-        document.getElementById('masterVolume').oninput = (e) => {
-            const vol = e.target.value;
-            document.getElementById('masterVolVal').innerText = vol;
-            audio.volume = vol;
-        };
-
-        // --- DYNAMIC CHANNEL SLIDERS ---
-
-        async function initChannelControls() {
+        async function syncState() {
             try {
-                const res = await fetch('/audio/control/channels');
-                const channels = await res.json();
-                const container = document.getElementById('channelsContainer');
-                container.innerHTML = '<h3>Mixer Input Channels</h3>';
+                const res = await fetch('/audio/control/state');
+                const state = await res.json();
 
-                channels.forEach(ch => {
-                    const strip = document.createElement('div');
-                    strip.className = 'channel-strip';
+                
+                // We only update it if the user isn't clicking it (standard safety)
+                k8sCheck.checked = state.k8sSyncActive;
+                document.getElementById('k8sStatusText').innerText = state.k8sSyncActive ? "ACTIVE" : "PAUSED";
+                document.getElementById('k8sStatusText').style.color = state.k8sSyncActive ? "var(--k8s)" : "var(--accent)"
 
-                    const gainHtml = ch.supportsGain ? `
-                <div class="slider-row">
-                    <label>GAIN</label>
-                    <input type="range" class="gain-slider" min="0" max="1" step="0.01" value="${ch.gain || 1.0}">
-                    <span class="gain-val">${ch.gain || 1.0}</span>
-                </div>` : '';
+                // 1. Update Global Master
+                if (!activeSliders.has('serverMasterVol')) {
+                    document.getElementById('serverMasterVol').value = state.masterVolume;
+                    document.getElementById('serverMasterVolVal').innerText = state.masterVolume.toFixed(2);
+                }
 
-                    const intensityHtml = ch.supportsIntensity ? `
-                <div class="slider-row intensity-row">
-                    <label>WEATHER</label>
-                    <input type="range" class="intensity-slider" min="0" max="1" step="0.01" value="${ch.intensity || 0.2}">
-                    <span class="intensity-val">${ch.intensity || 0.2}</span>
-                </div>` : '';
-
-                    strip.innerHTML = `
-                <div class="channel-name">${ch.name.toUpperCase()}</div>
-                ${gainHtml}
-                <div class="slider-row">
-                    <label>FADER</label>
-                    <input type="range" class="fader-slider" min="0" max="1" step="0.01" value="${ch.volume}">
-                    <span class="fader-val">${ch.volume}</span>
-                </div>
-                ${intensityHtml}
-            `;
-                    container.appendChild(strip);
-
-                    if (ch.supportsGain) {
-                        const gainSlider = strip.querySelector('.gain-slider');
-                        gainSlider.oninput = async (e) => {
-                            const val = e.target.value;
-                            strip.querySelector('.gain-val').innerText = val;
-                            await fetch('/audio/control/gain', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ channel: ch.name, volume: parseFloat(val) })
-                            });
-                        };
-                    }
-
-                    const faderSlider = strip.querySelector('.fader-slider');
-                    faderSlider.oninput = async (e) => {
-                        const val = e.target.value;
-                        strip.querySelector('.fader-val').innerText = val;
-                        await fetch('/audio/control/fader', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ channel: ch.name, volume: parseFloat(val) })
-                        });
-                    };
-
-                    if (ch.supportsIntensity) {
-                        const intensitySlider = strip.querySelector('.intensity-slider');
-                        intensitySlider.oninput = async (e) => {
-                            const val = e.target.value;
-                            strip.querySelector('.intensity-val').innerText = val;
-                            await fetch(`/audio/control/channels/${ch.name}/intensity/${val}`, {
-                                method: 'PATCH'
-                            });
-                        };
-                    }
+                // 2. Update Channels
+                state.channels.forEach(ch => {
+                    updateChannelUI(ch);
                 });
-            } catch (e) {
-                console.error("Mixer not ready yet...");
+            } catch (e) { console.error("Sync failed", e); }
+        }
+
+        function updateChannelUI(ch) {
+            const row = document.getElementById(`ch-${ch.name}`);
+            if (!row) return;
+            
+            // Update Intensity Bar (Visual only)
+            const bar = row.querySelector('.intensity-bar-fill');
+            if (bar) bar.style.width = (ch.intensity * 100) + '%';
+            row.querySelector('.intensity-val').innerText = Math.round(ch.intensity * 100) + '%';
+
+            // Update Faders if not being touched
+            const chFader = row.querySelector('.ch-fader');
+            if (!activeSliders.has(chFader.id)) {
+                chFader.value = ch.chanVol;
+                row.querySelector('.chFader-val').innerText = ch.chanVol.toFixed(2);
+            }
+            const mixFader = row.querySelector('.mix-fader');
+            if (!activeSliders.has(mixFader.id)) {
+                mixFader.value = ch.mixerVol;
+                row.querySelector('.mixFader-val').innerText = ch.mixerVol.toFixed(2);
             }
         }
 
-        async function initDropControls() {
-            try {
-                const res = await fetch('/audio/drop');
-                const drops = await res.json();
-                const container = document.getElementById('dropsList');
+        // --- INTERACTION ---
 
-                drops.forEach(drop => {
-                    const row = document.createElement('div');
-                    row.className = 'control-group';
-                    row.style = "border-bottom: 1px solid #eee; padding: 10px 0;";
-                    row.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <strong style="width: 120px;">${drop}</strong>
-                        <button class="trigger-btn">Play</button>
-                        <label>Vol:</label>
-                        <input type="range" class="drop-vol" min="0" max="1" step="0.01" value="0.8">
-                        <span class="vol-val">0.8</span>
-                    </div>
-                `;
-                    container.appendChild(row);
-
-                    row.querySelector('.trigger-btn').onclick = async () => {
-                        await fetch('/audio/drop', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ drop: drop })
-                        });
-                    };
-
-                    row.querySelector('.drop-vol').oninput = (e) => {
-                        row.querySelector('.vol-val').innerText = e.target.value;
-                    };
-                });
-            } catch (e) { console.error(e); }
+        async function postControl(path, body) {
+            await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
         }
 
-        initChannelControls();
-        initDropControls();
+        // Global K8s Toggle
+        k8sCheck.onchange = async () => {
+            const active = k8sCheck.checked;
+            document.getElementById('k8sStatusText').innerText = active ? "ACTIVE" : "PAUSED";
+            await fetch(`/audio/control/k8s-sync/${active}`, { method: 'POST' });
+        };
+
+        // Local Browser Volume
+        document.getElementById('localVol').oninput = (e) => {
+            audio.volume = e.target.value;
+            document.getElementById('localVolVal').innerText = parseFloat(e.target.value).toFixed(2);
+        };
+
+        // --- INITIALIZATION ---
+
+        async function init() {
+            const res = await fetch('/audio/control/channels');
+            const channels = await res.json();
+            const list = document.getElementById('chList');
+            
+            channels.forEach(ch => {
+                const div = document.createElement('div');
+                div.id = `ch-${ch.name}`;
+                div.className = 'channel-strip';
+
+                // Determine header content based on channel type
+                const headerAction = ch.isDrop
+                    ? `<button class="btn-drop" onclick="playDrop('${ch.name}')">▶ TRIGGER DROP</button>`
+                    : `<span class="status-tag">CONTINUOUS</span>`;
+
+                div.innerHTML = `
+                <div class="channel-header">
+                    <span class="channel-name">${ch.name.toUpperCase()}</span>
+                    ${headerAction}
+                </div>
+                
+                <div class="intensity-bar-container">
+                    <div class="intensity-bar-fill"></div>
+                </div>
+                
+                <div class="slider-row">
+                    <label>SIGNAL INTENSITY</label>
+                    <input type="range" class="intensity-slider" id="int-${ch.name}" 
+                        min="0" max="100" step="0.01" value="${ch.intensity}">
+                    <span class="intensity-val">0%</span>
+                </div>
+
+                <div class="slider-row">
+                    <label>CHAN OUTPUT VOL</label>
+                    <input type="range" class="fader-slider ch-fader" id="chanFade-${ch.name}" 
+                        min="0" max="100" step="0.01" value="${ch.chanVol}">
+                    <span class="chFader-val">${ch.chanVol}</span>
+                </div>
+
+                <div class="slider-row">
+                    <label>MIXER FADER</label>
+                    <input type="range" class="fader-slider mix-fader" id="mixerFade-${ch.name}" 
+                        min="0" max="100" step="0.01" value="${ch.mixerVol}">
+                    <span class="mixFader-val">${ch.mixerVol}</span>
+                </div>
+                `;
+                list.appendChild(div);
+
+                // Event Listeners for Sliders
+                const chfader = div.querySelector('.ch-fader');
+                chfader.onmousedown = () => activeSliders.add(chfader.id);
+                chfader.onmouseup = () => activeSliders.delete(chfader.id);
+                chfader.oninput = (e) => postControl('/audio/control/fader', { channel: ch.name, mixVol: parseFloat(div.querySelector('.mix-fader').value), chVol: parseFloat(e.target.value) });
+
+                const mixfader = div.querySelector('.mix-fader');
+                mixfader.onmousedown = () => activeSliders.add(mixfader.id);
+                mixfader.onmouseup = () => activeSliders.delete(mixfader.id);
+                mixfader.oninput = (e) => postControl('/audio/control/fader', { channel: ch.name, mixVol: parseFloat(e.target.value), chVol: parseFloat(div.querySelector('.ch-fader').value )});
+
+                const intensity = div.querySelector('.intensity-slider');
+                intensity.oninput = (e) => fetch(`/audio/control/channels/${ch.name}/intensity/${e.target.value}`, { method: 'PATCH' });
+            });
+
+            // Start Polling every 500ms
+            setInterval(syncState, 500);
+        }
+
+        async function playDrop(name) {
+            await postControl('/audio/drop', { drop: name });
+        }
+
+        // Standard stream start/stop logic remains same...
+        init();
     </script>
 </body>
 

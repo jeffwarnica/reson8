@@ -13,20 +13,41 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Timeout(10)
 class VolumeScalerTest {
 
-    @Inject
-    VolumeScaler scaler;
+    private static final double DELTA = 0.0001;
 
     @ParameterizedTest
-    @CsvSource({
-        "0.0,   0.0",      // Muted
-        "1.0,   1.0",      // Max
-        "0.5,   0.125",    // Mid-point (Cubic)
-        "0.794, 0.5"       // ~ -6dB point (0.794^3 approx 0.5)
+    @DisplayName("Human (0-100) to GStreamer (0-1) Scaling")
+    @CsvSource({ "-10.0, 0.0", // Out of bounds low
+            "0.0,   0.0", // Muted
+            "50.0,  0.125", // Mid-point (0.5^3)
+            "100.0, 1.0", // Max
+            "150.0, 1.0" // Out of bounds high
     })
-    @DisplayName("Verify UI slider maps correctly to cubic power curve")
-    void testVolumeScaling(double input, double expected) {
-        // Using 0.001 delta for floating point precision
-        assertEquals(expected, scaler.uiToGstVolume(input), 0.001);
+    void testHumanToGst(double input, double expected) {
+        assertEquals(expected, VolumeScaler.humanToGstVolume(input), DELTA);
+    }
+
+    @ParameterizedTest
+    @DisplayName("GStreamer (0-1) to Human (0-100) Scaling")
+    @CsvSource({ "-0.5,   0.0", // Out of bounds low
+            "0.0,    0.0", // Muted
+            "0.125,  50.0", // Mid-point (∛0.125 * 100)
+            "0.5,    79.37", // Common -6dB point check
+            "1.0,    100.0", // Max
+            "2.5,    100.0" // Out of bounds high
+    })
+    void testGstToHuman(double input, double expected) {
+        assertEquals(expected, VolumeScaler.gstToHumanVolume(input), 0.01); // Slightly wider delta for cbrt
+    }
+
+    @ParameterizedTest
+    @DisplayName("Round-trip consistency (Human -> Gst -> Human)")
+    @CsvSource({ "10.0", "25.5", "50.0", "75.0", "99.9" })
+    void testRoundTrip(double input) {
+        double gst = VolumeScaler.humanToGstVolume(input);
+        double backToHuman = VolumeScaler.gstToHumanVolume(gst);
+
+        assertEquals(input, backToHuman, DELTA, "Round trip failed: Value drifted significantly during conversion");
     }
     
 }

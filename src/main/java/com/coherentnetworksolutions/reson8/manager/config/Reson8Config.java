@@ -61,9 +61,10 @@ public interface Reson8Config {
     public enum SourceType {
         @WithName("prometheus") PROMETHEUS,
         @WithName("kubernetes_event") KUBERNETES_EVENT,
-        @WithName("dummy_loop") DUMMY_LOOP,
-        @WithName("dummy_drop") DUMMY_DROP,
-        @WithName("dummy_procedure") DUMMY_PROCEDURE
+        @WithName("kubernetes_stats") KUBERNETES_STATS,
+        // @WithName("dummy_loop") DUMMY_LOOP,
+        // @WithName("dummy_drop") DUMMY_DROP,
+        // @WithName("dummy_procedure") DUMMY_PROCEDURE
     }
 
     interface Soundscape {

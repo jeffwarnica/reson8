@@ -27,6 +27,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-camel-bom</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -62,6 +69,18 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-kubernetes-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.quarkus</groupId>
+            <artifactId>camel-quarkus-vertx</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
@@ -79,9 +98,20 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit-mockito</artifactId>
             <scope>test</scope>
-        </dependency>   
-    
-      <!-- <dependency>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path-assert</artifactId>
+            <version>3.0.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- <dependency>
         <groupId>com.jayway.restassured</groupId>
         <artifactId>rest-assured</artifactId>
         <version>2.9.0</version>
@@ -107,10 +137,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
+                    <!-- JW: limit the entire test suite to 300 seconds,
+                             to deal with possible deep c-level gstreamer fuckups -->
+                    <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                     <systemPropertyVariables>
-                        <!-- JW: limit the entire test suite to 300 seconds,
-                                 to deal with possible deep c-level gstreamer fuckups -->
-                        <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <quarkus.log.level>DEBUG</quarkus.log.level>
                         <maven.home>${maven.home}</maven.home>
@@ -130,11 +160,11 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <!-- JW: limit the entire test suite to 300 seconds,
+                             to deal with possible deep c-level gstreamer fuckups -->
+                    <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                     <argLine>@{argLine} -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
                     <systemPropertyVariables>
-                        <!-- JW: limit the entire test suite to 300 seconds,
-                                 to deal with possible deep c-level gstreamer fuckups -->
-                        <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>

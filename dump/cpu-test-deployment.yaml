@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audio-cpu-stress-tester
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stress
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      containers:
+      - name: stress-ng
+        image: polinux/stress-ng
+        # --cpu 1: use 1 worker
+        # --vm 1 --vm-bytes 512M: allocate and "touch" 512MB of RAM
+        args: ["--cpu", "1", "--vm", "1", "--vm-bytes", "512M"]
+        resources:
+          requests:
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audio-mem-stress-tester
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stress
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      containers:
+      - name: stress-ng
+        image: polinux/stress-ng
+        # --cpu 1: use 1 worker
+        # --vm 1 --vm-bytes 512M: allocate and "touch" 512MB of RAM
+        args: ["--cpu", "1", "--vm", "1", "--vm-bytes", "512M"]
+        resources:
+          requests:
+            memory: "600Mi"
+                        

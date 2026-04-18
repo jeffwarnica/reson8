@@ -5,7 +5,7 @@ import java.util.List;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalMapRegistry;
-import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
+import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
@@ -33,14 +33,13 @@ public class DropResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> listDrops() {
-        List<String> drops = mappingManager.getEndpoints().entrySet().stream()
+        List<String> drops = mappingManager.getBuckets().stream()
             .filter(entry -> {
-                SignalEndpoint endpoint = entry.getValue();
-                return endpoint.getSoundType() == Reson8Config.SoundType.DROP;
+                return entry.getSoundType() == Reson8Config.SoundType.DROP;
             })
             .map(
                 // entry -> new EndpointInfo(entry.getValue().getName(), entry.getValue().getFullSoundPath())
-                entry -> entry.getValue().getName()
+                entry -> entry.getName()
                 )
             .toList();
 
@@ -59,7 +58,7 @@ public class DropResource {
         
         Log.debugf("triggerDrop([%s])", dropRequest.drop);
 
-        SignalEndpoint endpoint = mappingManager.getEndpoint(dropRequest.drop);
+        SignalBucket endpoint = mappingManager.getBucket(dropRequest.drop);
 
         endpoint.trigger();
 

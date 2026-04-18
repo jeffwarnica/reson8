@@ -16,29 +16,33 @@ reson8:
     name: cool_project_map
     default-soundscape: forest    # define default for unqualified names
     inputs:
-      - name: "CPU Load"
+      - name: "Cluster CPU Load"
         sound: babblingBrook
-        type: DUMMY_LOOP #PROMETHEUS
-        query: "avg(node_cpu_utilization)"
+        type: KUBERNETES_STATS 
+        query: cpu
         unit: "percent"
-      - name: "Total Cluster Memory"
-        sound: "custom/campfire" 
-        type: DUMMY_LOOP #PROMETHEUS
-        query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
+      - name: "Cluster Memory Load"
+        sound: "custom/campfire"          #which sounds like wind
+        type: KUBERNETES_STATS
+        query: mem
         unit: "percent"
-      - name: "Ambient Temp"
-        sound: "wind" 
-        type: DUMMY_PROCEDURE #PROMETHEUS
-        query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
-        unit: "percent"
+      # - name: "Ambient Temp"
+      #   sound: "wind" 
+      #   type: DUMMY_PROCEDURE #PROMETHEUS
+      #   query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
+      #   unit: "percent"
       - name: Pod Startup
         sound: chirp_short1
-        type: DUMMY_DROP #KUBERNETES_EVENT
-        query: "involvedObject.kind=Pod,reason=Started"
-      - name: Pod Crash
+        type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'Started' && @.regarding.kind == 'Pod')]
+      - name: Pod Failed Scheduling
         sound: chirp_long1
-        type: DUMMY_DROP #KUBERNETES_EVENT
-        query: reason=BackOff
+        type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'FailedScheduling' && @.regarding.kind == 'Pod')]
+      - name: Pod Killed
+        sound: chirp_short2
+        type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'Killing' && @.regarding.kind == 'Pod')]
   soundscapes:
     - name: forest
       sounds:
@@ -51,16 +55,21 @@ reson8:
         type: DROP
         drop:
           filename: "sounds/chirp_short1.wav"
+      - name: chirp_short2
+        type: DROP
+        drop:
+          filename: "sounds/chirp_short2.wav"
       - name: babblingBrook
         type: LOOP 
         loop:
           filename: "sounds/trickling_water.wav"
+          gain: 0.5
       - name: wind
         type: PROCEDURAL
         procedural:
           type: WindGaugeChannel
           gain: 1.0
-          intensity: 0.5
+          intensity: 50
           phase: 0.02
           cutoffmin: 300
           cutoffscale: 4000

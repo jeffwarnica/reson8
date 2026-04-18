@@ -10,11 +10,13 @@ import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
-
+import com.coherentnetworksolutions.reson8.audio.utils.VolumeScaler;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
-import com.coherentnetworksolutions.reson8.signal.SignalEndpoint;
+import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 public class LoopingGaugeChannel implements GaugeChannel {
     private final String name;
@@ -23,10 +25,11 @@ public class LoopingGaugeChannel implements GaugeChannel {
     private final Element volume;
     private PlayBin playBin;
     private double intensity;
-    // private Reson8Config config;
     private String gsUri;
+    // kinda "max volume" fader for the sound. 0.0 to 1.0, default 1.0 (full volume).
+    private double baseGain = 1.0f;
 
-    public LoopingGaugeChannel(SignalEndpoint signalEndpoint, Reson8Config config) {
+    public LoopingGaugeChannel(SignalBucket signalEndpoint, Reson8Config config) {
         this.name = signalEndpoint.getName();
         this.bin = new Bin(name + "_bin");
         String prefix = name + "::" + System.nanoTime() + "::";
@@ -44,7 +47,7 @@ public class LoopingGaugeChannel implements GaugeChannel {
 
         volume = ElementFactory.make("volume", prefix + "vol");
         double initialGain = signalEndpoint.getSoundDefinition().loop().orElseThrow().gain();
-        volume.set("volume", initialGain * 0.2);
+        volume.set("volume", initialGain * 0);// TODO
 
         Element endPoint = ElementFactory.make("identity", prefix + "end");
 
@@ -78,25 +81,37 @@ public class LoopingGaugeChannel implements GaugeChannel {
     }
     
     @Override
-    public void setIntensity(double intensity) {
-        Log.debugf("setIntensity([%s])", intensity);
+    public void setIntensity(@Min(0) @Max(100) double intensity) {
         this.intensity = intensity;
-        // 1. Muffle Logic: 
-        // At 0.0 (low intensity), the water is muffled (cutoff ~600Hz)
-        // At 1.0 (high intensity), the water is fully open (cutoff ~8000Hz)
-        double cutoff = 600 + (Math.pow(intensity, 2) * 7400);
+
+        // Normalize for math: 0.0 to 1.0
+        double norm = intensity / 100.0;
+        double curve = Math.pow(norm, 2); // Quadratic response
+
+        // 1. Muffle Logic (The "Distance" effect)
+        // Low intensity = distant/muffled. High = splashing in your ears.
+        // 600Hz (murmur) to 12,000Hz (full splash detail)
+        double cutoff = 600.0 + (curve * 11400.0);
         filter.set("cutoff", cutoff);
-        
-        // 2. Resonant Ripple:
-        // As intensity increases, we increase the 'ripple' (resonance).
-        // In Chebyshev, this will emphasize the "babbling" splash frequencies.
-        filter.set("ripple", 0.1 + (intensity * 15.0));
-        
-        // 3. Amplitude mapping:
-        // Water feels more intense when it's louder.
-        volume.set("volume", 0.2 + (intensity * 0.8));
-        
-        Log.debugf("[%s] Water flow intensity: %f (Cutoff: %f)", name, intensity, cutoff);
+
+        // 2. Resonant Ripple (The "Babble" effect)
+        // In audiocheblimit, 'ripple' adds peaks to the passband.
+        // Too much ripple (15.0) can sound like a metallic whistle.
+        // We'll scale from 0.5 (smooth) to 10.0 (sharp splashes).
+        double ripple = 0.5 + (norm * 9.5);
+        filter.set("ripple", ripple);
+
+        // 3. Amplitude Mapping
+        // We don't want the brook to be 0 volume at 0 intensity;
+        // it should be a quiet background murmur.
+        // Range: 0.1 (murmur) to 1.0 (rushing stream)
+        double vcaValue = 0.1 + (norm * 0.9);
+
+        // Apply baseGain fader (0.0 - 1.0)
+        volume.set("volume", vcaValue * baseGain);
+
+        Log.debugf("[%s] Water flow intensity: %.1f%% (Cutoff: %.0fHz, Ripple: %.1f, Vol: %.2f)", name, intensity,
+                cutoff, ripple, vcaValue);
     }
     
     @Override
@@ -111,9 +126,9 @@ public class LoopingGaugeChannel implements GaugeChannel {
     public Element getSrcElement() { return bin; }
     
     @Override public String getChannelName() { return name; }
-    @Override public boolean supportsGain() { return true; }
-    @Override public void setGain(double vol) { volume.set("volume", vol); }
-    @Override public boolean supportsIntensity() { return true; }
+    @Override public void setGain(@Min(0) @Max(100) double vol) {  volume.set("volume", VolumeScaler.humanToGstVolume(vol)); }
+    // @Override public boolean supportsGain() { return true; }
+    // @Override public boolean supportsIntensity() { return true; }
 
     @Override
     public void start() {

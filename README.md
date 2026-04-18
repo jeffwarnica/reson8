@@ -34,6 +34,7 @@ There is a credible test suite providing over 80% line coverage, 61% branch cove
 ## Roadmap
 
 In vague order, not quite and both depth and breadth first.
+* Cleanup gs objects on Quarkus reload.
 * Continue moving out from the sound core, adding    
     * New channel types
         * Better sounding *generated* "always" sounds
