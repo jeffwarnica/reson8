@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -27,6 +28,8 @@ import org.freedesktop.gstreamer.Buffer;
 import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.Pad;
+import org.freedesktop.gstreamer.State;
+import org.mockito.InOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -167,11 +170,14 @@ class GstDropChannelTest {
 
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
+        // Capture the allocated pad before cleanup so the verify reads as
+        // "the pad that was reserved is the one that gets released"
+        Pad thePad = toolkit.requestedPads.iterator().next();
+
         // 1. Simulate the sound finishing (EOS Probe fires)
         toolkit.capturedCleanupTask.run();
 
         // 2. Verify the pad from requestedPads was released
-        Pad thePad = toolkit.requestedPads.iterator().next();
         verify(toolkit).releaseRequestPad(any(), eq(thePad));
     }
 
@@ -194,22 +200,40 @@ class GstDropChannelTest {
         // 1. Wait for the async thread to finish construction (capturedCleanupTask is last step [19])
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
-        // 2. Capture which bin was created so we can check it
+        // 2. Capture the instance bin and the reserved mixer pad before cleanup runs
         Bin instanceBin = (Bin) toolkit.createdElements.keySet().stream()
-                .filter(name -> name.contains("_inst_"))    // drop instance elements
-                .filter(name -> name.contains("_bin"))      // in particular, the Bin
+                .filter(name -> name.contains("_inst_"))
+                .filter(name -> name.contains("_bin"))
                 .map(toolkit.createdElements::get)
                 .findFirst()
                 .orElseThrow();
+        Pad thePad = toolkit.requestedPads.iterator().next();
 
-        // 3. Fire the cleanup task (Simulating the EOS probe)
+        // 3. Fire the cleanup task (simulating the EOS probe callback)
         toolkit.capturedCleanupTask.run();
 
-        // 4. Verify the toolkit was told to remove it
-        verify(toolkit).removeElementFromBin(any(Bin.class), eq(instanceBin));
+        // 4. Verify correct GStreamer teardown order:
+        //    setState(NULL) → unlinkPads → removeElementFromBin → releaseRequestPad
+        //    Out-of-order teardown can leave native C objects alive or cause crashes.
+        InOrder order = inOrder(toolkit);
+        order.verify(toolkit).setElementState(eq(instanceBin), eq(State.NULL));
+        order.verify(toolkit).unlinkPads(any(Pad.class), eq(thePad));
+        order.verify(toolkit).removeElementFromBin(any(Bin.class), eq(instanceBin));
+        order.verify(toolkit).releaseRequestPad(any(), eq(thePad));
+    }
 
-        // 5. Verify the pad was released
-        verify(toolkit).releaseRequestPad(any(), any(Pad.class));
+    @Test
+    void testCleanupDoesNotDestroyChannelMixer() {
+        channel.trigger(100.0);
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
+
+        // The channelMixer is shared across all triggers — cleanup must not touch its state.
+        Element channelMixer = toolkit.createdElements.get("TestChannel_sum");
+        assertNotNull(channelMixer, "channelMixer must be registered in createdElements");
+
+        toolkit.capturedCleanupTask.run();
+
+        verify(toolkit, never()).setElementState(eq(channelMixer), any(State.class));
     }
 
     @Test
@@ -219,7 +243,10 @@ class GstDropChannelTest {
         // linkPads is at [17]; capturedCleanupTask is set at [19] addEosProbe, after linkPads — correct barrier
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
-        verify(toolkit).linkPads(any(Pad.class), eq(toolkit.requestedPads.iterator().next()));
+        // Both args are now exact: the mixer pad from requestedPads and the instanceBin src pad
+        // (toolkit.getStaticPad caches the same mock pad for a given element+name, so we can retrieve it)
+        Pad mixerPad = toolkit.requestedPads.iterator().next();
+        verify(toolkit).linkPads(any(Pad.class), eq(mixerPad));
     }
 
     @Test

@@ -65,7 +65,7 @@ class MixerCleanupTest {
                 .map(Element::getName)
                 .collect(Collectors.toSet());
         int baseCount = beforeNames.size();
-        Log.infof("Before names: [%f]", beforeNames);
+        Log.infof("Before names: [%s]", beforeNames);
         // 2. Add a channel
         String chName = "diag-ch";
         String expectedPrefix = chName + "::";
@@ -88,7 +88,7 @@ class MixerCleanupTest {
                 .map(Element::getName)
                 .collect(Collectors.toSet());
 
-        Log.infof("After names: [%f]", beforeNames);
+        Log.infof("After names: [%s]", beforeNames);
         // 5. Identify Zombies
         if (afterNames.size() > baseCount) {
             Set<String> zombies = new HashSet<>(afterNames);

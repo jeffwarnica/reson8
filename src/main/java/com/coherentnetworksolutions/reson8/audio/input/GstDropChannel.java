@@ -1,19 +1,17 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
+
 import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Buffer;
 import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
-import org.freedesktop.gstreamer.ElementFactory;
 import org.freedesktop.gstreamer.Format;
-import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.Pad;
-import org.freedesktop.gstreamer.PadProbeReturn;
-import org.freedesktop.gstreamer.PadProbeType;
 import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.AppSrc;
+
+import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
@@ -22,90 +20,73 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 /**
- * A persistent channel for 'Drop' type sounds. 
+ * A persistent channel for 'Drop' type sounds.
  * It stays connected to the Mixer but only pushes data when triggered.
+ * <p>
+ * Target/current intensity (0–100) are stored for UI / control-plane parity; they do not
+ * drive drop playback (see {@link #trigger(double)}).
  */
-public class GstDropChannel implements InputChannel, DropChannel {
-    private final String channelName;
+public class GstDropChannel extends BaseInputChannel implements DropChannel {
+
     private final CachedWav cachedWav;
-    
+
     private double volume;
-    
+
     private Bin channelBin;
     private Element channelMixer;
+    private GstToolkit toolkit;
 
-    
-    public GstDropChannel(SignalBucket signalEndpoint, CachedWav cachedWav) {
-        this.channelName = signalEndpoint.getName();
-
-        //Get (a reference to) PCM data locally
+    public GstDropChannel(SignalBucket signalEndpoint, CachedWav cachedWav, GstToolkit toolkit) {
+        super(signalEndpoint.getName(), 0.0, 0.0);
         this.cachedWav = cachedWav;
-        // dropFactory.getDataFor(signalEndpoint.getSoundDefinition().drop().map(d -> d.filename()).orElseThrow());
+        this.toolkit = toolkit;
 
-        // //Calculate our Caps once
-        // // String channelMask = (cachedPcmData.channels == 1) ? "0x0" : "0x3";
-        // caps = Caps.fromString(String.format("audio/x-raw,format=%s,channels=%d,rate=%d,layout=interleaved,channel-mask=(bitmask)%s",
-        //         cachedPcmData.gstFormat(), cachedPcmData.channels(), (int)cachedPcmData.sampleRate(), cachedPcmData.channelMask()));
-        // Log.debugf("Setting caps for [%s] to [%s]", channelName, caps.toString());
-        this.volume = signalEndpoint.getSoundDefinition().drop().map(d -> d.gain()).orElse(1.0);
+        this.volume = signalEndpoint.getSoundDefinition().drop().get().gain();
 
-        //gstreamer bucket
-        this.channelBin = new Bin(channelName + "_bin");
-        this.channelMixer = ElementFactory.make("audiomixer", channelName + "_sum");
+        this.channelBin = toolkit.createBin(getChannelName() + "_bin");
+        this.channelMixer = toolkit.makeElement("audiomixer", getChannelName() + "_sum");
 
         channelMixer.set("start-time-selection", 1); // 1 = Running Time
-        // channelMixer.set("force-live", true);
 
-        // Low latency for drops
         channelMixer.set("latency", 10000000L); // 10ms
 
-        // deal with a bunch of bins being created, attached, quickly
         channelMixer.set("ignore-inactive-pads", true);
 
-        // Add this to prevent the mixer from "stuttering" while waiting for new
-        // spam-clicks
         channelMixer.set("min-upstream-latency", 10000000L); // 10ms
 
-        channelBin.add(channelMixer);
+        toolkit.addElementToBin(channelBin, channelMixer);
 
-        // Ghost the output of our internal mixer to the main Mixer
-        channelBin.addPad(new GhostPad("src", channelMixer.getStaticPad("src")));
-        
+        toolkit.addPad(channelBin, toolkit.createGhostPad("src", toolkit.getStaticPad(channelMixer, "src")));
 
-        Log.debugf("DropChannel [%s] registered and ready.", channelName);
+        Log.debugf("DropChannel [%s] registered and ready.", getChannelName());
     }
 
     @Override
     public void trigger(@Min(0) @Max(100) double volume) {
-        Log.debugf("Channel [%s] triggered with volume [%s]", channelName, volume);
-        Log.debugf("Channel [%s] channelMixer.state is [%s]", channelName, channelMixer.getState());
-        Log.debugf("Channel [%s] channelBin.state is [%s]", channelName, channelBin.getState());
+        Log.debugf("Channel [%s] triggered with volume [%s]", getChannelName(), volume);
+        Log.debugf("Channel [%s] channelMixer.state is [%s]", getChannelName(), channelMixer.getState());
+        Log.debugf("Channel [%s] channelBin.state is [%s]", getChannelName(), channelBin.getState());
 
-        // get this off our main path of execution, but not quite a new thread
         CompletableFuture.runAsync(() -> {
             try {
-                // 1. Create instance (native allocations happen here)
                 DropInstance dropInstance = new DropInstance(cachedWav, volume);
 
-                channelBin.setState(State.PLAYING);
-                
-                // Add to the internal mixer
+                toolkit.setElementState(channelBin, State.PLAYING);
+
                 dropInstance.linkAndStart();
 
-                Log.debugf("[%s] Instance successfully started asynchronously", channelName);
+                Log.debugf("[%s] Instance successfully started asynchronously", getChannelName());
             } catch (Exception e) {
-                Log.errorf(e, "Failed to trigger drop instance for channel [%s]", channelName);
+                Log.errorf(e, "Failed to trigger drop instance for channel [%s]", getChannelName());
             }
         });
 
-        // 3. Push data (The Need Data callback will fire once synced)
-        Log.debugf("[%s] Triggered instance with volume %.2f", channelName, volume);
+        Log.debugf("[%s] Triggered instance with volume %.2f", getChannelName(), volume);
     }
 
     @Override
     public void start() {
-        // No-op for Drop; it waits for trigger()
-        Log.debugf("DropChannel [%s] started (waiting for triggers).", channelName);
+        Log.debugf("DropChannel [%s] started (waiting for triggers).", getChannelName());
     }
 
     @Override
@@ -114,81 +95,70 @@ public class GstDropChannel implements InputChannel, DropChannel {
     }
 
     @Override
-    public String getChannelName() { return channelName; }
-
-    @Override
-    public void setGain(@Min(0) @Max(100) double volume) { 
-        this.volume = volume; 
+    public void setGain(@Min(0) @Max(100) double volume) {
+        this.volume = volume;
     }
 
     @Override
-    public double getGain() { return volume; }
+    public double getGain() {
+        return volume;
+    }
 
     @Override
-    public Element getSrcElement() { return channelBin; }
-
-
-    // @Override
-    // public boolean supportsGain() { return true; }
-
-    // @Override
-    // public boolean supportsIntensity() { return false; }
-
-    @Override 
-    public void setIntensity(@Min(0) @Max(100) double intensity) { }
-
-    @Override
-    public double getIntensity() { return 0.0; }
+    public Element getSrcElement() {
+        return channelBin;
+    }
 
     @Override
     public void dispose() {
-        // if (bin != null) {
-        // bin.endOfStream();
-        // }
     }
 
     private class DropInstance {
         private final AppSrc instanceSrc;
-        private final Bin instanceBin; // A small sub-bin for this instance
-        private Pad myReservedMixerPad; //this instances pad on the channel mixer
+        private final Bin instanceBin;
+        private Pad myReservedMixerPad;
         private int bytesPushed = 0;
         private String instanceId;
 
         public DropInstance(CachedWav cachedWav, double triggerVolume) {
-            instanceId = channelName + "_inst_" + System.nanoTime();
+            
+            instanceId = getChannelName() + "_inst_" + System.nanoTime();
 
             Log.debugf("channelMixer has pads: [%s]", channelMixer.getPads());
-            myReservedMixerPad = channelMixer.getRequestPad("sink_%u");
+            myReservedMixerPad = toolkit.getRequestPad(channelMixer, "sink_%u");
+
             Log.debugf("Got reserved pad from channelMixer: [%s] for instance [%s]", myReservedMixerPad.getName(), instanceId);
 
-            instanceBin = new Bin(instanceId + "_bin");
+            instanceBin = toolkit.createBin(instanceId + "_bin");
 
-            instanceSrc = (AppSrc) ElementFactory.make("appsrc", instanceId + "_src");
+            instanceSrc = toolkit.makeAppSrc(instanceId + "_src");
             instanceSrc.set("format", Format.TIME);
-            instanceSrc.set("is-live", true); //2100
+            instanceSrc.set("is-live", true);
             instanceSrc.set("emit-signals", true);
-            instanceSrc.set("do-timestamp", true); //2100
+            instanceSrc.set("do-timestamp", true);
             instanceSrc.setCaps(cachedWav.caps());
             Log.debugf("instanceSrc at creation is in state: [%s]", instanceSrc.getState());
 
-            Element vol = ElementFactory.make("volume", instanceId + "_vol");
+            Element vol = toolkit.makeElement("volume", instanceId + "_vol");
             vol.set("volume", triggerVolume);
-            Element conv = ElementFactory.make("audioconvert", instanceId + "_conv");
-            Element resample = ElementFactory.make("audioresample", instanceId + "_res");
 
-            instanceBin.addMany(instanceSrc, vol, conv, resample);
+            Element conv = toolkit.makeElement("audioconvert", instanceId + "_conv");
+            Element resample = toolkit.makeElement("audioresample", instanceId + "_res");
 
-            instanceSrc.link(vol);
-            vol.link(conv);
-            conv.link(resample);
-            resample.link(instanceBin);
-            
-            instanceBin.addPad(new GhostPad("src", resample.getStaticPad("src")));
-            instanceBin.syncStateWithParent();            
-            
-            instanceSrc.connect((AppSrc.NEED_DATA) (elem, size) -> {
+            Log.debugf("Created elements for instance [%s]: src=[%s], vol=[%s], conv=[%s], resample=[%s]",
+                    instanceId, instanceSrc.getName(), vol.getName(), conv.getName(), resample.getName());
+            toolkit.addMany(instanceBin, instanceSrc, vol, conv, resample);
+
+            toolkit.linkMany(instanceSrc, vol, conv, resample, instanceBin);
+
+            toolkit.addPad(instanceBin, toolkit.createGhostPad("src", toolkit.getStaticPad(resample, "src")));
+
+            toolkit.syncStateWithParent(instanceBin);
+
+            toolkit.connectNeedData(instanceSrc, (elem, size) -> {
+                Log.debugf("NEED_DATA callback triggered for instance [%s], requested size: [%s]", instanceId, size);
                 byte[] data = cachedWav.pcmData();
-                int bytesPerFrame = cachedWav.bytesPerFrame(); // e.g., 3 for 24-bit mono, 4 for 16-bit stereo
+                int bytesPerFrame = cachedWav.bytesPerFrame();
 
                 int remaining = data.length - bytesPushed;
                 if (remaining <= 0) {
@@ -196,82 +166,72 @@ public class GstDropChannel implements InputChannel, DropChannel {
                     return;
                 }
 
-                // GStreamer's suggested 'size' is usually in bytes
                 int requestSize = (size > 0) ? size : 4096;
                 int bufferSize = Math.min(remaining, requestSize);
 
-                // CRITICAL ALIGNMENT:
-                // This ensures we never cut a frame (like a 3-byte 24-bit sample) in half.
                 bufferSize -= (bufferSize % bytesPerFrame);
 
-                // If the data remaining is less than one single frame, we're done
                 if (bufferSize <= 0) {
                     elem.endOfStream();
                     return;
                 }
 
-                Buffer buffer = new Buffer(bufferSize);
-                buffer.map(true).put(ByteBuffer.wrap(data, bytesPushed, bufferSize));
-                buffer.unmap();
+                Buffer buffer = toolkit.createBuffer(bufferSize);
+                toolkit.fillBuffer(buffer, data, bytesPushed, bufferSize);
 
                 long currentTimestampNano = (long) ((bytesPushed / bytesPerFrame) * 1_000_000_000L / cachedWav.sampleRate());
-                // buffer.setPresentationTimestamp(currentTimestampNano);
 
                 long framesInThisBuffer = bufferSize / bytesPerFrame;
                 long durationNano = (long) ((framesInThisBuffer * 1_000_000_000L) / cachedWav.sampleRate());
-                buffer.setDuration(durationNano);
-                
+                toolkit.setDuration(buffer, durationNano);
+
                 Log.debugf("Had set PresentationTimestamp to [%s], and Duration to [%s]", currentTimestampNano, durationNano);
-                elem.pushBuffer(buffer);
-                
+                toolkit.pushBuffer(instanceSrc, buffer);
+
                 bytesPushed += bufferSize;
             });
         }
 
-
         public void linkAndStart() {
-            channelBin.add(instanceBin);
+            toolkit.addElementToBin(channelBin, instanceBin);
             Log.debugf("instanceBin pads: [%s]", instanceBin.getPads());
-            
-            Pad binSrcPad = instanceBin.getStaticPad("src");
-            binSrcPad.link(myReservedMixerPad);
 
-            Pad srcPad = instanceSrc.getStaticPad("src");
+            // Route through toolkit so the spy can observe and mock stays consistent
+            // (toolkit.getStaticPad returns the same cached pad on every call for a given element+name)
+            Pad binSrcPad = toolkit.getStaticPad(instanceBin, "src");
+            toolkit.linkPads(binSrcPad, myReservedMixerPad);
 
-            // Attach a probe to the src (out) pad of what actually is initiating sound
-            srcPad.addProbe(PadProbeType.EVENT_DOWNSTREAM, (pad, info) -> {
-                if (info.getEvent() instanceof org.freedesktop.gstreamer.event.EOSEvent) {
-                    Log.debugf("Dealing with event on pad [%s]: [%s]", pad.getName(), info.getEvent());
-                    // full on thread to get outside of gstreamer c thread so not to block it
-                    new Thread(() -> cleanup(channelBin, channelMixer, myReservedMixerPad)).start();
-                    return PadProbeReturn.DROP;
-                }
-                return PadProbeReturn.OK;
-            });
+            Pad srcPad = toolkit.getStaticPad(instanceSrc, "src");
+            toolkit.addEosProbe(srcPad, () -> cleanup(myReservedMixerPad));
 
-            this.instanceBin.setState(State.PLAYING);
+            toolkit.setElementState(instanceBin, State.PLAYING);
         }
 
-        private void cleanup(Bin parentBin, Element channelMixer, Pad myReservedMixerPad) {
-            Log.debugf("Cleanup of mixer pad: [%s] for instance [%s]", myReservedMixerPad.getName(), instanceId);
-            
-            /*
-             * disconnect our instance bin from the channel bin so the channel bin gets nothing
-             * and cant get confused if sound or events sneak through
-             */
-            this.instanceBin.getStaticPad("src").unlink(myReservedMixerPad);
+        /**
+         * Tears down this drop instance after EOS.
+         * <p>
+         * {@code channelBin} and {@code channelMixer} are referenced directly as outer-class
+         * fields — NOT passed as parameters — to make it unambiguous which objects are the
+         * long-lived channel components versus the short-lived per-drop components.
+         */
+        private void cleanup(Pad reservedMixerPad) {
+            Log.debugf("Cleanup of instance [%s], releasing mixer pad [%s]", instanceId, reservedMixerPad.getName());
 
-            // this specific instance to NULL so it stops processing
-            this.instanceBin.setState(State.NULL);
+            // 1. Stop the instance bin first so all its native C elements are flushed and
+            //    their GStreamer refcounts drop before we touch the graph structure.
+            toolkit.setElementState(instanceBin, State.NULL);
 
-            // finally remove, after disconnection and stopping
-            parentBin.remove(this.instanceBin);
+            // 2. Detach from the mixer — same toolkit.getStaticPad call as linkAndStart() so
+            //    the mock returns the identical cached pad, making link/unlink symmetrical.
+            toolkit.unlinkPads(toolkit.getStaticPad(instanceBin, "src"), reservedMixerPad);
 
-            // Release the mixer pad so it can be reused by the next "spam" click
-            channelMixer.releaseRequestPad(myReservedMixerPad);
-        
+            // 3. Remove the bin; channelBin drops its reference, allowing GC to unref natively.
+            toolkit.removeElementFromBin(channelBin, instanceBin);
+
+            // 4. Return the mixer request pad to the pool for future triggers.
+            toolkit.releaseRequestPad(channelMixer, reservedMixerPad);
+
             Log.debugf("Instance [%s] fully removed.", instanceId);
         }
     }
-
 }
