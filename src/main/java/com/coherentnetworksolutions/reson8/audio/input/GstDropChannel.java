@@ -1,6 +1,8 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Buffer;
@@ -35,6 +37,21 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
     private Bin channelBin;
     private Element channelMixer;
     private GstToolkit toolkit;
+
+    private final Object binLock = new Object();
+
+    /**
+     * Executor for the trigger method.
+     * This is used to ensure that the trigger method is executed asynchronously
+     * and does not block the main thread.
+     * 
+     * Named, so to be isolated from other executors.
+     */
+    private static final ExecutorService TRIGGER_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "drop-trigger");
+        t.setDaemon(true);
+        return t;
+    });
 
     public GstDropChannel(SignalBucket signalEndpoint, CachedWav cachedWav, GstToolkit toolkit) {
         super(signalEndpoint.getName(), 0.0, 0.0);
@@ -71,7 +88,9 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
             try {
                 DropInstance dropInstance = new DropInstance(cachedWav, volume);
 
-                toolkit.setElementState(channelBin, State.PLAYING);
+                synchronized (binLock) {
+                    toolkit.setElementState(channelBin, State.PLAYING);
+                }
 
                 dropInstance.linkAndStart();
 
@@ -79,7 +98,7 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
             } catch (Exception e) {
                 Log.errorf(e, "Failed to trigger drop instance for channel [%s]", getChannelName());
             }
-        });
+        }, TRIGGER_EXECUTOR);
 
         Log.debugf("[%s] Triggered instance with volume %.2f", getChannelName(), volume);
     }
@@ -193,7 +212,9 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
         }
 
         public void linkAndStart() {
-            toolkit.addElementToBin(channelBin, instanceBin);
+            synchronized (binLock) {
+                toolkit.addElementToBin(channelBin, instanceBin);
+            }
             Log.debugf("instanceBin pads: [%s]", instanceBin.getPads());
 
             // Route through toolkit so the spy can observe and mock stays consistent
@@ -226,7 +247,9 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
             toolkit.unlinkPads(toolkit.getStaticPad(instanceBin, "src"), reservedMixerPad);
 
             // 3. Remove the bin; channelBin drops its reference, allowing GC to unref natively.
-            toolkit.removeElementFromBin(channelBin, instanceBin);
+            synchronized (binLock) {
+                toolkit.removeElementFromBin(channelBin, instanceBin);
+            }
 
             // 4. Return the mixer request pad to the pool for future triggers.
             toolkit.releaseRequestPad(channelMixer, reservedMixerPad);

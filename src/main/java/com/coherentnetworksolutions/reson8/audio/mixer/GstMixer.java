@@ -18,13 +18,12 @@ import org.freedesktop.gstreamer.Gst;
 import org.freedesktop.gstreamer.Pad;
 import org.freedesktop.gstreamer.Pipeline;
 import org.freedesktop.gstreamer.State;
-import org.freedesktop.gstreamer.StateChangeReturn;
 import org.freedesktop.gstreamer.Structure;
 import org.freedesktop.gstreamer.message.MessageType;
 
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClientManagerChannel;
-import com.coherentnetworksolutions.reson8.audio.utils.VolumeScaler;
+import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
 
 import io.quarkus.logging.Log;
 import jakarta.annotation.PostConstruct;

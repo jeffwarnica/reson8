@@ -1,19 +1,23 @@
 package com.coherentnetworksolutions.reson8.signal;
 
-import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 
 import java.util.List;
 
 import com.coherentnetworksolutions.reson8.audio.input.DropChannel;
-import com.coherentnetworksolutions.reson8.audio.sound.SoundRegistry;
+import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
+import com.coherentnetworksolutions.reson8.audio.utils.map.CurveMapFactory;
+import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.CurveConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
+
 import com.fasterxml.jackson.databind.JsonNode;
+
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.Configuration;
@@ -31,7 +35,7 @@ public class SignalBucket {
     private final SourceType sourceType;
     private final String query;
     private final InputChannel inputChannel;
-    private final JsonPath jsonPath;
+    private JsonPath jsonPath;
     
     // We can even store the resolved SoundDefinition here later
     private Reson8Config.SoundDefinition soundDefinition;
@@ -42,17 +46,16 @@ public class SignalBucket {
     InputChannelFactory channelFactory;
 
     // @Inject
-    SoundRegistry soundRegistry;
+    SoundDefinitionRegistry soundRegistry;
 
     SignalManager signalManager;
-
-    private static final Configuration JSON_NODE_CONF = Configuration.builder()
-        .jsonProvider(new JacksonJsonNodeJsonProvider())
-        .options(Option.ALWAYS_RETURN_LIST, Option.SUPPRESS_EXCEPTIONS)
-        .build();
+    private CurveConfig curveConfig;
+    
+    private SignalCurveMap curve;
 
     public SignalBucket(Reson8Config.InputMapping mapping, SoundDefinition soundDefinition, 
-            InputChannelFactory channelFactory, SoundRegistry soundRegistry, SignalManager signalManager) {
+                        InputChannelFactory channelFactory, SoundDefinitionRegistry soundRegistry, 
+                        SignalManager signalManager, CurveMapFactory curveMapFactory) {
             this.name = mapping.name();
             this.sourceType = mapping.type().orElse(SourceType.PROMETHEUS);
             this.query = mapping.query().orElse("");
@@ -63,27 +66,24 @@ public class SignalBucket {
             this.soundType = soundDefinition.type();
             this.signalManager = signalManager;
             this.inputChannel = channelFactory.buildChannel(this);
+            this.curveConfig = mapping.curve().orElse(null);
+            this.curve = curveMapFactory.createCurve(curveConfig);
 
-            this.jsonPath = JsonPath.compile(query);
-            Log.infof("Compiling jsonPath for Bucket [%s]: %s", this.name, this.jsonPath);
+            if (this.sourceType == SourceType.KUBERNETES_EVENT) {
+                try {
+                    this.jsonPath = JsonPath.compile(query);
+                    Log.infof("Compiled jsonPath for Bucket [%s]: %s", this.name, this.jsonPath);
+                } catch (Exception e) {
+                    Log.errorf("Failed to compile JsonPath query [%s] for SignalBucket [%s]: %s", query, name, e.getMessage(), e);
+                    throw new RuntimeException("Invalid JsonPath query: " + query, e);
+                }
+            } else if (this.sourceType == SourceType.PROMETHEUS) {
+                // query = query
+            } else {
+                // noop
+            }
             
     }
-
-    public void processEvent(io.fabric8.kubernetes.api.model.events.v1.Event event) {
-        Log.debugf("Signal Bucket [%s] checking event [%s]", name, event);
-
-        JsonNode eventNode = Serialization.jsonMapper().valueToTree(event);
-        Log.debugf("Event as JsonNode: [%s]", eventNode);
-
-        Object matches = jsonPath.read(eventNode, JSON_NODE_CONF);
-        Log.debugf("Signal Bucket [%s] got matches [%s] for event [%s] against query [%s]", name, matches, event, query);
-        
-        if (!matches.toString().equals("[]")) {
-            trigger();
-        }
-    
-    }
-
 
     public Reson8Config.SoundDefinition getSoundDefinition(){
         return soundDefinition;
@@ -115,7 +115,7 @@ public class SignalBucket {
     public void setIntensity(@Min(0) @Max(100) double intensity){
         if (signalManager.isK8sSyncEnabled()) {
             Log.debugf("about to setIntensity([%s]) from [%s]", intensity, name);
-            inputChannel.setIntensity(intensity);
+            inputChannel.setTargetIntensity(intensity);
         }
     }
 
@@ -127,6 +127,7 @@ public class SignalBucket {
         return inputChannel.getGain();
     }
 
+    @Deprecated
     public void setVolume(@Min(0) @Max(100) double vol){
         Log.debugf("[%s].setVolume([%s]), pass to inputChanel", name, vol);
         inputChannel.setGain(vol);
@@ -134,11 +135,30 @@ public class SignalBucket {
 
 
     public double getIntensity() {
-        return inputChannel.getIntensity();
+        return inputChannel.getTargetIntensity();
     }
+
+    public double getCurrentIntensity() {
+        double intensity = inputChannel.getCurrentIntensity();
+        Log.tracef("sb: [%s], currentIntensity: [%s]", name , intensity);
+        return intensity; // inputChannel.getCurrentIntensity();
+    }
+
 
     public boolean isDrop() {
         return isDrop;
+    }
+
+    public JsonPath JsonPath() {
+        return jsonPath;
+    }
+
+    public String getQuery() {
+        return query;
+    }
+
+    public SignalCurveMap getCurve() {
+        return curve;
     }
 
 

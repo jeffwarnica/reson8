@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Min;
 public class SilentDropChannel implements DropChannel, InputChannel {
 
     private String channelName;
+    private double currentIntensity = 0.0;
     
     public SilentDropChannel(SignalBucket signalEndpoint) {
         channelName = signalEndpoint.getName();
@@ -64,13 +65,18 @@ public class SilentDropChannel implements DropChannel, InputChannel {
     public void dispose() {}
 
     @Override
-    public void setIntensity(@Min(0) @Max(100) double d) {
+    public void setTargetIntensity(@Min(0) @Max(100) double d) {
         return;
     }
 
     @Override
-    public double getIntensity() {
+    public double getTargetIntensity() {
         return 6.66;
+    }
+
+    @Override
+    public double getCurrentIntensity() {
+        return currentIntensity;
     }
 
 

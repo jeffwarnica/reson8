@@ -3,6 +3,8 @@ package com.coherentnetworksolutions.reson8.manager.config;
 import java.util.List;
 import java.util.Optional;
 
+import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap.Point;
+
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
@@ -25,6 +27,17 @@ public interface Reson8Config {
         NamespaceConfig namespaces();
 
         String map();
+
+        ThanosConfig thanos();
+    }
+
+    interface ThanosConfig {
+        String baseUrl();
+
+        @WithDefault("false")
+        boolean ignoreCerts();
+
+        // String token();
     }
 
     interface NamespaceConfig {
@@ -56,6 +69,8 @@ public interface Reson8Config {
         Optional<String> query();
 
         Optional<String> unit();
+
+        Optional<CurveConfig> curve();
     }
 
     public enum SourceType {
@@ -82,18 +97,41 @@ public interface Reson8Config {
         Optional<LoopConfig> loop();
         Optional<DropConfig> drop();
         Optional<ProceduralConfig> procedural();
+        Optional<StochasticConfig> stochastic();
     }
 
     public enum SoundType {
         @WithName("drop") DROP,
         @WithName("loop") LOOP,
-        @WithName("procedural") PROCEDURAL
+        @WithName("procedural") PROCEDURAL,
+        @WithName("stochastic") STOCHASTIC
+    }
+
+    interface StochasticConfig {
+        String directory(); // directory containing multiple sound files to randomly choose from
+        @WithDefault("32")
+        int maxSimultaneous(); // max number of simultaneous sounds from this directory
+        @WithDefault("0.1")
+        double pitchRandomization(); // random pitch variation in semitones (e.g. 0.1 = +/- 0.1 semitones)
+        @WithDefault("poisson")
+        StochasticDistribution distribution(); // distribution for random selection of files
+        double variance(); 
+    }
+
+    public enum StochasticDistribution {
+        @WithName("poisson") POISSON,
+        @WithName("weighted") JITTERED,
+        @WithName("bursty") BURSTY
     }
 
     interface LoopConfig {
         String filename();
+        
         @WithDefault("1.0")
         Double gain();
+        @WithDefault("0.02")
+        @WithName("smoothingrate")
+        Double smoothingrate();
     }
 
     interface DropConfig {
@@ -109,7 +147,7 @@ public interface Reson8Config {
         Optional<Double> phase();
 
         @WithName("gain")
-        Optional<Double> gain();
+        Double gain();
 
         @WithName("cutoffmin")
         Optional<Double> cutoffmin();
@@ -117,23 +155,25 @@ public interface Reson8Config {
         @WithName("cutoffscale")
         Optional<Double> cutoffscale();
 
+        @WithDefault("0.02")
         @WithName("smoothingrate")
-        Optional<Double> smoothingrate();
+        Double smoothingrate();
 
         @WithName("intensity")
-        Optional<Double> intensity();
+        @WithDefault("50.0") //todo, check if this is necessary; why are we configuring a intensity?
+        Double intensity();
 
-        Optional<IntensityCurveConfig> curve();
+        Optional<CurveConfig> curve();
     }
 
-    interface IntensityCurveConfig {
+    interface CurveConfig {
         @WithDefault("linear")
         Interpolation interpolation(); // linear, smooth, step
 
         List<CurvePoint> points();
+        @WithDefault("false")
+        Boolean extrapolate();
 
-        @WithDefault("true")
-        boolean extrapolate();
     }
 
     public enum Interpolation {
@@ -149,5 +189,9 @@ public interface Reson8Config {
 
         @WithName("out")
         double output();
+        
+        default Point toRecord() {
+            return new Point(input(), output());
+        }
     }
 }

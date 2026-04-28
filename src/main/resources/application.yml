@@ -43,9 +43,35 @@ reson8:
         sound: chirp_short2
         type: KUBERNETES_EVENT
         query: $.[?(@.reason == 'Killing' && @.regarding.kind == 'Pod')]
+      - name: Web Crashes
+        sound: alarmcrickets
+        type: PROMETHEUS
+        query: 'sum(rate(http_server_requests_seconds_count{status="500"}[5m])) * 60'
+        curve:
+          interpolation: LINEAR
+          points:
+            - { in: 0,   out: 0.0 }
+            # - { in: 100,  out: 20 }
+            # - { in: 200,  out: 40 }
+            - { in: 1000,  out: 100 }
+          extrapolate: true 
   soundscapes:
     - name: forest
       sounds:
+      - name: smoothcrickets
+        type: STOCHASTIC
+        stochastic:
+          directory: "sounds/crickets"
+          max-simultaneous: 10
+          distribution: POISSON
+          variance: 0
+      - name: alarmcrickets
+        type: STOCHASTIC
+        stochastic:
+          directory: "sounds/crickets"
+          max-simultaneous: 20
+          distribution: BURSTY
+          variance: 0.9
       - name: chirp_long1
         type: DROP
         drop:
@@ -93,4 +119,4 @@ reson8:
                   - { in: 20,  out: 0.0 }
                   - { in: 35,  out: 0.6 }
                   - { in: 50,  out: 0.9 }
-                extrapolate: true #do ... something ... for values >50
+                extrapolate: true 

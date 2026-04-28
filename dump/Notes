@@ -1,1 +1,12 @@
 kubectl run stress-test --image=polinux/stress-ng -- --cpu 2 --cpu-method matrixprod --timeout 60s
+
+oc create sa reson8-monitor -n stress-bucket
+oc adm policy add-cluster-role-to-user cluster-monitoring-view -z reson8-monitor -n stress-bucket
+oc create token reson8-monitor -n stress-bucket
+
+export THANOS_URL=$(oc get route thanos-querier -n openshift-monitoring -o jsonpath='{.spec.host}')
+export QUERY='sum(rate(http_server_requests_seconds_count{status="500"}[5m])) * 60'
+
+curl -G GET -k   -H "Authorization: Bearer $TOKEN"   --data-urlencode "query=$QUERY"   "https://$THANOS_URL/api/v1/query" 
+
+oc adm policy add-cluster-role-to-user cluster-monitoring-view -z default -n stress-bucket

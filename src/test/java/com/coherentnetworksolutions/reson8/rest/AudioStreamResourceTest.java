@@ -2,9 +2,12 @@ package com.coherentnetworksolutions.reson8.rest;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.InputStream;
 
+import org.freedesktop.gstreamer.Gst;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.output.to.BrowserSessionManager;
@@ -16,6 +19,14 @@ import jakarta.inject.Inject;
 
 @QuarkusTest
 public class AudioStreamResourceTest {
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "This test class must not require native GStreamer. " +
+                        "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
+                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+    }
 
     @Inject
     BrowserSessionManager sessionManager;

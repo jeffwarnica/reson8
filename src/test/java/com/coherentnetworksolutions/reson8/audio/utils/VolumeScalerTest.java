@@ -7,13 +7,27 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.freedesktop.gstreamer.Gst;
+import org.junit.jupiter.api.BeforeEach;
 
 @QuarkusTest
 @Timeout(10)
 class VolumeScalerTest {
 
     private static final double DELTA = 0.0001;
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "This test class must not require native GStreamer. " +
+                        "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
+                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+    }
 
     @ParameterizedTest
     @DisplayName("Human (0-100) to GStreamer (0-1) Scaling")

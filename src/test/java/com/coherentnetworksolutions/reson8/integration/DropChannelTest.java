@@ -2,14 +2,28 @@ package com.coherentnetworksolutions.reson8.integration;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.freedesktop.gstreamer.Gst;
 
 @QuarkusTest
 public class DropChannelTest {
+
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "This test class must not require native GStreamer. " +
+                        "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
+                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+    }
 
     @Test
     @DisplayName("GET /audio/drop - List registered drops")
@@ -21,7 +35,7 @@ public class DropChannelTest {
                 .contentType(ContentType.JSON)
                 // Verify it returns a list containing your specific aliases
                 .body("$", hasItem("Pod Startup"))
-                .body("$", hasItem("Pod Crash"));
+                .body("$", hasItem("Pod Killed"));
     }
 
     @Test

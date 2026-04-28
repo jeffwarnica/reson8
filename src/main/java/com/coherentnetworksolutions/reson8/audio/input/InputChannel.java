@@ -22,6 +22,23 @@ public interface InputChannel {
         Caps getCaps();
         // boolean supportsIntensity();
         void dispose();
-        void setIntensity(@Min(0) @Max(100) double d);
-        double getIntensity();
+        
+        /**
+         * Sets the target intensity (what user/k8s wants)
+         * @param d target intensity 0-100
+         */
+        void setTargetIntensity(@Min(0) @Max(100) double d);
+        
+        /**
+         * Gets the target intensity (what was set via setIntensity)
+         * @return target intensity 0-100
+         */
+        double getTargetIntensity();
+        
+        /**
+         * Gets the current/observed intensity (may differ from target)
+         * @return current intensity 0-100
+         */
+        double getCurrentIntensity();
+        
 }
