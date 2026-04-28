@@ -11,9 +11,9 @@ import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClientManagerChannel;
 
 import io.quarkus.logging.Log;
-import jakarta.inject.Singleton;
+import jakarta.enterprise.context.ApplicationScoped;
 
-@Singleton
+@ApplicationScoped
 @io.quarkus.arc.properties.IfBuildProperty(name="reson8dev.audiopath", stringValue = "silent")
 public class SilentMixer implements Mixer {
     private final Map<String, InputChannel> inputChannels = new HashMap<>(); 

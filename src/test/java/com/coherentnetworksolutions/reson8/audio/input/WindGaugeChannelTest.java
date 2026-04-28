@@ -1,31 +1,33 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.Gst;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
-
-import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
-import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class WindGaugeChannelTest {
 
@@ -63,6 +65,11 @@ class WindGaugeChannelTest {
         channel = new WindGaugeChannel(mockBucket, toolkit);
     }
 
+    @AfterEach
+    void tearDown() {
+        channel.dispose();
+    }
+
     @Test
     void testIntensitySmoothingRamp() {
         // 1. Set a high target intensity
@@ -93,8 +100,8 @@ class WindGaugeChannelTest {
     void testDisposeShutsDown() {
         channel.dispose();
 
-        // Verify state is set to NULL
-        verify(toolkit).setElementState(any(), eq(org.freedesktop.gstreamer.State.NULL));
+        // Verify state is set to NULL (atLeastOnce because @AfterEach also calls dispose).
+        verify(toolkit, atLeastOnce()).setElementState(any(), eq(org.freedesktop.gstreamer.State.NULL));
 
         // Note: You could use reflection to check if scheduler.isShutdown() is true
     }

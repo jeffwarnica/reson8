@@ -42,7 +42,7 @@ class MixerCleanupTest {
         // have actually exited their while loops
         try { Thread.sleep(500); } catch (InterruptedException e) {}
     }
-
+    
     @AfterEach
     void tearDown() {
         // Everything is now handled internally by the Mixer

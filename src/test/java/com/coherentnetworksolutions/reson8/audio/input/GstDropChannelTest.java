@@ -1,24 +1,27 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+// import static org.junit.jupiter.api.Assertions.assertEquals;
+// import static org.junit.jupiter.api.Assertions.assertFalse;
+// import static org.junit.jupiter.api.Assertions.assertNotNull;
+// import static org.junit.jupiter.api.Assertions.assertThrows;
+// import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.*;
+// import static org.mockito.ArgumentMatchers.anyInt;
+// import static org.mockito.ArgumentMatchers.anyString;
+// import static org.mockito.ArgumentMatchers.contains;
+// import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+// import static org.mockito.Mockito.mock;
+// import static org.mockito.Mockito.never;
+// import static org.mockito.Mockito.spy;
+// import static org.mockito.Mockito.timeout;
+// import static org.mockito.Mockito.times;
+// import static org.mockito.Mockito.verify;
+// import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -289,5 +292,107 @@ class GstDropChannelTest {
 
         // Verify two different pads were requested from the mixer
         assertEquals(2, toolkit.requestedPads.size());
+    }
+
+    // -----------------------------------------------------------------------
+    // Streaming / data-flow edge cases
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testNeedDataAdvancesOffset() {
+        // Three full frames; served across two sequential needData requests.
+        byte[] threeFrames = new byte[4 * 3];
+        when(mockWav.pcmData()).thenReturn(threeFrames);
+
+        channel.trigger(100.0);
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
+
+        // First request: 8 bytes (frames 0-1). Second request: 4 bytes (frame 2).
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 8);
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 8);
+
+        // bytesPushed must advance: second fill starts at offset 8, not 0.
+        InOrder order = inOrder(toolkit);
+        order.verify(toolkit).fillBuffer(any(Buffer.class), any(byte[].class), eq(0), eq(8));
+        order.verify(toolkit).fillBuffer(any(Buffer.class), any(byte[].class), eq(8), eq(4));
+    }
+
+    @Test
+    void testEosOnExactBoundary() {
+        // Exactly 2 frames — after the data is exhausted the next needData must fire EOS.
+        when(mockWav.pcmData()).thenReturn(new byte[4 * 2]);
+
+        channel.trigger(100.0);
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
+
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 8); // consumes all 8 bytes
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 8); // remaining == 0 → EOS
+
+        verify(toolkit.lastCreatedAppSrc).endOfStream();
+        verify(toolkit, times(1)).createBuffer(anyInt()); // only one buffer was ever created
+    }
+
+    @Test
+    void testPartialFrameIsDroppedBeforeEos() {
+        // 1 full frame (4 bytes) + 1 orphan byte: the orphan must not be pushed as a partial buffer.
+        // First needData: bufferSize = 5 - (5 % 4) = 4 → one buffer pushed.
+        // Second needData: remaining = 1; 1 - (1 % 4) = 0 → EOS.
+        when(mockWav.pcmData()).thenReturn(new byte[5]);
+
+        channel.trigger(100.0);
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
+
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 5);
+        toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 5);
+
+        verify(toolkit.lastCreatedAppSrc).endOfStream();
+        verify(toolkit, times(1)).createBuffer(4); // exactly one 4-byte buffer, no partial
+    }
+
+    // -----------------------------------------------------------------------
+    // Volume / gain edge cases
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testTriggerWithZeroVolume() {
+        // A trigger with volume 0 must still create and wire up an AppSrc instance.
+        channel.trigger(0.0);
+
+        verify(toolkit, timeout(1000)).makeAppSrc(anyString());
+        assertFalse(toolkit.requestedPads.isEmpty(), "Pad must be reserved even at zero volume");
+    }
+
+    // -----------------------------------------------------------------------
+    // Lifecycle
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testDisposeIsNoOp() {
+        // dispose() has an intentionally empty body but must not throw,
+        // and channel internals must remain accessible afterwards.
+        assertDoesNotThrow(() -> channel.dispose());
+        assertNotNull(channel.getSrcElement(), "channelBin must survive dispose()");
+    }
+
+    // -----------------------------------------------------------------------
+    // Multi-trigger resource accounting
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testConcurrentTriggersBothCleanUp() {
+        channel.trigger(100.0);
+        channel.trigger(90.0);
+
+        // Wait until both async tasks have registered their EOS probes.
+        await().atMost(2, TimeUnit.SECONDS)
+                .until(() -> toolkit.allCapturedCleanupTasks.size() >= 2);
+
+        assertEquals(2, toolkit.requestedPads.size(), "Each trigger must reserve its own mixer pad");
+
+        // Fire every captured cleanup task (simulating both AppSrcs reaching EOS).
+        new ArrayList<>(toolkit.allCapturedCleanupTasks).forEach(Runnable::run);
+
+        // Both reserved pads must be returned — zero pad leak.
+        assertEquals(2, toolkit.releasedPads.size(), "Every reserved pad must be released after cleanup");
     }
 }

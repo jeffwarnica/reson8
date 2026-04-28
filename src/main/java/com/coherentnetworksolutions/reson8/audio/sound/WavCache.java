@@ -18,6 +18,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.freedesktop.gstreamer.Caps;
 
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
+import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 
 import io.quarkus.logging.Log;
@@ -26,6 +27,9 @@ import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class WavCache {
+
+
+    @Inject GstToolkit toolkit;
 
     private Map<String, CachedWav> cache = new ConcurrentHashMap<>();
 
@@ -59,7 +63,7 @@ public class WavCache {
 
             byte[] pcmData = ais.readAllBytes();
             
-            return CachedWav.create(pcmData,af);
+            return CachedWav.create(pcmData, af, toolkit);
 
         } catch (IOException | UnsupportedAudioFileException e) {
             Log.fatalf("File load problems: [%s]", e.getMessage());
@@ -80,15 +84,16 @@ public class WavCache {
 
     public record CachedWav(byte[] pcmData, AudioFormat audioFormat, String capsString, Caps caps) {
         
-        public static CachedWav create(byte[] pcmData, AudioFormat audioFormat) { 
+        public static CachedWav create(byte[] pcmData, AudioFormat audioFormat, GstToolkit toolkit) {
             if (pcmData == null)
                 throw new IllegalArgumentException("pcmData cannot be null");
             if (audioFormat == null)
                 throw new IllegalArgumentException("audioFormat cannot be null");
+            if (toolkit == null)
+                throw new IllegalArgumentException("toolkit cannot be null");
             String capsString = generateCapsString(audioFormat);
             Log.debugf("Creating cachedWav with format: [%s]", audioFormat);
-            return new CachedWav(pcmData, audioFormat, capsString, Caps.fromString(capsString));
-
+            return new CachedWav(pcmData, audioFormat, capsString, toolkit.capsFromString(capsString));
         }
 
         // --- Helper Getters for easier GStreamer integration ---

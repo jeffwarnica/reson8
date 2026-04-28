@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 
 import org.freedesktop.gstreamer.Gst;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,8 @@ public class GstChannelFactoryTests {
     private GstChannelFactory factory;
     // private MockGstToolkit toolkit;
     private MockGstToolkit toolkit;
+    /** Holds the channel built each test so @AfterEach can stop its internal scheduler. */
+    private InputChannel lastBuiltChannel;
 
     @BeforeAll
     static void ensureGstInitialized() {
@@ -45,6 +48,15 @@ public class GstChannelFactoryTests {
         factory.wavCache = mock(WavCache.class);
         factory.config = mock(Reson8Config.class);
         when(factory.config.audioPath()).thenReturn("/tmp");
+        lastBuiltChannel = null;
+    }
+
+    @AfterEach
+    void disposeChannel() {
+        if (lastBuiltChannel != null) {
+            lastBuiltChannel.dispose();
+            lastBuiltChannel = null;
+        }
     }
 
     @Test
@@ -72,8 +84,8 @@ public class GstChannelFactoryTests {
 
         // Add other necessary mocks for construction...
 
-        InputChannel channel = factory.buildChannel(signalBucket);
-        assertTrue(channel instanceof LoopingGaugeChannel);
+        lastBuiltChannel = factory.buildChannel(signalBucket);
+        assertTrue(lastBuiltChannel instanceof LoopingGaugeChannel);
     }
 
     @Test
@@ -96,8 +108,8 @@ public class GstChannelFactoryTests {
         when(proc.className()).thenReturn("WindGaugeChannel");
         when(proc.gain()).thenReturn(100.0);
 
-        InputChannel channel = factory.buildChannel(signalBucket);
-        assertTrue(channel instanceof WindGaugeChannel);
+        lastBuiltChannel = factory.buildChannel(signalBucket);
+        assertTrue(lastBuiltChannel instanceof WindGaugeChannel);
     }
 
     @Test
@@ -116,8 +128,8 @@ public class GstChannelFactoryTests {
 
         when(factory.wavCache.getOrLoad("drop_sound.wav")).thenReturn(cachedWav);
 
-        InputChannel channel = factory.buildChannel(signalBucket);
-        assertTrue(channel instanceof GstDropChannel);
+        lastBuiltChannel = factory.buildChannel(signalBucket);
+        assertTrue(lastBuiltChannel instanceof GstDropChannel);
     }
 
     @Test
@@ -134,8 +146,8 @@ public class GstChannelFactoryTests {
 
         when(factory.wavCache.getOrLoad("drop_sound.wav")).thenThrow(new RuntimeException("Wav cache failure"));
 
-        InputChannel channel = factory.buildChannel(signalBucket);
-        assertTrue(channel instanceof SilentInputChannel);
+        lastBuiltChannel = factory.buildChannel(signalBucket);
+        assertTrue(lastBuiltChannel instanceof SilentInputChannel);
     }
 
     @Test
