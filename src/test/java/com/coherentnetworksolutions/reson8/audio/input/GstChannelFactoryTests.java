@@ -64,6 +64,7 @@ public class GstChannelFactoryTests {
 
         when(loopConfig.filename()).thenReturn("trickling_water.wav");
         when(loopConfig.gain()).thenReturn(100.0);
+        when(loopConfig.smoothingrate()).thenReturn(0.02);
 
         when(mockDef.loop()).thenReturn(Optional.of(loopConfig));
         when(loopConfig.filename()).thenReturn("trickling_water.wav");

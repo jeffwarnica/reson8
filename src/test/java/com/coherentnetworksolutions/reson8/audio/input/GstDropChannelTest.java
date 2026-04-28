@@ -37,6 +37,8 @@ import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 class GstDropChannelTest {
 
+    /** Used only before {@code spy(...)} so {@code when(mockWav.caps()).thenReturn(...)} does not call the spy mid-stub. */
+    private MockGstToolkit toolkitDelegate;
     private MockGstToolkit toolkit;
     private SignalBucket mockBucket;
     private CachedWav mockWav;
@@ -45,9 +47,9 @@ class GstDropChannelTest {
     @BeforeEach
     void setUp() {
         // 1. Initialize the Mock Toolkit
-        MockGstToolkit realToolkit = new MockGstToolkit();
-        Caps wavCaps = realToolkit.capsFromString("audio/x-raw");
-        toolkit = spy(realToolkit);
+        toolkitDelegate = new MockGstToolkit();
+        Caps wavCaps = toolkitDelegate.capsFromString("audio/x-raw");
+        toolkit = spy(toolkitDelegate);
 
         // 2. Mock the configuration dependencies
         mockBucket = mock(SignalBucket.class);
@@ -94,7 +96,7 @@ class GstDropChannelTest {
         when(def.drop()).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class,
-                () -> new GstDropChannel(bucket, mockWav, toolkit));
+                () -> new GstDropChannel(bucket, mockWav, toolkitDelegate));
     }
 
     @Test
@@ -114,7 +116,7 @@ class GstDropChannelTest {
 
         channel.trigger(100.0);
 
-        // Wait for async wiring
+        // capturedNeedData is set at [14] connectNeedData, after addMany[10]/linkMany[11] — safe barrier
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         // 2. Simulate GStreamer requesting 1000 bytes
@@ -147,6 +149,7 @@ class GstDropChannelTest {
     void testAudioDataFlow() {
         channel.trigger(100.0);
 
+        // capturedCleanupTask is set at [19] addEosProbe — after linkPads[17] in linkAndStart
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
         // 1. Manually trigger the callback captured by the toolkit
@@ -176,8 +179,9 @@ class GstDropChannelTest {
     void testTriggerAddsElementsToBin() {
         channel.trigger(100.0);
 
-        // WAIT for the async thread to reach this point
-        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.lastCreatedAppSrc != null);
+        // lastCreatedAppSrc is set at [3] makeAppSrc — too early; addMany is at [10].
+        // capturedNeedData is set at [14] connectNeedData (end of constructor) — correct barrier.
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         // NOW you verify on the toolkit SPY
         verify(toolkit).addMany(any(Bin.class), any(Element.class), any(), any(), any());
@@ -187,7 +191,7 @@ class GstDropChannelTest {
     void testCleanupRemovesInstanceFromBin() {
         channel.trigger(100.0);
 
-        // 1. Wait for the async thread to finish construction
+        // 1. Wait for the async thread to finish construction (capturedCleanupTask is last step [19])
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
         // 2. Capture which bin was created so we can check it
@@ -212,13 +216,9 @@ class GstDropChannelTest {
     void testInstanceLinksToMixer() {
         channel.trigger(100.0);
 
-        // 1. Wait for async construction
-        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.lastCreatedAppSrc != null);
+        // linkPads is at [17]; capturedCleanupTask is set at [19] addEosProbe, after linkPads — correct barrier
+        await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
-        // 2. We need to verify that the Bin's GhostPad (src)
-        // was linked to the Mixer's RequestPad (sink)
-
-        // We can use ArgumentCaptors to be precise, or just verify the toolkit call
         verify(toolkit).linkPads(any(Pad.class), eq(toolkit.requestedPads.iterator().next()));
     }
 
