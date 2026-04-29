@@ -1,0 +1,5 @@
+package com.coherentnetworksolutions.reson8.k8s.client;
+
+public @interface RestClient {
+
+}

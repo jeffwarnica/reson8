@@ -48,11 +48,12 @@ reson8:
         type: PROMETHEUS
         query: 'sum(rate(http_server_requests_seconds_count{status="500"}[5m])) * 60'
         curve:
-          interpolation: SMOOTH
+          interpolation: MONOTONE
           points:
             - { in: 0,   out: 0.0 }
-            - { in: 100,  out: 20 }
-            - { in: 200,  out: 40 }
+            - { in: 1,  out: 20 }
+            - { in: 10,  out: 50 }
+            - { in: 200,  out: 80 }
             - { in: 1000,  out: 100 }
           extrapolate: true 
   soundscapes:

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ~  Copyright 2021 Red Hat, Inc.
+ ~
+ ~  Licensed under the Apache License, Version 2.0 (the "License");
+ ~  you may not use this file except in compliance with the License.
+ ~  You may obtain a copy of the License at
+ ~
+ ~    http://www.apache.org/licenses/LICENSE-2.0
+ ~
+ ~  Unless required by applicable law or agreed to in writing, software
+ ~  distributed under the License is distributed on an "AS IS" BASIS,
+ ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ ~  See the License for the specific language governing permissions and
+ ~  limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.smallrye.config</groupId>
+        <artifactId>smallrye-config-parent</artifactId>
+        <version>3.16.0</version>
+    </parent>
+
+    <artifactId>smallrye-config-validator</artifactId>
+
+    <name>SmallRye Config: Validator</name>
+
+    <properties>
+        <version.jakarta.validation>3.0.2</version.jakarta.validation>
+
+        <!-- Test -->
+        <version.hibernate.validator>9.1.0.Final</version.hibernate.validator>
+        <version.glassfish.expressly>5.0.0</version.glassfish.expressly>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>${version.jakarta.validation}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${version.hibernate.validator}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.expressly</groupId>
+            <artifactId>expressly</artifactId>
+            <version>${version.glassfish.expressly}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <user.language>en</user.language>
+                        <user.region>US</user.region>
+                    </systemPropertyVariables>
+                    <!-- https://github.com/smallrye/smallrye-config/issues/1456 -->
+                    <argLine>
+                        --add-opens=io.smallrye.config.validator/io.smallrye.config.validator=io.smallrye.config,org.hibernate.validator
+                        --add-opens=io.smallrye.config.validator/io.smallrye.config.validator.external=io.smallrye.config,org.hibernate.validator</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
