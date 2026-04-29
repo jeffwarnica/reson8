@@ -39,6 +39,162 @@
             gap: 20px;
         }
 
+        /* Pipeline flow */
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin: 10px 0 12px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .pipe-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 7px;
+            border-radius: 6px;
+            border: 1.5px solid #b0bec5;
+            background: #f5f5f5;
+            min-width: 52px;
+            font-size: 0.68em;
+            color: #546e7a;
+            white-space: nowrap;
+            transition: background 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s;
+        }
+
+        .pipe-node .node-label {
+            font-weight: bold;
+            font-size: 0.9em;
+            letter-spacing: 0.02em;
+        }
+
+        .pipe-node .node-value {
+            font-family: monospace;
+            font-size: 1em;
+            margin-top: 2px;
+            color: #37474f;
+        }
+
+        .pipe-arrow {
+            flex-shrink: 0;
+            color: #b0bec5;
+            font-size: 1.1em;
+            padding: 0 2px;
+            transition: color 0.3s;
+        }
+
+        /* Active k8s source path */
+        .pipe-node.active-k8s {
+            background: #e3f2fd;
+            border-color: var(--k8s);
+            color: var(--k8s);
+        }
+        .pipe-node.active-k8s .node-value { color: #0d47a1; }
+        .pipe-arrow.active-k8s { color: var(--k8s); }
+
+        /* Active manual-override path */
+        .pipe-node.active-manual {
+            background: #fff3e0;
+            border-color: var(--accent);
+            color: #bf360c;
+        }
+        .pipe-node.active-manual .node-value { color: #bf360c; }
+        .pipe-arrow.active-manual { color: var(--accent); }
+
+        /* Active neutral path (after merge point) */
+        .pipe-node.active-flow {
+            background: #e8f5e9;
+            border-color: #388e3c;
+            color: #1b5e20;
+        }
+        .pipe-node.active-flow .node-value { color: #1b5e20; }
+        .pipe-arrow.active-flow { color: #388e3c; }
+
+        /* Dimmed inactive segment */
+        .pipe-node.dimmed { opacity: 0.32; }
+        .pipe-arrow.dimmed { opacity: 0.25; }
+
+        /* Signal Curves card */
+        .curves-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 12px;
+        }
+
+        .curve-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 14px;
+            min-width: 240px;
+        }
+
+        .curve-panel h4 {
+            margin: 0 0 8px;
+            font-size: 0.85em;
+            color: #455a64;
+        }
+
+        .curve-svg {
+            display: block;
+        }
+
+        .btn-toggle-curves {
+            background: none;
+            border: 1.5px solid #90a4ae;
+            color: #455a64;
+            font-size: 0.82em;
+            padding: 4px 12px;
+            border-radius: 5px;
+            margin-left: 10px;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        .btn-toggle-curves:hover { background: #eceff1; }
+
+        /* Drop channel — Simulate Event button inside the pipeline node */
+        .pipe-node-drop {
+            border-color: #7e57c2;
+            background: #ede7f6;
+            color: #4527a0;
+        }
+
+        .btn-simulate-event {
+            margin-top: 4px;
+            padding: 3px 8px;
+            font-size: 0.8em;
+            font-weight: bold;
+            background: #673ab7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            white-space: nowrap;
+        }
+        .btn-simulate-event:hover   { background: #512da8; }
+        .btn-simulate-event:active  { background: #311b92; }
+        .btn-simulate-event:disabled { opacity: 0.5; cursor: default; }
+
+        /* Metric simulation input inside the K8s Metric pipeline node */
+        .metric-sim-input {
+            margin-top: 4px;
+            width: 72px;
+            padding: 2px 4px;
+            font-size: 0.85em;
+            font-family: monospace;
+            border: 1.5px solid var(--accent);
+            border-radius: 4px;
+            background: #fff8f5;
+            color: #bf360c;
+            text-align: center;
+            outline: none;
+        }
+        .metric-sim-input:focus { background: #fff3e0; border-color: #e64a19; }
+
         .channel-strip {
             background: #f8f9fa;
             border-left: 5px solid var(--primary);
@@ -205,12 +361,6 @@
             color: white;
         }
 
-        .btn-drop {
-            background: #673ab7;
-            color: white;
-            font-size: 0.8em;
-        }
-
         .btn-stop {
             background: #d32f2f;
             color: white;
@@ -253,7 +403,10 @@
     <div class="signal-chain">
         <div id="channelsContainer">
             <div class="card">
-                <h2>Mixer Channels</h2>
+                <h2>
+                    Mixer Channels
+                    <button class="btn-toggle-curves" onclick="toggleCurvesCard()" id="showCurvesBtn">▼ Show Curves</button>
+                </h2>
                 <div id="chList"></div>
             </div>
         </div>
@@ -275,6 +428,14 @@
     </div>
 
     <audio id="audioPlayer"></audio>
+
+    <div class="card" id="curvesCard" style="display:none;">
+        <h2>
+            Signal Curves
+            <button class="btn-toggle-curves" onclick="toggleCurvesCard()" style="font-weight:normal;">▲ Hide</button>
+        </h2>
+        <div class="curves-grid" id="curvesGrid"></div>
+    </div>
 
     <script>
         const audio = document.getElementById('audioPlayer');
@@ -336,18 +497,16 @@
 
                 // 2. Update Channels
                 state.channels.forEach(ch => {
-                    updateChannelUI(ch);
+                    updateChannelUI(ch, state.k8sSyncActive);
                 });
             } catch (e) { console.error("Sync failed", e); }
         }
 
-        function updateChannelUI(ch) {
+        function updateChannelUI(ch, k8sActive) {
             const row = document.getElementById(`ch-${ch.name}`);
             if (!row) return;
 
             const currentPct = Math.min(100, Math.max(0, ch.currentIntensity ?? 0));
-            const bar = row.querySelector('.intensity-bar-fill');
-            if (bar) bar.style.width = currentPct + '%';
 
             const badge = row.querySelector('.current-intensity-badge');
             if (badge) badge.textContent = 'Live ' + Math.round(currentPct) + '%';
@@ -373,6 +532,25 @@
                 mixFader.value = mixerVolPercent;
                 row.querySelector('.mixFader-val').innerText = mixerVolPercent.toFixed(2);
             }
+
+            // Update pipeline flow
+            const pipEl = row.querySelector('.pipeline-flow');
+            if (pipEl) {
+                updatePipelineStyles(pipEl, k8sActive);
+                updatePipelineValues(pipEl, ch, channelCurveData[ch.name]);
+            }
+
+            // Update curve live dots
+            if (channelCurveData[ch.name]) {
+                const cd = channelCurveData[ch.name];
+                const rawApprox = (cd.curveSamples && cd.curveSamples.length >= 2)
+                    ? curveInverse(cd.curveSamples, currentPct)
+                    : currentPct;
+                updateCurveDot(`ch-${ch.name}`, rawApprox, currentPct);
+            }
+            // VolumeScaler dot: use currentIntensity as x, cubic as y
+            const gstVal = Math.pow(currentPct / 100, 3);
+            updateCurveDot('vol', currentPct, gstVal);
         }
 
         // --- INTERACTION ---
@@ -411,6 +589,287 @@
         document.getElementById('localVolVal').innerText = 
             parseFloat(document.getElementById('localVol').value).toFixed(2);
 
+        // --- CURVES CARD TOGGLE ---
+
+        let curvesVisible = false;
+        function toggleCurvesCard() {
+            curvesVisible = !curvesVisible;
+            document.getElementById('curvesCard').style.display = curvesVisible ? '' : 'none';
+            const btn = document.getElementById('showCurvesBtn');
+            if (btn) btn.textContent = curvesVisible ? '▲ Hide Curves' : '▼ Show Curves';
+        }
+
+        // --- SVG CURVE HELPERS ---
+
+        const SVG_W = 230, SVG_H = 130, SVG_PAD = { t: 8, r: 8, b: 28, l: 36 };
+
+        function makeSvgNS(tag, attrs) {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+            return el;
+        }
+
+        function buildCurveSvg(id, title, samples, rawSamples, xLabel, yLabel, xMin, xMax, yMin, yMax) {
+            const iw = SVG_W - SVG_PAD.l - SVG_PAD.r;
+            const ih = SVG_H - SVG_PAD.t - SVG_PAD.b;
+
+            // Expand y range to fit unclamped samples if they go outside [yMin, yMax]
+            const rawYVals = (rawSamples || []).map(s => s[1]).filter(v => isFinite(v));
+            const allYMin = rawYVals.length ? Math.min(yMin, ...rawYVals) : yMin;
+            const allYMax = rawYVals.length ? Math.max(yMax, ...rawYVals) : yMax;
+            const hasOscillation = rawSamples && (allYMin < yMin - 0.5 || allYMax > yMax + 0.5);
+
+            const svg = makeSvgNS('svg', { width: SVG_W, height: SVG_H, class: 'curve-svg', 'aria-label': title });
+
+            const toSvgX = x => SVG_PAD.l + ((x - xMin) / (xMax - xMin)) * iw;
+            const toSvgY = y => SVG_PAD.t + ih - ((y - allYMin) / (allYMax - allYMin)) * ih;
+
+            // Zero-reference line if the chart includes negative values
+            if (allYMin < 0) {
+                const y0 = toSvgY(0);
+                const refLine = makeSvgNS('line', { x1: SVG_PAD.l, y1: y0, x2: SVG_PAD.l + iw, y2: y0, stroke: '#ef9a9a', 'stroke-width': '1', 'stroke-dasharray': '3,2' });
+                svg.appendChild(refLine);
+            }
+
+            // Axes
+            const axes = makeSvgNS('g', { stroke: '#90a4ae', 'stroke-width': '1' });
+            axes.appendChild(makeSvgNS('line', { x1: SVG_PAD.l, y1: SVG_PAD.t, x2: SVG_PAD.l, y2: SVG_PAD.t + ih }));
+            axes.appendChild(makeSvgNS('line', { x1: SVG_PAD.l, y1: SVG_PAD.t + ih, x2: SVG_PAD.l + iw, y2: SVG_PAD.t + ih }));
+            svg.appendChild(axes);
+
+            // Axis labels
+            const xLbl = makeSvgNS('text', { x: SVG_PAD.l + iw / 2, y: SVG_H - 4, 'text-anchor': 'middle', 'font-size': '9', fill: '#78909c' });
+            xLbl.textContent = xLabel;
+            svg.appendChild(xLbl);
+            const yLbl = makeSvgNS('text', { x: 9, y: SVG_PAD.t + ih / 2, 'text-anchor': 'middle', 'font-size': '9', fill: '#78909c', transform: `rotate(-90, 9, ${SVG_PAD.t + ih / 2})` });
+            yLbl.textContent = yLabel;
+            svg.appendChild(yLbl);
+
+            // Tick labels — always show the clamped range boundary values
+            const addTick = (x, y, txt, anchor) => {
+                const t = makeSvgNS('text', { x, y, 'text-anchor': anchor, 'font-size': '8', fill: '#90a4ae' });
+                t.textContent = txt;
+                svg.appendChild(t);
+            };
+            addTick(SVG_PAD.l - 2, toSvgY(allYMin) + 4, fmt(allYMin), 'end');
+            addTick(SVG_PAD.l - 2, toSvgY(allYMax) + 4, fmt(allYMax), 'end');
+            if (allYMin < 0 && yMin === 0) {
+                // extra tick at 0 (the clamping floor)
+                addTick(SVG_PAD.l - 2, toSvgY(0) + 4, '0', 'end');
+            }
+            addTick(SVG_PAD.l, SVG_PAD.t + ih + 10, fmt(xMin), 'middle');
+            addTick(SVG_PAD.l + iw, SVG_PAD.t + ih + 10, fmt(xMax), 'middle');
+
+            // Raw (unclamped) spline — dashed grey, drawn first so clamped sits on top
+            if (hasOscillation && rawSamples) {
+                const rawPts = rawSamples.map(([x, y]) => `${toSvgX(x).toFixed(1)},${toSvgY(y).toFixed(1)}`).join(' ');
+                const rawPoly = makeSvgNS('polyline', { points: rawPts, fill: 'none', stroke: '#b0bec5', 'stroke-width': '1.5', 'stroke-dasharray': '4,3', 'stroke-linejoin': 'round' });
+                svg.appendChild(rawPoly);
+
+                // Legend hint
+                const warn = makeSvgNS('text', { x: SVG_PAD.l + 2, y: SVG_PAD.t + 10, 'font-size': '8', fill: '#e53935' });
+                warn.textContent = '⚠ clamping active';
+                svg.appendChild(warn);
+            }
+
+            // Effective (clamped) curve — solid blue
+            const pts = samples.map(([x, y]) => `${toSvgX(x).toFixed(1)},${toSvgY(y).toFixed(1)}`).join(' ');
+            const poly = makeSvgNS('polyline', { points: pts, fill: 'none', stroke: 'var(--k8s)', 'stroke-width': '2', 'stroke-linejoin': 'round' });
+            svg.appendChild(poly);
+
+            // Live dot (initially hidden, updated by syncState)
+            const dot = makeSvgNS('circle', { id: `dot-${id}`, r: '5', fill: 'var(--accent)', stroke: 'white', 'stroke-width': '1.5', cx: '-20', cy: '-20' });
+            svg.appendChild(dot);
+            const dotLbl = makeSvgNS('text', { id: `dotlbl-${id}`, 'font-size': '9', fill: 'var(--accent)', 'font-weight': 'bold' });
+            svg.appendChild(dotLbl);
+
+            svg._toSvgX = toSvgX;
+            svg._toSvgY = toSvgY;
+            svg._xMin = xMin; svg._xMax = xMax;
+            svg._yMin = allYMin; svg._yMax = allYMax;
+            return svg;
+        }
+
+        function fmt(v) {
+            if (Math.abs(v) >= 1000) return Math.round(v).toString();
+            if (Math.abs(v) >= 10)   return v.toFixed(1);
+            return v.toFixed(2);
+        }
+
+        function updateCurveDot(svgId, x, y) {
+            const dot = document.getElementById(`dot-${svgId}`);
+            const lbl = document.getElementById(`dotlbl-${svgId}`);
+            const svg = dot && dot.closest('svg');
+            if (!dot || !svg) return;
+            const cx = svg._toSvgX(x);
+            const cy = svg._toSvgY(y);
+            dot.setAttribute('cx', cx.toFixed(1));
+            dot.setAttribute('cy', cy.toFixed(1));
+            lbl.setAttribute('x', (cx + 6).toFixed(1));
+            lbl.setAttribute('y', (cy - 4).toFixed(1));
+            lbl.textContent = fmt(y);
+        }
+
+        // Channel curve data keyed by channel name
+        const channelCurveData = {};
+
+        function buildCurvesCard(channels) {
+            const grid = document.getElementById('curvesGrid');
+            grid.innerHTML = '';
+
+            channels.forEach(ch => {
+                if (!ch.curveSamples || ch.curveSamples.length < 2) return;
+                channelCurveData[ch.name] = ch;
+
+                const yVals = ch.curveSamples.map(s => s[1]);
+                const yMin = Math.min(...yVals);
+                const yMax = Math.max(...yVals);
+
+                const panel = document.createElement('div');
+                panel.className = 'curve-panel';
+                const title = document.createElement('h4');
+                title.textContent = `${ch.name.toUpperCase()} — k8s metric → intensity`;
+                panel.appendChild(title);
+
+                const svg = buildCurveSvg(
+                    `ch-${ch.name}`, title.textContent,
+                    ch.curveSamples, ch.curveRawSamples || null,
+                    `metric (${fmt(ch.curveMinInput)}–${fmt(ch.curveMaxInput)})`, 'intensity (0–100)',
+                    ch.curveMinInput, ch.curveMaxInput,
+                    yMin, Math.max(yMax, 0.001)
+                );
+                panel.appendChild(svg);
+                grid.appendChild(panel);
+            });
+
+            // VolumeScaler cubic curve — computed entirely in JS
+            const volPanel = document.createElement('div');
+            volPanel.className = 'curve-panel';
+            const volTitle = document.createElement('h4');
+            volTitle.textContent = 'VolumeScaler — intensity (0–100) → GStreamer (0–1)';
+            volPanel.appendChild(volTitle);
+            const volSamples = [];
+            for (let i = 0; i <= 40; i++) {
+                const h = i * 2.5; // 0..100
+                volSamples.push([h, Math.pow(h / 100, 3)]);
+            }
+            const volSvg = buildCurveSvg('vol', volTitle.textContent, volSamples, null, 'intensity (0–100)', 'GStreamer (0–1)', 0, 100, 0, 1);
+            volPanel.appendChild(volSvg);
+            grid.appendChild(volPanel);
+        }
+
+        // --- PIPELINE RENDERING ---
+
+        function buildPipelineHTML(ch) {
+            const sourceSegment = ch.isDrop ? `
+                <div class="pipe-node pipe-node-drop" data-seg="drop">
+                    <span class="node-label">Event</span>
+                    <button class="btn-simulate-event" data-channel="${ch.name}"
+                        title="Simulate a k8s event triggering this drop">▶ Simulate Event</button>
+                </div>` : (() => {
+                    const curveMax = (ch.curveMaxInput != null && ch.curveMaxInput > 0) ? ch.curveMaxInput : 1000;
+                    return `
+                <div class="pipe-node" data-seg="k8s">
+                    <span class="node-label">K8s Metric</span>
+                    <span class="node-value" data-pipe-val="rawMetric">—</span>
+                    <input type="number" class="metric-sim-input" data-channel="${ch.name}"
+                        min="0" max="${curveMax}" step="any"
+                        placeholder="sim value"
+                        title="Enter a raw metric value to simulate (applies when k8s sync is paused)">
+                </div>
+                <span class="pipe-arrow" data-seg="k8s">▶</span>
+                <div class="pipe-node" data-seg="k8s">
+                    <span class="node-label">Curve Map</span>
+                    <span class="node-value" style="font-size:0.85em; color:inherit;">→ intensity</span>
+                </div>
+                <span class="pipe-arrow" data-seg="merge">▶</span>
+                <div class="pipe-node" data-seg="manual">
+                    <span class="node-label">Manual</span>
+                    <span class="node-value" style="font-size:0.85em; color:inherit;">override</span>
+                </div>
+                <span class="pipe-arrow" data-seg="merge">▶</span>`;
+                })();
+
+            return `
+            <div class="pipeline-flow" id="pipe-${ch.name}">
+                ${sourceSegment}
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">Target</span>
+                    <span class="node-value" data-pipe-val="target">—</span>
+                </div>
+                <span class="pipe-arrow" data-seg="flow">▶</span>
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">Easing</span>
+                    <span class="node-value" style="font-size:0.85em; color:inherit;">~ smooth</span>
+                </div>
+                <span class="pipe-arrow" data-seg="flow">▶</span>
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">Current</span>
+                    <span class="node-value" data-pipe-val="current">—</span>
+                </div>
+                <span class="pipe-arrow" data-seg="flow">▶</span>
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">Ceiling</span>
+                    <span class="node-value" data-pipe-val="ceiling">—</span>
+                </div>
+                <span class="pipe-arrow" data-seg="flow">▶</span>
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">Fader</span>
+                    <span class="node-value" data-pipe-val="fader">—</span>
+                </div>
+                <span class="pipe-arrow" data-seg="flow">▶</span>
+                <div class="pipe-node" data-seg="flow">
+                    <span class="node-label">GStreamer</span>
+                    <span class="node-value" data-pipe-val="gst">—</span>
+                </div>
+            </div>`;
+        }
+
+        function updatePipelineStyles(pipEl, k8sActive) {
+            pipEl.querySelectorAll('[data-seg]').forEach(el => {
+                const seg = el.dataset.seg;
+                el.classList.remove('active-k8s', 'active-manual', 'active-flow', 'dimmed');
+                if (seg === 'k8s')         el.classList.add(k8sActive  ? 'active-k8s'  : 'dimmed');
+                else if (seg === 'manual') el.classList.add(k8sActive  ? 'dimmed'       : 'active-manual');
+                else if (seg === 'merge')  el.classList.add(k8sActive  ? 'active-k8s'  : 'active-manual');
+                else if (seg === 'flow')   el.classList.add('active-flow');
+                // drop segment keeps its own .pipe-node-drop styling; no dynamic class needed
+            });
+            // Show the metric sim input only when k8s sync is paused
+            const simInput = pipEl.querySelector('.metric-sim-input');
+            if (simInput) simInput.style.display = k8sActive ? 'none' : '';
+        }
+
+        function updatePipelineValues(pipEl, ch, curveData) {
+            const set = (key, val) => {
+                const el = pipEl.querySelector(`[data-pipe-val="${key}"]`);
+                if (el) el.textContent = val;
+            };
+            // Raw metric: derive via inverse of currentIntensity if curve data available
+            if (curveData && curveData.curveSamples && curveData.curveSamples.length >= 2) {
+                const rawApprox = curveInverse(curveData.curveSamples, ch.currentIntensity);
+                set('rawMetric', fmt(rawApprox));
+            }
+            set('target',  ch.targetIntensity.toFixed(1));
+            set('current', ch.currentIntensity.toFixed(1));
+            set('ceiling', ch.chanVol.toFixed(1));
+            set('fader',   ch.mixerVol.toFixed(1));
+            // GStreamer: apply cubic scaling to currentIntensity
+            const gstVal = Math.pow(Math.min(100, Math.max(0, ch.currentIntensity)) / 100, 3);
+            set('gst', gstVal.toFixed(3));
+        }
+
+        /** Approximate inverse lookup by finding the closest sample pair. */
+        function curveInverse(samples, intensity) {
+            let best = samples[0][0];
+            let bestDist = Math.abs(samples[0][1] - intensity);
+            for (const [x, y] of samples) {
+                const d = Math.abs(y - intensity);
+                if (d < bestDist) { bestDist = d; best = x; }
+            }
+            return best;
+        }
+
         // --- INITIALIZATION ---
 
         async function init() {
@@ -428,7 +887,7 @@
                     ? `<span class="map-type" style="background: #e8f5e8; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold;">${sourceLabel.replace(/_/g, ' ').toUpperCase()}</span>`
                     : '';
                 const headerAction = ch.isDrop
-                    ? `<button class="btn-drop" onclick="playDrop('${ch.name}')">▶ TRIGGER DROP</button>`
+                    ? `<span class="status-tag" style="background:#ede7f6;color:#673ab7">DROP EVENT</span>`
                     : `<span class="status-tag">CONTINUOUS</span>`;
 
                 div.innerHTML = `
@@ -438,10 +897,8 @@
                     ${headerAction}
                 </div>
                 
-                <div class="intensity-bar-container">
-                    <div class="intensity-bar-fill"></div>
-                </div>
-                
+                ${buildPipelineHTML(ch)}
+
                 <div class="slider-row">
                     <label>Signal intensity (target)<abbr class="info-hint" title="Desired signal level (0–100%). This is what you or k8s sync ask for; the sound engine may ramp smoothly toward it.">i</abbr></label>
                     <div class="intensity-slider-wrap">
@@ -468,6 +925,17 @@
                 `;
                 list.appendChild(div);
 
+                // Wire up pipeline initial state (k8s status unknown until first poll; default active)
+                const pipEl = div.querySelector('.pipeline-flow');
+                updatePipelineStyles(pipEl, true);
+                updatePipelineValues(pipEl, ch, ch);
+
+                // Drop channels: wire the Simulate Event button
+                const simEventBtn = div.querySelector('.btn-simulate-event');
+                if (simEventBtn) {
+                    simEventBtn.onclick = () => playDrop(ch.name);
+                }
+
                 // Event Listeners for Sliders
                 const chfader = div.querySelector('.ch-fader');
                 chfader.onmousedown = () => activeSliders.add(chfader.id);
@@ -488,7 +956,33 @@
                     div.querySelector('.intensity-target-val').textContent = v.toFixed(1);
                     patchTargetIntensity(ch.name, v);
                 };
+
+                // Metric sim input: only present on non-drop channels
+                const simInput = div.querySelector('.metric-sim-input');
+                if (simInput) {
+                    simInput.style.display = 'none'; // hidden until k8s sync is paused
+                    const fireSimulate = async () => {
+                        const raw = parseFloat(simInput.value);
+                        if (isNaN(raw)) return;
+                        try {
+                            const res = await fetch(
+                                '/audio/control/channels/' + encodeURIComponent(ch.name) + '/simulate-metric',
+                                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rawMetricValue: raw }) }
+                            );
+                            if (res.ok) {
+                                const data = await res.json();
+                                const pipEl = div.querySelector('.pipeline-flow');
+                                const targetEl = pipEl && pipEl.querySelector('[data-pipe-val="target"]');
+                                if (targetEl) targetEl.textContent = data.mappedIntensity.toFixed(1);
+                            }
+                        } catch (e) { console.error('simulate-metric failed', e); }
+                    };
+                    simInput.addEventListener('keydown', e => { if (e.key === 'Enter') fireSimulate(); });
+                    simInput.addEventListener('change', fireSimulate);
+                }
             });
+
+            buildCurvesCard(channels);
 
             // Start Polling every 500ms
             setInterval(syncState, 500);

@@ -120,6 +120,20 @@ public class SignalBucket {
     }
 
     /**
+     * Maps a raw (unscaled) metric value through this bucket's {@code SignalCurveMap} and applies
+     * it as the target intensity, bypassing the k8s-sync gate. Intended for manual simulation
+     * when k8s sync is paused.
+     *
+     * @return the mapped intensity (0–100) so callers can report it back to the UI.
+     */
+    public double simulateRawMetric(double rawMetricValue) {
+        double intensity = curve.map(rawMetricValue);
+        Log.infof("simulate raw metric [%s] -> intensity [%s] on [%s]", rawMetricValue, intensity, name);
+        inputChannel.setTargetIntensity(intensity);
+        return intensity;
+    }
+
+    /**
      * @return the output ceiling of the channel (0–100)
      */
     public double getVolume() {

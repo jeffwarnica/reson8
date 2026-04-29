@@ -5,8 +5,10 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.ArrayList;
 import java.util.List;
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
+import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
@@ -26,6 +28,32 @@ public class AudioControlResource {
     EventBus eventBus;
 
 
+    private static final int CURVE_SAMPLE_COUNT = 40;
+
+    /** Samples a curve at {@value #CURVE_SAMPLE_COUNT} evenly-spaced points across its input domain. */
+    private List<double[]> sampleCurve(SignalCurveMap curve) {
+        double min = curve.minInput();
+        double max = curve.maxInput();
+        List<double[]> samples = new ArrayList<>(CURVE_SAMPLE_COUNT);
+        for (int i = 0; i < CURVE_SAMPLE_COUNT; i++) {
+            double x = min + (max - min) * i / (CURVE_SAMPLE_COUNT - 1);
+            samples.add(new double[]{x, curve.map(x)});
+        }
+        return samples;
+    }
+
+    /** Like {@link #sampleCurve} but uses {@code mapUnclamped} — exposes spline oscillation. */
+    private List<double[]> sampleCurveUnclamped(SignalCurveMap curve) {
+        double min = curve.minInput();
+        double max = curve.maxInput();
+        List<double[]> samples = new ArrayList<>(CURVE_SAMPLE_COUNT);
+        for (int i = 0; i < CURVE_SAMPLE_COUNT; i++) {
+            double x = min + (max - min) * i / (CURVE_SAMPLE_COUNT - 1);
+            samples.add(new double[]{x, curve.mapUnclamped(x)});
+        }
+        return samples;
+    }
+
     @GET
     @Path("/channels")
     @Produces(MediaType.APPLICATION_JSON)
@@ -39,6 +67,11 @@ public class AudioControlResource {
             dto.currentIntensity = ch.getCurrentIntensity();
             dto.isDrop = ch.isDrop();
             dto.sourceType = ch.getSourceType();
+            SignalCurveMap curve = ch.getCurve();
+            dto.curveSamples = sampleCurve(curve);
+            dto.curveRawSamples = sampleCurveUnclamped(curve);
+            dto.curveMinInput = curve.minInput();
+            dto.curveMaxInput = curve.maxInput();
             return dto;
         }).toList();
     }
@@ -129,6 +162,35 @@ public class AudioControlResource {
         public double targetIntensity;
     }
 
+    /**
+     * Feeds a raw (unscaled) metric value through the channel's {@code SignalCurveMap} and sets
+     * the result as the target intensity, bypassing the k8s-sync gate. Intended for manual
+     * simulation when k8s sync is paused.
+     *
+     * @return JSON {@code {"mappedIntensity": <0-100>}} so the caller can show the translated value.
+     */
+    @POST
+    @Path("/channels/{name}/simulate-metric")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response simulateRawMetric(@PathParam("name") String name, SimulateMetricRequest body) {
+        if (body == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\":\"JSON body required\"}").build();
+        }
+        var bucket = signalManager.getSignalBucket(name);
+        if (bucket == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\":\"Channel not found\"}").build();
+        }
+        double mapped = bucket.simulateRawMetric(body.rawMetricValue);
+        return Response.ok("{\"mappedIntensity\":" + mapped + "}").build();
+    }
+
+    /** Request body for {@link #simulateRawMetric(String, SimulateMetricRequest)}. */
+    public static class SimulateMetricRequest {
+        /** Raw (unscaled) metric value in the same units as the Prometheus query (e.g. crashes/min). */
+        public double rawMetricValue;
+    }
+
 
     public static class ChannelVolumeRequest {
         public String channel;
@@ -170,6 +232,14 @@ public class AudioControlResource {
         public double currentIntensity; // What is actually observed (0-100)
         public boolean isDrop; // To tell the UI to show the "Play" button
         public SourceType sourceType;
+        /** Clamped samples [{x, y}] — what actually drives intensity. Populated on initial load only. */
+        public List<double[]> curveSamples;
+        /** Unclamped raw spline samples [{x, y}] — exposes oscillation/overshoot for diagnostics. */
+        public List<double[]> curveRawSamples;
+        /** Minimum value of the curve's input domain (k8s metric units). */
+        public double curveMinInput;
+        /** Maximum value of the curve's input domain (k8s metric units). */
+        public double curveMaxInput;
     }
     
 }

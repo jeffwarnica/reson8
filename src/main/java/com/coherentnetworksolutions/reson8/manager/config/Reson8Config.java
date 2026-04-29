@@ -186,9 +186,10 @@ public interface Reson8Config {
     }
 
     public enum Interpolation {
-        @WithName("linear") LINEAR,
-        @WithName("smooth") SMOOTH,
-        @WithName("step") STEP
+        @WithName("linear")   LINEAR,
+        @WithName("smooth")   SMOOTH,
+        @WithName("monotone") MONOTONE,
+        @WithName("step")     STEP
     }  
         
 
