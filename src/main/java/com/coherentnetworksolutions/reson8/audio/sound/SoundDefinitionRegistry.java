@@ -58,7 +58,7 @@ public class SoundDefinitionRegistry {
     public String toString() {
     return registry.entrySet()
               .stream()
-              .map(e -> e.getKey() + " (" + e.getValue().type() + ")")
+              .map(e -> e.getKey() + " (" + e.getValue().soundType() + ")")
               .collect(Collectors.joining("\n"));
     }
 

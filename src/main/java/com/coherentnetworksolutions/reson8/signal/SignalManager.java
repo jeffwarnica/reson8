@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -101,6 +102,23 @@ public class SignalManager {
     
     public Collection<SignalBucket> getSignalBuckets() {
         return buckets.values();
+    }
+
+    public Optional<SignalBucket> getBucketByMetric(Reson8Config.ClusterMetric metric) {
+        return buckets.values().stream()
+            .filter(b -> b.getMetric() == metric)
+            .findFirst();
+    }
+
+    public void updateSignalIntensityFromRaw(String signalId, double rawValue) {
+        SignalBucket bucket = buckets.get(signalId);
+        if (bucket == null) {
+            Log.warnf("No bucket found for signal [%s]", signalId);
+            return;
+        }
+        double intensity = bucket.getCurve().map(rawValue);
+        bucket.setIntensity(intensity);
+        Log.debugf("Updated intensity for signal [%s] to [%f] from raw [%f]", signalId, intensity, rawValue);
     }
 
     public void processEvent(io.fabric8.kubernetes.api.model.events.v1.Event event) {

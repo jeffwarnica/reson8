@@ -3,27 +3,20 @@ package com.coherentnetworksolutions.reson8.signal;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 
-import java.util.List;
-
 import com.coherentnetworksolutions.reson8.audio.input.DropChannel;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
 import com.coherentnetworksolutions.reson8.audio.utils.map.CurveMapFactory;
 import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ClusterMetric;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.CurveConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.Option;
 
-import io.fabric8.kubernetes.client.utils.Serialization;
 import io.quarkus.logging.Log;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -34,10 +27,10 @@ public class SignalBucket {
     private final String name;
     private final SourceType sourceType;
     private final String query;
+    private final ClusterMetric metric;
     private final InputChannel inputChannel;
     private JsonPath jsonPath;
-    
-    // We can even store the resolved SoundDefinition here later
+
     private Reson8Config.SoundDefinition soundDefinition;
     private SoundType soundType;
     private boolean isDrop;
@@ -57,13 +50,14 @@ public class SignalBucket {
                         InputChannelFactory channelFactory, SoundDefinitionRegistry soundRegistry, 
                         SignalManager signalManager, CurveMapFactory curveMapFactory) {
             this.name = mapping.name();
-            this.sourceType = mapping.type().orElse(SourceType.PROMETHEUS);
+            this.sourceType = mapping.sourceType().orElse(SourceType.PROMETHEUS);
             this.query = mapping.query().orElse("");
+            this.metric = mapping.metric().orElse(null);
             this.soundDefinition = soundDefinition;
             this.channelFactory = channelFactory;
             this.soundRegistry = soundRegistry;
-            this.isDrop = (soundDefinition.type() == SoundType.DROP);
-            this.soundType = soundDefinition.type();
+            this.isDrop = (soundDefinition.soundType() == SoundType.DROP);
+            this.soundType = soundDefinition.soundType();
             this.signalManager = signalManager;
             this.inputChannel = channelFactory.buildChannel(this);
             this.curveConfig = mapping.curve().orElse(null);
@@ -168,6 +162,10 @@ public class SignalBucket {
 
     public String getQuery() {
         return query;
+    }
+
+    public ClusterMetric getMetric() {
+        return metric;
     }
 
     public SignalCurveMap getCurve() {

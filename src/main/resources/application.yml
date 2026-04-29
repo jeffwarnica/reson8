@@ -18,107 +18,91 @@ reson8:
     inputs:
       - name: "Cluster CPU Load"
         sound: babblingBrook
-        type: KUBERNETES_STATS 
-        query: cpu
-        unit: "percent"
+        source-type: KUBERNETES_STATS
+        metric: CPU
       - name: "Cluster Memory Load"
-        sound: "custom/campfire"          #which sounds like wind
-        type: KUBERNETES_STATS
-        query: mem
-        unit: "percent"
-      # - name: "Ambient Temp"
-      #   sound: "wind" 
-      #   type: DUMMY_PROCEDURE #PROMETHEUS
-      #   query: "((sum(node_memory_MemTotal_bytes) - sum(node_memory_MemAvailable_bytes)) / sum(node_memory_MemTotal_bytes)) * 100"
-      #   unit: "percent"
+        sound: "custom/scaled-wind"
+        source-type: KUBERNETES_STATS
+        metric: MEMORY
+      - name: Pending Pods
+        sound: smoothcrickets
+        source-type: KUBERNETES_STATS
+        metric: PENDING_PODS
+        curve:
+          interpolation: MONOTONE
+          points:
+            - { in: 0,   out: 0  }
+            - { in: 2,   out: 10 }
+            - { in: 10,  out: 40 }
+            - { in: 30,  out: 75 }
+            - { in: 100, out: 100 }
       - name: Pod Startup
         sound: chirp_short1
-        type: KUBERNETES_EVENT
+        source-type: KUBERNETES_EVENT
         query: $.[?(@.reason == 'Started' && @.regarding.kind == 'Pod')]
       - name: Pod Failed Scheduling
         sound: chirp_long1
-        type: KUBERNETES_EVENT
+        source-type: KUBERNETES_EVENT
         query: $.[?(@.reason == 'FailedScheduling' && @.regarding.kind == 'Pod')]
       - name: Pod Killed
         sound: chirp_short2
-        type: KUBERNETES_EVENT
+        source-type: KUBERNETES_EVENT
         query: $.[?(@.reason == 'Killing' && @.regarding.kind == 'Pod')]
       - name: Web Crashes
         sound: alarmcrickets
-        type: PROMETHEUS
+        source-type: PROMETHEUS
         query: 'sum(rate(http_server_requests_seconds_count{status="500"}[5m])) * 60'
         curve:
           interpolation: MONOTONE
           points:
-            - { in: 0,   out: 0.0 }
-            - { in: 1,  out: 20 }
-            - { in: 10,  out: 50 }
-            - { in: 200,  out: 80 }
-            - { in: 1000,  out: 100 }
-          extrapolate: true 
+            - { in: 0,    out: 0.0  }
+            - { in: 1,    out: 20   }
+            - { in: 10,   out: 50   }
+            - { in: 200,  out: 80   }
+            - { in: 1000, out: 100  }
   soundscapes:
     - name: forest
       sounds:
       - name: smoothcrickets
-        type: STOCHASTIC
+        sound-type: STOCHASTIC
         stochastic:
           directory: "sounds/crickets"
           max-simultaneous: 10
-          distribution: POISSON
-          variance: 0
       - name: alarmcrickets
-        type: STOCHASTIC
+        sound-type: STOCHASTIC
         stochastic:
           ceiling: 30
           directory: "sounds/crickets"
           max-simultaneous: 20
-          distribution: BURSTY
-          variance: 0.9
       - name: chirp_long1
-        type: DROP
+        sound-type: DROP
         drop:
           filename: "sounds/chirp_long1.wav"
           ceiling: 100
       - name: chirp_short1
-        type: DROP
+        sound-type: DROP
         drop:
           filename: "sounds/chirp_short1.wav"
       - name: chirp_short2
-        type: DROP
+        sound-type: DROP
         drop:
           filename: "sounds/chirp_short2.wav"
       - name: babblingBrook
-        type: LOOP 
+        sound-type: LOOP 
         loop:
           filename: "sounds/trickling_water.wav"
           output-scale: 0.5
-      - name: wind
-        type: PROCEDURAL
+      - name: straight-wind
+        sound-type: PROCEDURAL
         procedural:
-          type: WindGaugeChannel
+          generator: WIND
           output-scale: 1.0
           intensity: 50
-          phase: 0.02
-          cutoffmin: 300
-          cutoffscale: 4000
           smoothingrate: 0.1
-          curve:
-            interpolation: LINEAR
-            points:
-              - {in: 0.0, out: 0.0}
-              - {in: 100, out: 100}
     - name: custom
       sounds:
-        - name: campfire
-          type: PROCEDURAL
+        - name: scaled-wind
+          sound-type: PROCEDURAL
           procedural:
-            type: WindGaugeChannel #CracklingfireGaugeChannel
+            generator: WIND
             output-scale: 1.0
-            curve:
-                interpolation: SMOOTH #smooth, linear, step
-                points:
-                  - { in: 0,   out: 0.0 }
-                  - { in: 20,  out: 0.0 }
-                  - { in: 35,  out: 0.6 }
-                  - { in: 50,  out: 0.9 }
-                extrapolate: true 

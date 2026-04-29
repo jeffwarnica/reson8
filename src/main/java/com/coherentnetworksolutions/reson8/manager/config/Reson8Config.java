@@ -36,8 +36,6 @@ public interface Reson8Config {
 
         @WithDefault("false")
         boolean ignoreCerts();
-
-        // String token();
     }
 
     interface NamespaceConfig {
@@ -62,13 +60,15 @@ public interface Reson8Config {
     interface InputMapping {
         String name();
 
-        String sound(); // references "base/stream" or "stream"
+        String sound();
 
-        Optional<SourceType> type();
-        
+        @WithName("source-type")
+        Optional<SourceType> sourceType();
+
         Optional<String> query();
 
-        Optional<String> unit();
+        @WithName("metric")
+        Optional<ClusterMetric> metric();
 
         Optional<CurveConfig> curve();
     }
@@ -77,9 +77,14 @@ public interface Reson8Config {
         @WithName("prometheus") PROMETHEUS,
         @WithName("kubernetes_event") KUBERNETES_EVENT,
         @WithName("kubernetes_stats") KUBERNETES_STATS,
-        // @WithName("dummy_loop") DUMMY_LOOP,
-        // @WithName("dummy_drop") DUMMY_DROP,
-        // @WithName("dummy_procedure") DUMMY_PROCEDURE
+    }
+
+    public enum ClusterMetric {
+        @WithName("cpu") CPU,
+        @WithName("memory") MEMORY,
+        @WithName("node_readiness") NODE_READINESS,
+        @WithName("pending_pods") PENDING_PODS,
+        @WithName("deployment_health") DEPLOYMENT_HEALTH,
     }
 
     interface Soundscape {
@@ -91,9 +96,9 @@ public interface Reson8Config {
     interface SoundDefinition {
         String name();
 
-        SoundType type(); // drop, loop, procedural
+        @WithName("sound-type")
+        SoundType soundType();
 
-        // Auto-validated sub-configs
         Optional<LoopConfig> loop();
         Optional<DropConfig> drop();
         Optional<ProceduralConfig> procedural();
@@ -108,31 +113,22 @@ public interface Reson8Config {
     }
 
     interface StochasticConfig {
-        String directory(); // directory containing multiple sound files to randomly choose from
+        String directory();
         @WithDefault("32")
-        int maxSimultaneous(); // max number of simultaneous sounds from this directory
+        int maxSimultaneous();
         @WithDefault("100.0")
         @WithName("ceiling")
         Double ceiling();
         @WithDefault("0.1")
-        double pitchRandomization(); // random pitch variation in semitones (e.g. 0.1 = +/- 0.1 semitones)
-        @WithDefault("poisson")
-        StochasticDistribution distribution(); // distribution for random selection of files
-        double variance();
+        double pitchRandomization();
         @WithDefault("0.05")
         @WithName("smoothingrate")
         double smoothingrate();
     }
 
-    public enum StochasticDistribution {
-        @WithName("poisson") POISSON,
-        @WithName("weighted") JITTERED,
-        @WithName("bursty") BURSTY
-    }
-
     interface LoopConfig {
         String filename();
-        
+
         @WithDefault("1.0")
         @WithName("output-scale")
         Double outputScale();
@@ -149,49 +145,38 @@ public interface Reson8Config {
     }
 
     interface ProceduralConfig {
-        @WithName("type")
-        String className(); // e.g. WindGaugeChannel
-        
-        Optional<Double> phase();
+        @WithName("generator")
+        GeneratorType generatorType();
 
         @WithDefault("1.0")
         @WithName("output-scale")
         Double outputScale();
-
-        @WithName("cutoffmin")
-        Optional<Double> cutoffmin();
-
-        @WithName("cutoffscale")
-        Optional<Double> cutoffscale();
 
         @WithDefault("0.02")
         @WithName("smoothingrate")
         Double smoothingrate();
 
         @WithName("intensity")
-        @WithDefault("50.0") //todo, check if this is necessary; why are we configuring a intensity?
+        @WithDefault("50.0")
         Double intensity();
+    }
 
-        Optional<CurveConfig> curve();
+    public enum GeneratorType {
+        @WithName("wind") WIND
     }
 
     interface CurveConfig {
         @WithDefault("linear")
-        Interpolation interpolation(); // linear, smooth, step
+        Interpolation interpolation();
 
         List<CurvePoint> points();
-        @WithDefault("false")
-        Boolean extrapolate();
-
     }
 
     public enum Interpolation {
         @WithName("linear")   LINEAR,
         @WithName("smooth")   SMOOTH,
-        @WithName("monotone") MONOTONE,
-        @WithName("step")     STEP
-    }  
-        
+        @WithName("monotone") MONOTONE
+    }
 
     interface CurvePoint {
         @WithName("in")
@@ -199,7 +184,7 @@ public interface Reson8Config {
 
         @WithName("out")
         double output();
-        
+
         default Point toRecord() {
             return new Point(input(), output());
         }

@@ -5,6 +5,7 @@ import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.GeneratorType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
@@ -30,15 +31,13 @@ public class GstChannelFactory implements InputChannelFactory {
         Log.debugf("buildChannel([%s])", signalBucket.getName());
                
         SoundType type = signalBucket.getSoundType();
-
         return switch (type) {
             case LOOP -> {
                 // var config = soundDef.loop().orElseThrow();
                 yield new LoopingGaugeChannel(signalBucket, config, gstToolkit);
             }
             case PROCEDURAL -> {
-                // var proc = soundDef.procedural().orElseThrow();
-                yield createProcedural(signalBucket); //channelName, proc.className(), proc.params());
+                yield createProcedural(signalBucket);
             }
             case STOCHASTIC -> {
                 yield new StochasticGaugeChannel(signalBucket, config, wavCache, gstToolkit);
@@ -64,13 +63,12 @@ public class GstChannelFactory implements InputChannelFactory {
         };
     }
 
-    private GaugeChannel createProcedural(SignalBucket signalBucket) { 
+    private GaugeChannel createProcedural(SignalBucket signalBucket) {
         ProceduralConfig procedureConfig = signalBucket.getProcedureConf();
-                
-        return switch (procedureConfig.className()) {
-            case "WindGaugeChannel" -> new WindGaugeChannel(signalBucket, gstToolkit);
-            // case "FireGaugeChannel" -> ...
-            default -> throw new UnsupportedOperationException("Unknown procedural: " + procedureConfig.className());
+        GeneratorType generator = procedureConfig.generatorType();
+
+        return switch (generator) {
+            case WIND -> new WindGaugeChannel(signalBucket, gstToolkit);
         };
     }
 

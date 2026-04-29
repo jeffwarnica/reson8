@@ -18,6 +18,7 @@ import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.DropConfig;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.GeneratorType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.LoopConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
@@ -103,9 +104,9 @@ public class GstChannelFactoryTests {
         when(signalBucket.getSoundType()).thenReturn(SoundType.PROCEDURAL);
 
         when(mockDef.procedural()).thenReturn(Optional.of(proc));
-        when(mockDef.name()).thenReturn("wind");
-        when(signalBucket.getName()).thenReturn("wind");
-        when(proc.className()).thenReturn("WindGaugeChannel");
+        when(mockDef.name()).thenReturn("straight-wind");
+        when(signalBucket.getName()).thenReturn("straight-wind");
+        when(proc.generatorType()).thenReturn(GeneratorType.WIND);
         when(proc.outputScale()).thenReturn(1.0);
 
         lastBuiltChannel = factory.buildChannel(signalBucket);
@@ -151,18 +152,27 @@ public class GstChannelFactoryTests {
     }
 
     @Test
-    void testUnknownProceduralThrows() {
+    void testBuildWindChannelViaEnum() {
+        // The GeneratorType enum switch in GstChannelFactory is exhaustive at compile
+        // time; there is no longer a runtime "unknown procedural" case. This test
+        // confirms that a WIND generator produces a WindGaugeChannel, complementing
+        // testBuildWindChannel which uses the full mock setup.
         SignalBucket signalBucket = mock(SignalBucket.class);
         ProceduralConfig proc = mock(ProceduralConfig.class);
         SoundDefinition mockDef = mock(Reson8Config.SoundDefinition.class);
 
+        when(proc.intensity()).thenReturn(50.0);
+        when(proc.smoothingrate()).thenReturn(0.02);
+        when(proc.outputScale()).thenReturn(1.0);
+        when(proc.generatorType()).thenReturn(GeneratorType.WIND);
+
         when(signalBucket.getSoundDefinition()).thenReturn(mockDef);
         when(signalBucket.getProcedureConf()).thenReturn(proc);
         when(signalBucket.getSoundType()).thenReturn(SoundType.PROCEDURAL);
-
+        when(signalBucket.getName()).thenReturn("straight-wind");
         when(mockDef.procedural()).thenReturn(Optional.of(proc));
-        when(proc.className()).thenReturn("GhostNoiseChannel");
 
-        assertThrows(UnsupportedOperationException.class, () -> factory.buildChannel(signalBucket));
+        lastBuiltChannel = factory.buildChannel(signalBucket);
+        assertTrue(lastBuiltChannel instanceof WindGaugeChannel);
     }
 }

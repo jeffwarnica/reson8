@@ -22,7 +22,7 @@ public class CurveMapFactory {
                 ? configPointsToRecords(curveConfig.points())
                 : List.of(
                     new Point(0, 0.0),
-                    new Point(100, 1.0)
+                    new Point(100, 100.0)
                 );
             return new LinearSignalCurveMap(points);
         }
@@ -36,7 +36,6 @@ public class CurveMapFactory {
         }
 
         throw new IllegalArgumentException("Unsupported interpolation type: " + curveConfig.interpolation());
-        
     }
 
     private List<SignalCurveMap.Point> configPointsToRecords(List<Reson8Config.CurvePoint> points) {
