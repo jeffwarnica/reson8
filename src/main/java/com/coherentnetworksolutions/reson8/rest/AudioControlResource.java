@@ -99,7 +99,7 @@ public class AudioControlResource {
             mixer.setInputChannelVolume(req.channel, req.mixVol);
         }
         if (req.mixVol >= 0) {
-            mixer.getInputChannel(req.channel).setGain(req.chVol);
+            mixer.getInputChannel(req.channel).setCeiling(req.chVol);
         }
         return Response.ok().build();
     }

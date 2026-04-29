@@ -61,8 +61,8 @@ class GstDropChannelTest {
         mockBucket = mock(SignalBucket.class);
         mockWav = mock(CachedWav.class);
 
-        // SoundDefinition.drop() must be non-empty: GstDropChannel uses drop().get().gain().
-        // @WithDefault on DropConfig does not apply to Mockito mocks — stub gain() or NPE on unboxing.
+        // SoundDefinition.drop() must be non-empty: GstDropChannel uses drop().get().ceiling().
+        // @WithDefault on DropConfig does not apply to Mockito mocks — stub ceiling() or NPE on unboxing.
         var mockDef = mock(Reson8Config.SoundDefinition.class);
         var mockDropDef = mock(Reson8Config.DropConfig.class);
 
@@ -71,7 +71,7 @@ class GstDropChannelTest {
         when(mockBucket.getSoundDefinition()).thenReturn(mockDef);
         when(mockDef.drop()).thenReturn(Optional.of(mockDropDef));
         when(mockDropDef.filename()).thenReturn("test.wav");
-        when(mockDropDef.gain()).thenReturn(1.0);
+        when(mockDropDef.ceiling()).thenReturn(100.0);
 
         // Mock basic Wav info (mock Caps from toolkit — avoids native Caps.fromString / Gst.init ordering)
         when(mockWav.caps()).thenReturn(wavCaps);
@@ -90,7 +90,7 @@ class GstDropChannelTest {
         // Verify that the constructor used the toolkit to create the base bin and mixer
         assertNotNull(channel.getSrcElement());
         assertTrue(toolkit.createdElements.keySet().stream().anyMatch(el -> el.contains("TestChannel_sum")));
-        assertEquals(1.0, channel.getGain(), 1e-9, "initial gain comes from DropConfig.gain()");
+        assertEquals(100.0, channel.getCeiling(), 1e-9, "initial ceiling comes from DropConfig.ceiling()");
     }
 
     @Test
@@ -254,9 +254,9 @@ class GstDropChannelTest {
 
     @Test
     void testBasicGettersAndSetters() {
-        assertEquals(1.0, channel.getGain(), 1e-9);
-        channel.setGain(75.5);
-        assertEquals(75.5, channel.getGain());
+        assertEquals(100.0, channel.getCeiling(), 1e-9);
+        channel.setCeiling(75.5);
+        assertEquals(75.5, channel.getCeiling());
         assertEquals("TestChannel", channel.getChannelName());
 
         // Intensity is stored for REST/UI (0–100); drops do not modulate audio from it.

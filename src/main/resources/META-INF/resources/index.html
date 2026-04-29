@@ -453,14 +453,14 @@
                 </div>
 
                 <div class="slider-row">
-                    <label>Channel output volume<abbr class="info-hint" title="Output volume (clipping)">i</abbr></label>
+                    <label>Channel ceiling<abbr class="info-hint" title="Output ceiling (0–100) — caps this channel's contribution to the mix">i</abbr></label>
                     <input type="range" class="fader-slider ch-fader" id="chanFade-${ch.name}" 
                         min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.chanVol))}">
                     <span class="chFader-val">${Math.min(100, Math.max(0, ch.chanVol)).toFixed(2)}</span>
                 </div>
 
                 <div class="slider-row">
-                    <label>MIXER FADER</label>
+                    <label>Mixer fader</label>
                     <input type="range" class="fader-slider mix-fader" id="mixerFade-${ch.name}" 
                         min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.mixerVol))}">
                     <span class="mixFader-val">${ch.mixerVol.toFixed(2)}</span>

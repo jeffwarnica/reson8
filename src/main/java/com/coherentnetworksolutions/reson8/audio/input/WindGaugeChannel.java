@@ -28,7 +28,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     private double phase = 0.0;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final double smoothingRate;
-    private final double baseGain;
+    private final double outputScale;
     private final double targetVolume = 50;
     private final GstToolkit toolkit;
     private final Caps caps;// = Caps.fromString(Mixer.CAPS);
@@ -43,7 +43,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
         this.caps = toolkit.capsFromString(Mixer.CAPS);
         ProceduralConfig procedureConfig =signalBucket.getProcedureConf();
         this.smoothingRate = procedureConfig.smoothingrate();
-        this.baseGain = signalBucket.getSoundDefinition().procedural().orElseThrow().gain();
+        this.outputScale = signalBucket.getSoundDefinition().procedural().orElseThrow().outputScale();
 
         String prefix = getChannelName() + "::" + System.nanoTime() + "::";
 
@@ -97,7 +97,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
 
         toolkit.setElementProperty(filter, "cutoff", cutoffHz);
 
-        double gsVol = baseGain * curve;
+        double gsVol = outputScale * curve;
         double humanVol = VolumeScaler.gstToHumanVolume(gsVol);
 
         toolkit.setElementProperty(volume, "volume", gsVol);
@@ -116,13 +116,13 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     }
 
     @Override
-    public double getGain() {
+    public double getCeiling() {
         return (double) VolumeScaler.gstToHumanVolume((double) toolkit.getElementProperty(volume, "volume"));
     }
 
     @Override
-    public void setGain(@Min(0) @Max(100) double vol) {
-        Log.debugf("setGain([%s]", vol);
+    public void setCeiling(@Min(0) @Max(100) double vol) {
+        Log.debugf("setCeiling([%s]", vol);
         double gsVol = VolumeScaler.humanToGstVolume(vol);
         toolkit.setElementProperty(volume, "volume", gsVol);
     }

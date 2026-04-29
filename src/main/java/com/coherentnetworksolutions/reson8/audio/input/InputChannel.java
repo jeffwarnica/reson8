@@ -10,13 +10,17 @@ import jakarta.validation.constraints.Min;
 public interface InputChannel {
         void start();
         String getChannelName();
-        double getGain();
+        double getCeiling();
         // boolean supportsGain();
         
         /**
-         * @param volume coming out of input channel 0-1, unscaled
+         * Sets the output ceiling for this channel (0–100, human scale).
+         * Capped to [0, 100] and converted to the GStreamer 0–1 range internally via
+         * {@link com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler}.
+         *
+         * @param ceiling output ceiling, 0–100
          */
-        void setGain(@Min(0) @Max(100) double volume);
+        void setCeiling(@Min(0) @Max(100) double ceiling);
         // Element getElement();
         Element getSrcElement();
         Caps getCaps();

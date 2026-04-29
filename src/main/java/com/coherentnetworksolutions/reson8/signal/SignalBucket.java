@@ -108,7 +108,7 @@ public class SignalBucket {
     public void trigger() {
         Log.debugf("SignalEndpoint[%s] is type[%s]", name, soundType);
         if (soundType == SoundType.DROP) {
-            ((DropChannel) inputChannel).trigger(inputChannel.getGain());
+            ((DropChannel) inputChannel).trigger(inputChannel.getCeiling());
         }
     }
     
@@ -120,17 +120,16 @@ public class SignalBucket {
     }
 
     /**
-     * 
-     * @return "gain", the output volume of the channel
+     * @return the output ceiling of the channel (0–100)
      */
     public double getVolume() {
-        return inputChannel.getGain();
+        return inputChannel.getCeiling();
     }
 
     @Deprecated
     public void setVolume(@Min(0) @Max(100) double vol){
         Log.debugf("[%s].setVolume([%s]), pass to inputChanel", name, vol);
-        inputChannel.setGain(vol);
+        inputChannel.setCeiling(vol);
     }
 
 

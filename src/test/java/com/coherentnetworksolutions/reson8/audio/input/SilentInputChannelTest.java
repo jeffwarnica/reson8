@@ -21,10 +21,10 @@ public class SilentInputChannelTest {
 
         SilentInputChannel silent = new SilentInputChannel(mockBucket, null);
 
-        silent.setGain(50.0);
+        silent.setCeiling(50.0);
         silent.setTargetIntensity(75.0);
 
-        assertEquals(50.0, silent.getGain());
+        assertEquals(50.0, silent.getCeiling());
         assertEquals(75.0, silent.getTargetIntensity());
         assertEquals("SilentTest", silent.getChannelName());
         assertNull(silent.getSrcElement());

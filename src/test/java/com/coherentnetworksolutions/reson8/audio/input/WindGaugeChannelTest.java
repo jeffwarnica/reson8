@@ -55,12 +55,12 @@ class WindGaugeChannelTest {
         when(mockProc.intensity()).thenReturn(50.0);
         when(mockProc.smoothingrate()).thenReturn(0.8); // High smoothing for fast tests
 
-        // Setup SoundDefinition for baseGain
+        // Setup SoundDefinition for outputScale
         var mockDef = mock(Reson8Config.SoundDefinition.class);
         var mockProcedural = mock(Reson8Config.ProceduralConfig.class);
         when(mockBucket.getSoundDefinition()).thenReturn(mockDef);
         when(mockDef.procedural()).thenReturn(Optional.of(mockProcedural));
-        when(mockProcedural.gain()).thenReturn(100.0);
+        when(mockProcedural.outputScale()).thenReturn(1.0);
 
         channel = new WindGaugeChannel(mockBucket, toolkit);
     }
@@ -87,9 +87,9 @@ class WindGaugeChannelTest {
     }
 
     @Test
-    void testGainScaling() {
-        // Test that setting gain translates through our VolumeScaler logic
-        channel.setGain(50.0);
+    void testCeilingScaling() {
+        // Test that setting ceiling translates through our VolumeScaler logic
+        channel.setCeiling(50.0);
 
         // Verify the toolkit was called to set volume on the volume element
         verify(toolkit, atLeastOnce()).setElementProperty(argThat(el -> el.getName().contains("vol")), eq("volume"),

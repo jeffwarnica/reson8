@@ -34,7 +34,7 @@ public class SilentDropChannel implements DropChannel, InputChannel {
     }
 
     @Override
-    public double getGain() {
+    public double getCeiling() {
         return 6.66;
     }
 
@@ -44,7 +44,7 @@ public class SilentDropChannel implements DropChannel, InputChannel {
     // public boolean supportsIntensity() { return true;}
 
     @Override
-    public void setGain(@Min(0) @Max(100) double volume) {
+    public void setCeiling(@Min(0) @Max(100) double volume) {
         return;
     }
 

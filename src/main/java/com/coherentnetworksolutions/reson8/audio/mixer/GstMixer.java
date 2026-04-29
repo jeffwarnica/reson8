@@ -534,12 +534,12 @@ public class GstMixer implements Mixer {
             
             Pad sinkPad = volPadsOfInputs.get(name);
 
-            double channelGain = channel.getGain();
+            double channelCeiling = channel.getCeiling();
             double faderPos = (sinkPad != null) ? (double) sinkPad.get("volume") : 0.0;
             State srcState = channel.getSrcElement().getState();
 
-            sb.append(String.format("CH: %-15s | SRC: %-7s | GAIN: %.2f | FADER: %.2f\n",
-                    name.toUpperCase(), srcState, channelGain, faderPos));
+            sb.append(String.format("CH: %-15s | SRC: %-7s | CEILING: %.2f | FADER: %.2f\n",
+                    name.toUpperCase(), srcState, channelCeiling, faderPos));
 
             // Check for common link failures
             if (sinkPad == null || !sinkPad.isLinked()) {

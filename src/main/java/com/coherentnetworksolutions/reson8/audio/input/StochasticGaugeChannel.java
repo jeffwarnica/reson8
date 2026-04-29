@@ -27,8 +27,6 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.Stochasti
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 
 /**
  * A gauge channel that generates a stochastic soundscape (e.g. crickets) by
@@ -62,7 +60,6 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
      */
     private final double pitchRandomization;
     private final List<ChirpSlot> slots;
-    private double gain = 100.0;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "stochastic-tick");
@@ -79,7 +76,8 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
         this.smoothingRate = stochasticConfig.smoothingrate();
         this.maxSimultaneous = stochasticConfig.maxSimultaneous();
         this.pitchRandomization = stochasticConfig.pitchRandomization();
-
+        initCeiling(stochasticConfig.ceiling());
+        
         this.hitBundle = new SoundHitBundle(stochasticConfig.directory(), config, wavCache);
         if (hitBundle.isEmpty()) {
             throw new IllegalArgumentException(
@@ -144,7 +142,7 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
             }
             CachedWav wav = hitBundle.getRandomCachedWav();
             if (wav == null) break;
-            slot.play(wav, VolumeScaler.humanToGstVolume(gain));
+            slot.play(wav, VolumeScaler.humanToGstVolume(getCeiling()));
         }
     }
 
@@ -245,16 +243,6 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
     @Override
     public Caps getCaps() {
         return bundleCaps;
-    }
-
-    @Override
-    public void setGain(@Min(0) @Max(100) double volume) {
-        this.gain = volume;
-    }
-
-    @Override
-    public double getGain() {
-        return gain;
     }
 
     @Override

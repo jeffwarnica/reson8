@@ -13,7 +13,7 @@ public class SilentInputChannel implements InputChannel {
 
     private String channelName;
     private @Min(0) @Max(100) double intensity;
-    private @Min(0) @Max(100) double gain;
+    private @Min(0) @Max(100) double ceiling;
     private GstToolkit toolkit;
 
     public SilentInputChannel(SignalBucket signalEndpoint, GstToolkit toolkit) {
@@ -32,8 +32,8 @@ public class SilentInputChannel implements InputChannel {
     }
 
     @Override
-    public double getGain() {
-        return gain;
+    public double getCeiling() {
+        return ceiling;
     }
 
     // @Override
@@ -42,8 +42,8 @@ public class SilentInputChannel implements InputChannel {
     // public boolean supportsIntensity() {return true;}
 
     @Override
-    public void setGain(@Min(0) @Max(100) double gain) {
-        this.gain = gain;
+    public void setCeiling(@Min(0) @Max(100) double ceiling) {
+        this.ceiling = ceiling;
     }
 
     @Override

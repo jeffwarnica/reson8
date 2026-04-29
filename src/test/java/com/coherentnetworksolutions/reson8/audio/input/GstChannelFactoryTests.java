@@ -75,12 +75,12 @@ public class GstChannelFactoryTests {
         when(mockDef.loop()).thenReturn(Optional.of(loopConfig));
 
         when(loopConfig.filename()).thenReturn("trickling_water.wav");
-        when(loopConfig.gain()).thenReturn(100.0);
+        when(loopConfig.outputScale()).thenReturn(1.0);
         when(loopConfig.smoothingrate()).thenReturn(0.02);
 
         when(mockDef.loop()).thenReturn(Optional.of(loopConfig));
         when(loopConfig.filename()).thenReturn("trickling_water.wav");
-        when(loopConfig.gain()).thenReturn(100.0);
+        when(loopConfig.outputScale()).thenReturn(1.0);
 
         // Add other necessary mocks for construction...
 
@@ -96,7 +96,7 @@ public class GstChannelFactoryTests {
 
         when(proc.intensity()).thenReturn(50.0);
         when(proc.smoothingrate()).thenReturn(0.02);
-        when(proc.gain()).thenReturn(100.0);
+        when(proc.outputScale()).thenReturn(1.0);
         
         when(signalBucket.getSoundDefinition()).thenReturn(mockDef);
         when(signalBucket.getProcedureConf()).thenReturn(proc);
@@ -106,7 +106,7 @@ public class GstChannelFactoryTests {
         when(mockDef.name()).thenReturn("wind");
         when(signalBucket.getName()).thenReturn("wind");
         when(proc.className()).thenReturn("WindGaugeChannel");
-        when(proc.gain()).thenReturn(100.0);
+        when(proc.outputScale()).thenReturn(1.0);
 
         lastBuiltChannel = factory.buildChannel(signalBucket);
         assertTrue(lastBuiltChannel instanceof WindGaugeChannel);
@@ -124,7 +124,7 @@ public class GstChannelFactoryTests {
 
         when(mockDef.drop()).thenReturn(Optional.of(dropConfig));
         when(dropConfig.filename()).thenReturn("drop_sound.wav");
-        when(dropConfig.gain()).thenReturn(1.0);
+        when(dropConfig.ceiling()).thenReturn(100.0);
 
         when(factory.wavCache.getOrLoad("drop_sound.wav")).thenReturn(cachedWav);
 

@@ -111,6 +111,9 @@ public interface Reson8Config {
         String directory(); // directory containing multiple sound files to randomly choose from
         @WithDefault("32")
         int maxSimultaneous(); // max number of simultaneous sounds from this directory
+        @WithDefault("100.0")
+        @WithName("ceiling")
+        Double ceiling();
         @WithDefault("0.1")
         double pitchRandomization(); // random pitch variation in semitones (e.g. 0.1 = +/- 0.1 semitones)
         @WithDefault("poisson")
@@ -131,7 +134,8 @@ public interface Reson8Config {
         String filename();
         
         @WithDefault("1.0")
-        Double gain();
+        @WithName("output-scale")
+        Double outputScale();
         @WithDefault("0.02")
         @WithName("smoothingrate")
         Double smoothingrate();
@@ -139,8 +143,9 @@ public interface Reson8Config {
 
     interface DropConfig {
         String filename();
-        @WithDefault("1.0")
-        Double gain();
+        @WithDefault("100.0")
+        @WithName("ceiling")
+        Double ceiling();
     }
 
     interface ProceduralConfig {
@@ -149,8 +154,9 @@ public interface Reson8Config {
         
         Optional<Double> phase();
 
-        @WithName("gain")
-        Double gain();
+        @WithDefault("1.0")
+        @WithName("output-scale")
+        Double outputScale();
 
         @WithName("cutoffmin")
         Optional<Double> cutoffmin();

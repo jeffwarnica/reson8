@@ -72,7 +72,7 @@ class MixerTest {
         
         when(mockChannel.getChannelName()).thenReturn("test-ch");
         when(mockChannel.getSrcElement()).thenReturn(fakeSrc);
-        when(mockChannel.getGain()).thenReturn(1.0);
+        when(mockChannel.getCeiling()).thenReturn(80.0);
 
         mixer.addInputChannel(mockChannel);
         

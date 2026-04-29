@@ -15,6 +15,7 @@ import org.freedesktop.gstreamer.elements.AppSrc;
 
 import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
+import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
@@ -31,8 +32,6 @@ import jakarta.validation.constraints.Min;
 public class GstDropChannel extends BaseInputChannel implements DropChannel {
 
     private final CachedWav cachedWav;
-
-    private double volume;
 
     private Bin channelBin;
     private Element channelMixer;
@@ -58,7 +57,7 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
         this.cachedWav = cachedWav;
         this.toolkit = toolkit;
 
-        this.volume = signalEndpoint.getSoundDefinition().drop().get().gain();
+        initCeiling(signalEndpoint.getSoundDefinition().drop().get().ceiling());
 
         this.channelBin = toolkit.createBin(getChannelName() + "_bin");
         this.channelMixer = toolkit.makeElement("audiomixer", getChannelName() + "_sum");
@@ -80,13 +79,13 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
 
     @Override
     public void trigger(@Min(0) @Max(100) double volume) {
-        Log.debugf("Channel [%s] triggered with volume [%s]", getChannelName(), volume);
+        Log.debugf("Channel [%s] triggered", getChannelName());
         Log.debugf("Channel [%s] channelMixer.state is [%s]", getChannelName(), channelMixer.getState());
         Log.debugf("Channel [%s] channelBin.state is [%s]", getChannelName(), channelBin.getState());
 
         CompletableFuture.runAsync(() -> {
             try {
-                DropInstance dropInstance = new DropInstance(cachedWav, volume);
+                DropInstance dropInstance = new DropInstance(cachedWav, VolumeScaler.humanToGstVolume(getCeiling()));
 
                 synchronized (binLock) {
                     toolkit.setElementState(channelBin, State.PLAYING);
@@ -100,7 +99,7 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
             }
         }, TRIGGER_EXECUTOR);
 
-        Log.debugf("[%s] Triggered instance with volume %.2f", getChannelName(), volume);
+        Log.debugf("[%s] Triggered instance with volume %.2f (ceiling: %.2f)", getChannelName(), VolumeScaler.humanToGstVolume(getCeiling()), getCeiling());
     }
 
     @Override
@@ -111,16 +110,6 @@ public class GstDropChannel extends BaseInputChannel implements DropChannel {
     @Override
     public Caps getCaps() {
         return cachedWav.caps();
-    }
-
-    @Override
-    public void setGain(@Min(0) @Max(100) double volume) {
-        this.volume = volume;
-    }
-
-    @Override
-    public double getGain() {
-        return volume;
     }
 
     @Override

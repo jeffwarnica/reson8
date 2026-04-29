@@ -186,8 +186,8 @@ class AudioControlResourceTest {
 
         // chVol (50.0) ≥ 0 → setInputChannelVolume called (using req.mixVol as value)
         verify(mixer).setInputChannelVolume("wind", 80.0);
-        // mixVol (80.0) ≥ 0 → setGain called (using req.chVol as value)
-        verify(mockChannel).setGain(50.0);
+        // mixVol (80.0) ≥ 0 → setCeiling called (using req.chVol as value)
+        verify(mockChannel).setCeiling(50.0);
     }
 
     @Test
@@ -207,8 +207,8 @@ class AudioControlResourceTest {
     }
 
     @Test
-    @DisplayName("POST /fader: negative mixVol skips the channel gain update")
-    void setFader_negativeMixVol_skipsSetGain() {
+    @DisplayName("POST /fader: negative mixVol skips the channel ceiling update")
+    void setFader_negativeMixVol_skipsSetCeiling() {
         given()
             .contentType(ContentType.JSON)
             .body("{\"channel\":\"wind\",\"chVol\":50.0,\"mixVol\":-1.0}")
@@ -216,7 +216,7 @@ class AudioControlResourceTest {
             .then()
             .statusCode(200);
 
-        // mixVol (-1.0) < 0 → getInputChannel never called, setGain never called
+        // mixVol (-1.0) < 0 → getInputChannel never called, setCeiling never called
         verify(mixer, never()).getInputChannel(anyString());
     }
 

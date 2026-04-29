@@ -27,8 +27,8 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     private final Element volume;
     private PlayBin playBin;
     private String gsUri;
-    /** Linear multiplier on procedural VCA (0–1), from loop config gain. */
-    private final double baseGain;
+    /** Linear multiplier on procedural VCA (0–1), from loop config output-scale. */
+    private final double outputScale;
     private final GstToolkit toolkit;
     private final Caps caps;
 
@@ -65,9 +65,9 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
         Log.debug("About to create volume");
 
         volume = toolkit.makeElement("volume", prefix + "vol");
-        double initialGain = signalBucket.getSoundDefinition().loop().orElseThrow().gain();
-        this.baseGain = initialGain;
-        toolkit.setElementProperty(volume, "volume", initialGain * 1.0);
+        double initialScale = signalBucket.getSoundDefinition().loop().orElseThrow().outputScale();
+        this.outputScale = initialScale;
+        toolkit.setElementProperty(volume, "volume", initialScale * 1.0);
 
         Element endPoint = toolkit.makeElement("identity", prefix + "end");
 
@@ -110,7 +110,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
         toolkit.setElementProperty(filter, "ripple", ripple);
 
         double vcaValue = 0.1 + (norm * 0.9);
-        double gstLinear = vcaValue * baseGain;
+        double gstLinear = vcaValue * outputScale;
         toolkit.setElementProperty(volume, "volume", gstLinear);
 
         Log.tracef("[%s] Water flow intensity: %.1f%% (Cutoff: %.0fHz, Ripple: %.1f, Vol: %.2f)",
@@ -128,7 +128,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     }
 
     @Override
-    public void setGain(@Min(0) @Max(100) double vol) {
+    public void setCeiling(@Min(0) @Max(100) double vol) {
         double gsVol = VolumeScaler.humanToGstVolume(vol);
         toolkit.setElementProperty(volume, "volume", gsVol);
     }
@@ -140,7 +140,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     }
 
     @Override
-    public double getGain() {
+    public double getCeiling() {
         return VolumeScaler.gstToHumanVolume((double) toolkit.getElementProperty(volume, "volume"));
     }
 
