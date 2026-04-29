@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
+import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
@@ -60,6 +61,8 @@ class AudioControlResourceTest {
         when(bucket.getCurrentIntensity()).thenReturn(45.0);
         when(bucket.isDrop()).thenReturn(false);
         when(bucket.getSourceType()).thenReturn(SourceType.PROMETHEUS);
+        SignalCurveMap curve1 = mockCurve();
+        when(bucket.getCurve()).thenReturn(curve1);
         when(mixer.getInputChannelVolume("wind")).thenReturn(0.8);
         when(signalManager.getSignalBuckets()).thenReturn(List.of(bucket));
 
@@ -85,6 +88,8 @@ class AudioControlResourceTest {
         when(bucket.getName()).thenReturn("pod-killed");
         when(bucket.isDrop()).thenReturn(true);
         when(bucket.getSourceType()).thenReturn(SourceType.KUBERNETES_EVENT);
+        SignalCurveMap curve2 = mockCurve();
+        when(bucket.getCurve()).thenReturn(curve2);
         when(signalManager.getSignalBuckets()).thenReturn(List.of(bucket));
 
         given()
@@ -271,6 +276,18 @@ class AudioControlResourceTest {
         SignalBucket b = mock(SignalBucket.class);
         when(b.getName()).thenReturn(name);
         when(b.getSourceType()).thenReturn(sourceType);
+        SignalCurveMap curve = mockCurve();
+        when(b.getCurve()).thenReturn(curve);
         return b;
+    }
+
+    /** Returns a stub {@link SignalCurveMap} with a trivial linear identity over [0, 100]. */
+    private SignalCurveMap mockCurve() {
+        SignalCurveMap curve = mock(SignalCurveMap.class);
+        when(curve.minInput()).thenReturn(0.0);
+        when(curve.maxInput()).thenReturn(100.0);
+        when(curve.map(anyDouble())).thenAnswer(inv -> inv.getArgument(0));
+        when(curve.mapUnclamped(anyDouble())).thenAnswer(inv -> inv.getArgument(0));
+        return curve;
     }
 }
