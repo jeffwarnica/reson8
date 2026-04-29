@@ -7,7 +7,6 @@
         :root {
             --primary: #0056b3;
             --k8s: #326ce5;
-            --prometheus: #e65100;
             --accent: #ff5722;
         }
 
@@ -26,43 +25,51 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        /* Flow Layout */
+        .signal-chain {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
         .channel-strip {
             background: #f8f9fa;
-            border-left: 8px solid var(--primary);
-            /* Default color */
+            border-left: 5px solid var(--primary);
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 15px;
         }
 
-        /* Channel Type Styles */
-        .type-k8s {
-            border-left-color: var(--k8s);
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
-        .type-prometheus {
-            border-left-color: var(--prometheus);
-        }
-
-        .type-drop {
-            border-left-color: #673ab7;
-        }
-
-        .tag {
-            font-size: 0.7em;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
+        .channel-name {
             font-weight: bold;
-            vertical-align: middle;
+            font-size: 1.1em;
         }
 
-        .tag-k8s {
-            background: var(--k8s);
+        .map-type {
+            margin-left: 8px;
         }
 
-        .tag-prom {
-            background: var(--prometheus);
+        .status-tag {
+            background: #e3f2fd;
+            color: var(--k8s);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
         }
 
         .slider-row {
@@ -73,24 +80,85 @@
         }
 
         .slider-row label {
-            width: 130px;
+            min-width: 158px;
+            width: 158px;
+            flex-shrink: 0;
             font-size: 0.85em;
             color: #666;
             font-weight: bold;
         }
 
-        .intensity-input {
-            width: 80px;
-            padding: 4px;
-            font-family: monospace;
+        .slider-row input[type=range]:not(.intensity-slider) {
+            flex-grow: 1;
         }
 
+        .info-hint {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            margin-left: 4px;
+            border-radius: 50%;
+            border: 1px solid #90a4ae;
+            color: #455a64;
+            font-size: 9px;
+            font-weight: bold;
+            font-style: normal;
+            cursor: help;
+            vertical-align: middle;
+            line-height: 1;
+            text-decoration: none;
+        }
+
+        .intensity-slider-wrap {
+            position: relative;
+            flex-grow: 1;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            padding-right: 62px;
+        }
+
+        .intensity-slider-wrap .intensity-slider {
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .current-intensity-badge {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.72em;
+            font-family: monospace;
+            color: #37474f;
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid #b0bec5;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: help;
+            z-index: 2;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            text-decoration: none;
+        }
+
+        .slider-row span {
+            min-width: 35px;
+            font-family: monospace;
+            font-size: 0.9em;
+            background: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* Status Colors */
         .intensity-bar-container {
             height: 8px;
             background: #ddd;
             border-radius: 4px;
             overflow: hidden;
-            margin: 10px 0;
+            margin: 5px 0;
         }
 
         .intensity-bar-fill {
@@ -100,6 +168,17 @@
             transition: width 0.3s;
         }
 
+        .k8s-toggle {
+            background: #e3f2fd;
+            border: 1px solid var(--k8s);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
         #debugLog {
             width: 100%;
             height: 180px;
@@ -107,7 +186,34 @@
             color: #81c784;
             font-family: 'Consolas', monospace;
             padding: 10px;
+            border: none;
             border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-play {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-drop {
+            background: #673ab7;
+            color: white;
+            font-size: 0.8em;
+        }
+
+        .btn-stop {
+            background: #d32f2f;
+            color: white;
         }
     </style>
 </head>
@@ -120,30 +226,51 @@
             <div class="k8s-toggle">
                 <strong>K8s Signal Sync:</strong>
                 <input type="checkbox" id="k8sActive" checked>
-                <span id="k8sStatusText">ACTIVE</span>
+                <span id="k8sStatusText" style="color:var(--k8s)">ACTIVE</span>
             </div>
             <div>
-                <button id="startBtn" style="background:var(--primary); color:white;">▶ Start Stream</button>
-                <button id="stopBtn" style="background:#d32f2f; color:white;" disabled>■ Stop</button>
+                <button id="startBtn" class="btn-play">▶ Start Stream</button>
+                <button id="stopBtn" class="btn-stop" disabled>■ Stop</button>
             </div>
+            <audio id="audioPlayer"></audio>
+            <div id="connectionStatus" class="status">Status: Disconnected</div>
         </div>
 
-        <div class="slider-row" style="background: #f1f8e9; padding: 10px; border-radius: 8px; margin-top: 15px;">
+        <div class="slider-row" style="background: #fff3e0; padding: 10px; border-radius: 8px;">
+            <label>OUTPUT (Server)</label>
+            <input type="range" id="serverMasterVol" min="0" max="100" step="0.01">
+            <span id="serverMasterVolVal">0.00</span>
+            <small>Global for all users</small>
+        </div>
+
+        <div class="slider-row" style="background: #f1f8e9; padding: 10px; border-radius: 8px;">
             <label>LOCAL (Browser)</label>
-            <input type="range" id="localVol" min="0" max="1" step="0.01" value="0.5">
-            <span id="localVolVal">0.50</span>
+            <input type="range" id="localVol" min="0" max="100" step="0.01" value="0.2">
+            <span id="localVolVal">0.20</span>
         </div>
     </div>
 
-    <div class="signal-chain" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div class="card">
-            <h2>Mixer Channels</h2>
-            <div id="chList"></div>
+    <div class="signal-chain">
+        <div id="channelsContainer">
+            <div class="card">
+                <h2>Mixer Channels</h2>
+                <div id="chList"></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2>Pipeline Log</h2>
-            <textarea id="debugLog" readonly></textarea>
+        <div>
+            <!--
+                <div class="card">
+                    <h2>Sound Drops</h2>
+                    <div id="dropsList"></div>
+                </div>
+            -->
+
+            <div class="card">
+                <h2>Pipeline Log</h2>
+                <button onclick="fetchMixerDump()" style="font-size: 10px;">Refresh Dump</button>
+                <textarea id="debugLog" readonly></textarea>
+            </div>
         </div>
     </div>
 
@@ -151,39 +278,164 @@
 
     <script>
         const audio = document.getElementById('audioPlayer');
-        const activeSliders = new Set();
+        const k8sCheck = document.getElementById('k8sActive');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('connectionStatus');
+        let activeSliders = new Set(); // Tracks sliders the user is currently touching
 
-        // Fix Local Volume immediately on interaction
-        document.getElementById('localVol').oninput = (e) => {
-            const val = parseFloat(e.target.value);
-            audio.volume = val;
-            document.getElementById('localVolVal').innerText = val.toFixed(2);
+        // --- STREAM LOGIC ---
+
+            startBtn.onclick = () => {
+            status.innerText = "Status: Connecting...";
+            audio.src = '';
+            audio.load();
+            audio.src = '/audio/stream?t=' + Date.now();
+            audio.play().then(() => {
+                isStreaming = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                status.innerText = "Status: Streaming Live Assets...";
+                status.style.color = "green";
+            }).catch(e => {
+                console.error("Error:", e);
+                status.innerText = "Status: Error";
+                status.style.color = "red";
+            });
         };
+
+        stopBtn.onclick = () => {
+            isStreaming = false;
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.innerText = "Status: Disconnected";
+            status.style.color = "#666";
+        };
+
+        // --- CORE SYNC LOGIC ---
+
+        async function syncState() {
+            try {
+                const res = await fetch('/audio/control/state');
+                const state = await res.json();
+
+                
+                // We only update it if the user isn't clicking it (standard safety)
+                k8sCheck.checked = state.k8sSyncActive;
+                document.getElementById('k8sStatusText').innerText = state.k8sSyncActive ? "ACTIVE" : "PAUSED";
+                document.getElementById('k8sStatusText').style.color = state.k8sSyncActive ? "var(--k8s)" : "var(--accent)"
+
+                // 1. Update Global Master
+                if (!activeSliders.has('serverMasterVol')) {
+                    document.getElementById('serverMasterVol').value = state.masterVolume;
+                    document.getElementById('serverMasterVolVal').innerText = state.masterVolume.toFixed(2);
+                }
+
+                // 2. Update Channels
+                state.channels.forEach(ch => {
+                    updateChannelUI(ch);
+                });
+            } catch (e) { console.error("Sync failed", e); }
+        }
+
+        function updateChannelUI(ch) {
+            const row = document.getElementById(`ch-${ch.name}`);
+            if (!row) return;
+
+            const currentPct = Math.min(100, Math.max(0, ch.currentIntensity ?? 0));
+            const bar = row.querySelector('.intensity-bar-fill');
+            if (bar) bar.style.width = currentPct + '%';
+
+            const badge = row.querySelector('.current-intensity-badge');
+            if (badge) badge.textContent = 'Live ' + Math.round(currentPct) + '%';
+
+            const intensitySlider = row.querySelector('.intensity-slider');
+            if (intensitySlider && !activeSliders.has(intensitySlider.id)) {
+                const target = Math.min(100, Math.max(0, ch.targetIntensity ?? 0));
+                intensitySlider.value = target;
+                const tv = row.querySelector('.intensity-target-val');
+                if (tv) tv.textContent = target.toFixed(1);
+            }
+
+            // Update Faders if not being touched - both chanVol and mixVol are 0-100
+            const chFader = row.querySelector('.ch-fader');
+            if (!activeSliders.has(chFader.id)) {
+                const chanVolPercent = Math.min(100, Math.max(0, ch.chanVol));
+                chFader.value = chanVolPercent;
+                row.querySelector('.chFader-val').innerText = chanVolPercent.toFixed(2);
+            }
+            const mixFader = row.querySelector('.mix-fader');
+            if (!activeSliders.has(mixFader.id)) {
+                const mixerVolPercent = Math.min(100, Math.max(0, ch.mixerVol)); // mixVol is already 0-100
+                mixFader.value = mixerVolPercent;
+                row.querySelector('.mixFader-val').innerText = mixerVolPercent.toFixed(2);
+            }
+        }
+
+        // --- INTERACTION ---
+
+        async function postControl(path, body) {
+            await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        }
+
+        async function patchTargetIntensity(channelName, targetIntensity) {
+            await fetch('/audio/control/channels/' + encodeURIComponent(channelName) + '/target-intensity', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetIntensity })
+            });
+        }
+
+        // Global K8s Toggle
+        k8sCheck.onchange = async () => {
+            const active = k8sCheck.checked;
+            document.getElementById('k8sStatusText').innerText = active ? "ACTIVE" : "PAUSED";
+            await fetch(`/audio/control/k8s-sync/${active}`, { method: 'POST' });
+        };
+
+        // Local Browser Volume (0-100% -> 0.0-1.0 for HTML audio)
+        document.getElementById('localVol').oninput = (e) => {
+            const volumePercent = parseFloat(e.target.value);
+            audio.volume = volumePercent / 100; // Convert 0-100% to 0.0-1.0
+            document.getElementById('localVolVal').innerText = volumePercent.toFixed(2);
+        };
+
+        // Initialize local volume display
+        document.getElementById('localVolVal').innerText = 
+            parseFloat(document.getElementById('localVol').value).toFixed(2);
+
+        // --- INITIALIZATION ---
 
         async function init() {
             const res = await fetch('/audio/control/channels');
             const channels = await res.json();
             const list = document.getElementById('chList');
-
+            
             channels.forEach(ch => {
                 const div = document.createElement('div');
                 div.id = `ch-${ch.name}`;
+                div.className = 'channel-strip';
 
-                // Set class based on SourceType
-                const typeClass = ch.sourceType === 'PROMETHEUS' ? 'type-prometheus' : 'type-k8s';
-                div.className = `channel-strip ${typeClass}`;
-
-                const isProm = ch.sourceType === 'PROMETHEUS';
-                const tag = isProm ? '<span class="tag tag-prom">THANOS</span>' : '<span class="tag tag-k8s">K8S</span>';
-
-                // Use an Input box for Thanos (unbounded scale), Slider for K8s (0-1.0)
-                const intensityControl = isProm
-                    ? `<input type="number" class="intensity-input" id="int-${ch.name}" value="${ch.intensity}" step="0.1">`
-                    : `<input type="range" class="intensity-slider" id="int-${ch.name}" min="0" max="1" step="0.01" value="${ch.intensity}">`;
+                const sourceLabel = (ch.sourceType || ch.mapType || '').toString();
+                const mapTypeDisplay = sourceLabel
+                    ? `<span class="map-type" style="background: #e8f5e8; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold;">${sourceLabel.replace(/_/g, ' ').toUpperCase()}</span>`
+                    : '';
+                const headerAction = ch.isDrop
+                    ? `<button class="btn-drop" onclick="playDrop('${ch.name}')">▶ TRIGGER DROP</button>`
+                    : `<span class="status-tag">CONTINUOUS</span>`;
 
                 div.innerHTML = `
-                <div class="channel-header" style="display:flex; justify-content:space-between;">
-                    <span class="channel-name">${tag} ${ch.name.toUpperCase()}</span>
+                <div class="channel-header">
+                    <span class="channel-name">${ch.name.toUpperCase()}</span>
+                    ${mapTypeDisplay}
+                    ${headerAction}
                 </div>
                 
                 <div class="intensity-bar-container">
@@ -191,67 +443,62 @@
                 </div>
                 
                 <div class="slider-row">
-                    <label>SIGNAL INTENSITY</label>
-                    ${intensityControl}
-                    <span class="intensity-val">0%</span>
+                    <label>Signal intensity (target)<abbr class="info-hint" title="Desired signal level (0–100%). This is what you or k8s sync ask for; the sound engine may ramp smoothly toward it.">i</abbr></label>
+                    <div class="intensity-slider-wrap">
+                        <abbr class="current-intensity-badge" title="Current signal level (0–100%) the channel is using right now. It can differ from target while easing or when metrics update.">Live ${Math.round(Math.min(100, Math.max(0, ch.currentIntensity ?? 0)))}%</abbr>
+                        <input type="range" class="intensity-slider" id="int-${ch.name}"
+                            min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.targetIntensity ?? 0))}">
+                    </div>
+                    <span class="intensity-target-val">${(Math.min(100, Math.max(0, ch.targetIntensity ?? 0))).toFixed(1)}</span>
+                </div>
+
+                <div class="slider-row">
+                    <label>Channel output volume<abbr class="info-hint" title="Output volume (clipping)">i</abbr></label>
+                    <input type="range" class="fader-slider ch-fader" id="chanFade-${ch.name}" 
+                        min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.chanVol))}">
+                    <span class="chFader-val">${Math.min(100, Math.max(0, ch.chanVol)).toFixed(2)}</span>
                 </div>
 
                 <div class="slider-row">
                     <label>MIXER FADER</label>
-                    <input type="range" class="mix-fader" id="mixerFade-${ch.name}" min="0" max="1" step="0.01" value="${ch.mixerVol || 0}">
-                    <span class="mixFader-val">${(ch.mixerVol || 0).toFixed(2)}</span>
+                    <input type="range" class="fader-slider mix-fader" id="mixerFade-${ch.name}" 
+                        min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.mixerVol))}">
+                    <span class="mixFader-val">${ch.mixerVol.toFixed(2)}</span>
                 </div>
                 `;
                 list.appendChild(div);
 
-                // Handle Input/Slider events
-                const intCtrl = div.querySelector(isProm ? '.intensity-input' : '.intensity-slider');
-                intCtrl.oninput = (e) => {
-                    const val = parseFloat(e.target.value);
-                    fetch(`/audio/control/channels/${ch.name}/intensity/${val}`, { method: 'PATCH' });
-                };
+                // Event Listeners for Sliders
+                const chfader = div.querySelector('.ch-fader');
+                chfader.onmousedown = () => activeSliders.add(chfader.id);
+                chfader.onmouseup = () => activeSliders.delete(chfader.id);
+                chfader.oninput = (e) => postControl('/audio/control/fader', { channel: ch.name, mixVol: parseFloat(div.querySelector('.mix-fader').value), chVol: parseFloat(e.target.value) });
 
                 const mixfader = div.querySelector('.mix-fader');
                 mixfader.onmousedown = () => activeSliders.add(mixfader.id);
                 mixfader.onmouseup = () => activeSliders.delete(mixfader.id);
-                mixfader.oninput = (e) => {
-                    const val = parseFloat(e.target.value);
-                    fetch('/audio/control/fader', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ channel: ch.name, mixVol: val })
-                    });
+                mixfader.oninput = (e) => postControl('/audio/control/fader', { channel: ch.name, mixVol: parseFloat(e.target.value), chVol: parseFloat(div.querySelector('.ch-fader').value )});
+
+                const intensity = div.querySelector('.intensity-slider');
+                intensity.onmousedown = () => activeSliders.add(intensity.id);
+                intensity.onmouseup = () => activeSliders.delete(intensity.id);
+                intensity.onmouseleave = () => activeSliders.delete(intensity.id);
+                intensity.oninput = (e) => {
+                    const v = parseFloat(e.target.value);
+                    div.querySelector('.intensity-target-val').textContent = v.toFixed(1);
+                    patchTargetIntensity(ch.name, v);
                 };
             });
 
+            // Start Polling every 500ms
             setInterval(syncState, 500);
         }
 
-        async function syncState() {
-            try {
-                const res = await fetch('/audio/control/state');
-                const state = await res.json();
-
-                state.channels.forEach(ch => {
-                    const row = document.getElementById(`ch-${ch.name}`);
-                    if (!row) return;
-
-                    // Update the visual progress bar (clamped 0-100 for display)
-                    const barFill = ch.intensity > 1 ? 1 : (ch.intensity < 0 ? 0 : ch.intensity);
-                    row.querySelector('.intensity-bar-fill').style.width = (barFill * 100) + '%';
-                    row.querySelector('.intensity-val').innerText = (ch.intensity).toFixed(3);
-
-                    // Update Faders only if not being touched
-                    const fader = row.querySelector('.mix-fader');
-                    if (!activeSliders.has(fader.id)) {
-                        const vol = ch.mixerVol || 0; // Fallback to 0 if undefined
-                        fader.value = vol;
-                        row.querySelector('.mixFader-val').innerText = vol.toFixed(2);
-                    }
-                });
-            } catch (e) { }
+        async function playDrop(name) {
+            await postControl('/audio/drop', { drop: name });
         }
 
+        // Standard stream start/stop logic remains same...
         init();
     </script>
 </body>

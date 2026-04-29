@@ -242,6 +242,11 @@ public class MockGstToolkit implements GstToolkit {
     }
 
     @Override
+    public void setAppSrcCaps(AppSrc appSrc, Caps caps) {
+        Log.debugf("MockToolkit: setAppSrcCaps on [%s]", appSrc.getName());
+    }
+
+    @Override
     public void connectNeedData(AppSrc appSrc, AppSrc.NEED_DATA callback) {
         this.capturedNeedData = callback;
         this.allCapturedNeedData.add(callback);

@@ -115,7 +115,10 @@ public interface Reson8Config {
         double pitchRandomization(); // random pitch variation in semitones (e.g. 0.1 = +/- 0.1 semitones)
         @WithDefault("poisson")
         StochasticDistribution distribution(); // distribution for random selection of files
-        double variance(); 
+        double variance();
+        @WithDefault("0.05")
+        @WithName("smoothingrate")
+        double smoothingrate();
     }
 
     public enum StochasticDistribution {
