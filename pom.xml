@@ -144,6 +144,12 @@
             <version>4.9.3</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.1</version>
+            <scope>test</scope>
+        </dependency>
 
 
     </dependencies>
@@ -215,6 +221,53 @@
                         <goals><goal>check</goal></goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.19.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.2</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <!-- Scope: pure domain-logic classes where a subtle bug is dangerous -->
+                    <targetClasses>
+                        <param>com.coherentnetworksolutions.reson8.audio.utils.map.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>com.coherentnetworksolutions.reson8.audio.utils.map.*</param>
+                    </targetTests>
+                    <!-- VolumeScalerTest uses @QuarkusTest for CDI/GStreamer guard checks —
+                         it cannot run under PITest's classloader. VolumeScalerMutationTest
+                         covers the same math as plain JUnit5 for mutation purposes.
+                         Integration tests and GStreamer-native tests are also excluded. -->
+                    <excludedTestClasses>
+                        <param>*IT</param>
+                        <param>com.coherentnetworksolutions.reson8.audio.utils.VolumeScalerTest</param>
+                    </excludedTestClasses>
+                    <!-- Interfaces have no mutable bytecode -->
+                    <excludedClasses>
+                        <param>com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap</param>
+                    </excludedClasses>
+                    <avoidCallsTo>
+                        <avoidCallsTo>io.quarkus.logging.Log</avoidCallsTo>
+                        <avoidCallsTo>org.jboss.logging.Logger</avoidCallsTo>
+                    </avoidCallsTo>
+                    <outputFormats>
+                        <outputFormat>HTML</outputFormat>
+                        <outputFormat>XML</outputFormat>
+                    </outputFormats>
+                    <!-- Keeps report path stable across runs -->
+                    <timestampedReports>false</timestampedReports>
+                    <!-- Build fails if mutation score drops below this threshold.
+                         Calibrated on first run: 70.9% killed (144/203 mutations).
+                         Raise this gradually as tests improve. -->
+                    <mutationThreshold>70</mutationThreshold>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
