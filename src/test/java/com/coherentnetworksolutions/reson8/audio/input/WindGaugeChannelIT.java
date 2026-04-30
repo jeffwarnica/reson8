@@ -20,7 +20,7 @@ import jakarta.inject.Inject;
 
 @QuarkusTest
 @TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
-class WindGaugeChannelIntegrationTest {
+class WindGaugeChannelIT {
 
     @Inject
     GstToolkit toolkit; // NativeGstToolkit in this profile

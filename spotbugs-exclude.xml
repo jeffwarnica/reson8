@@ -1,0 +1,142 @@
+<FindBugsFilter>
+
+    <!-- ===================================================================
+         EXCLUDED PACKAGES: third-party native code, not our responsibility
+         =================================================================== -->
+    <Match>
+        <Package name="~org\.freedesktop\.gstreamer.*"/>
+    </Match>
+    <Match>
+        <Package name="~com\.sun\.jna.*"/>
+    </Match>
+
+    <!-- ===================================================================
+         EI_EXPOSE_REP / EI_EXPOSE_REP2 — audio layer
+         GstToolkit is the CDI abstraction interface (gstreamer-access.mdc).
+         GStreamer native objects (Bin, Caps, Element, Pad, AppSrc) are
+         inherently mutable native handles. Defensive copying is impossible.
+         WavCache.CachedWav.caps is a GStreamer Caps handle; pcmData is a
+         bulk-loaded byte array treated as immutable after construction.
+         =================================================================== -->
+    <Match>
+        <Bug code="EI,EI2"/>
+        <Package name="~com\.coherentnetworksolutions\.reson8\.audio.*"/>
+    </Match>
+
+    <!-- ===================================================================
+         EI_EXPOSE_REP / EI_EXPOSE_REP2 — k8s / Thanos response records
+         ThanosData, ThanosLabelResponse, ThanosResult are Jackson-deserialized
+         response DTOs. The List fields they hold are owned by the record and
+         not shared with any caller after creation.
+         =================================================================== -->
+    <Match>
+        <Bug code="EI,EI2"/>
+        <Source name="ThanosMetricPoller.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         EI_EXPOSE_REP2 — AudioControlResource$MixerStateDTO
+         Non-static inner class captures outer-class reference (this$0) by
+         design; the DTO is only ever used within the same request scope.
+         =================================================================== -->
+    <Match>
+        <Bug code="EI,EI2"/>
+        <Source name="AudioControlResource.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         EI_EXPOSE_REP / EI_EXPOSE_REP2 — SignalBucket
+         InputChannel and JsonPath references are the bucket's own objects;
+         exposing them to callers (SignalManager) is intentional.
+         =================================================================== -->
+    <Match>
+        <Bug code="EI,EI2"/>
+        <Class name="com.coherentnetworksolutions.reson8.signal.SignalBucket"/>
+    </Match>
+
+    <!-- ===================================================================
+         URF / UUF / UWF — Jackson-serialized REST DTOs
+         All public fields on AudioControlResource inner classes
+         (ChannelStateDTO, MixerStateDTO, ChannelInfo, ChannelVolumeRequest)
+         and DropResource.DropRequest are read or written by Jackson via
+         reflection. SpotBugs cannot observe reflective field access.
+         =================================================================== -->
+    <Match>
+        <Bug code="URF,UUF,UWF"/>
+        <Source name="AudioControlResource.java"/>
+    </Match>
+    <Match>
+        <Bug code="URF,UUF,UWF"/>
+        <Source name="DropResource.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         SIC_INNER_SHOULD_BE_STATIC — REST DTO inner classes
+         Non-static because they reference the enclosing resource class
+         context. Tracked as a separate cleanup item.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="SIC_INNER_SHOULD_BE_STATIC"/>
+        <Source name="AudioControlResource.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         CT_CONSTRUCTOR_THROW — Quarkus CDI beans / value types
+         Classes that do not extend Object in a way that enables finalizer
+         attacks, and Quarkus CDI does not use finalizers. Applies to:
+         StochasticGaugeChannel, SignalBucket, and all SignalCurveMap impls.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+        <Package name="~com\.coherentnetworksolutions\.reson8.*"/>
+    </Match>
+
+    <!-- ===================================================================
+         VA_PRIMITIVE_ARRAY_PASSED_TO_OBJECT_VARARG — AudioStreamResource
+         byte[] is intentionally passed as a single stream item (the WAV
+         header blob). Treating it as individual bytes is not the intent.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="VA_PRIMITIVE_ARRAY_PASSED_TO_OBJECT_VARARG"/>
+        <Source name="AudioStreamResource.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         VA_FORMAT_STRING_USES_NEWLINE — GstMixer.dumpMixerState()
+         This application is Linux-only (requires GStreamer, deploys on
+         OpenShift). \n is the correct and intentional line separator for
+         the diagnostic console dump output.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+        <Source name="GstMixer.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         URF_UNREAD_FIELD — dead fields after refactoring
+         channelFactory / soundRegistry in SignalBucket: stored after
+         construction but never read; tracked as cleanup.
+         kind / volume in SilentMixerToBrowserManagerChannel: stub fields
+         in the silent/test implementation, unused by design.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+        <Class name="com.coherentnetworksolutions.reson8.signal.SignalBucket"/>
+    </Match>
+    <Match>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+        <Source name="SilentMixerToBrowserManagerChannel.java"/>
+    </Match>
+
+    <!-- ===================================================================
+         DMI_HARDCODED_ABSOLUTE_FILENAME — ThanosMetricPoller
+         /var/run/secrets/kubernetes.io is the standard Kubernetes service
+         account token mount path defined by the Kubernetes spec. Checking
+         its existence is the canonical way to detect in-cluster runtime.
+         =================================================================== -->
+    <Match>
+        <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
+        <Source name="ThanosMetricPoller.java"/>
+    </Match>
+
+</FindBugsFilter>

@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @QuarkusTest
 @Timeout(10)
 @TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
-class MixerCleanupTest {
+class MixerCleanupIT {
 
     @Inject
     Mixer mixer;
