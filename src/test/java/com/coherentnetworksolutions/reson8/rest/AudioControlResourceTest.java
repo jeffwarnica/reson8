@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
+import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
@@ -61,6 +63,8 @@ class AudioControlResourceTest {
         when(bucket.getCurrentIntensity()).thenReturn(45.0);
         when(bucket.isDrop()).thenReturn(false);
         when(bucket.getSourceType()).thenReturn(SourceType.PROMETHEUS);
+        SoundDefinition sd1 = mockSoundDefinition("brook", SoundType.LOOP);
+        when(bucket.getSoundDefinition()).thenReturn(sd1);
         SignalCurveMap curve1 = mockCurve();
         when(bucket.getCurve()).thenReturn(curve1);
         when(mixer.getInputChannelVolume("wind")).thenReturn(0.8);
@@ -88,6 +92,8 @@ class AudioControlResourceTest {
         when(bucket.getName()).thenReturn("pod-killed");
         when(bucket.isDrop()).thenReturn(true);
         when(bucket.getSourceType()).thenReturn(SourceType.KUBERNETES_EVENT);
+        SoundDefinition sd2 = mockSoundDefinition("chirp", SoundType.DROP);
+        when(bucket.getSoundDefinition()).thenReturn(sd2);
         SignalCurveMap curve2 = mockCurve();
         when(bucket.getCurve()).thenReturn(curve2);
         when(signalManager.getSignalBuckets()).thenReturn(List.of(bucket));
@@ -276,9 +282,19 @@ class AudioControlResourceTest {
         SignalBucket b = mock(SignalBucket.class);
         when(b.getName()).thenReturn(name);
         when(b.getSourceType()).thenReturn(sourceType);
+        SoundDefinition sd = mockSoundDefinition(name, SoundType.LOOP);
+        when(b.getSoundDefinition()).thenReturn(sd);
         SignalCurveMap curve = mockCurve();
         when(b.getCurve()).thenReturn(curve);
         return b;
+    }
+
+    /** Returns a stub {@link SoundDefinition} with the given name and type. */
+    private SoundDefinition mockSoundDefinition(String name, SoundType type) {
+        SoundDefinition sd = mock(SoundDefinition.class);
+        when(sd.name()).thenReturn(name);
+        when(sd.soundType()).thenReturn(type);
+        return sd;
     }
 
     /** Returns a stub {@link SignalCurveMap} with a trivial linear identity over [0, 100]. */
