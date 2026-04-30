@@ -34,9 +34,7 @@
 
         /* Flow Layout */
         .signal-chain {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            display: block;
         }
 
         /* Pipeline flow */
@@ -47,7 +45,7 @@
             margin: 10px 0 12px;
             flex-wrap: nowrap;
             overflow-x: auto;
-            padding-bottom: 2px;
+            padding: 14px 2px 4px;
         }
 
         .pipe-node {
@@ -95,15 +93,6 @@
         .pipe-node.active-k8s .node-value { color: #0d47a1; }
         .pipe-arrow.active-k8s { color: var(--k8s); }
 
-        /* Active manual-override path */
-        .pipe-node.active-manual {
-            background: #fff3e0;
-            border-color: var(--accent);
-            color: #bf360c;
-        }
-        .pipe-node.active-manual .node-value { color: #bf360c; }
-        .pipe-arrow.active-manual { color: var(--accent); }
-
         /* Active neutral path (after merge point) */
         .pipe-node.active-flow {
             background: #e8f5e9;
@@ -113,23 +102,26 @@
         .pipe-node.active-flow .node-value { color: #1b5e20; }
         .pipe-arrow.active-flow { color: #388e3c; }
 
-        /* Dimmed inactive segment */
-        .pipe-node.dimmed { opacity: 0.32; }
-        .pipe-arrow.dimmed { opacity: 0.25; }
 
-        /* Signal Curves card */
-        .curves-grid {
+        /* Channel body: sliders + curve side-by-side */
+        .channel-body {
             display: flex;
+            align-items: flex-start;
+            gap: 16px;
             flex-wrap: wrap;
-            gap: 20px;
-            margin-top: 12px;
         }
 
+        .channel-sliders {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        /* Signal Curves — inline per-channel */
         .curve-panel {
             background: #f8f9fa;
             border-radius: 8px;
             padding: 12px 14px;
-            min-width: 240px;
+            flex-shrink: 0;
         }
 
         .curve-panel h4 {
@@ -142,18 +134,38 @@
             display: block;
         }
 
-        .btn-toggle-curves {
-            background: none;
-            border: 1.5px solid #90a4ae;
-            color: #455a64;
-            font-size: 0.82em;
-            padding: 4px 12px;
-            border-radius: 5px;
-            margin-left: 10px;
-            font-weight: bold;
-            vertical-align: middle;
+
+        /* VolumeScaler x³ transform node */
+        .pipe-node-xform {
+            border-style: dashed;
+            font-style: italic;
+            min-width: 40px;
         }
-        .btn-toggle-curves:hover { background: #eceff1; }
+
+        /* Input channel group box in pipeline diagram */
+        .pipeline-input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            position: relative;
+            border: 1.5px solid #b0bec5;
+            border-radius: 8px;
+            padding: 10px 6px 4px;
+            background: #fafafa;
+            flex-shrink: 0;
+        }
+
+        .pipeline-input-group-label {
+            position: absolute;
+            top: -8px;
+            left: 8px;
+            background: white;
+            padding: 0 4px;
+            font-size: 0.7em;
+            color: #78909c;
+            font-weight: bold;
+            white-space: nowrap;
+        }
 
         /* Drop channel — Simulate Event button inside the pipeline node */
         .pipe-node-drop {
@@ -335,17 +347,6 @@
             margin-bottom: 15px;
         }
 
-        #debugLog {
-            width: 100%;
-            height: 180px;
-            background: #263238;
-            color: #81c784;
-            font-family: 'Consolas', monospace;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
 
         button {
             cursor: pointer;
@@ -403,39 +404,13 @@
     <div class="signal-chain">
         <div id="channelsContainer">
             <div class="card">
-                <h2>
-                    Mixer Channels
-                    <button class="btn-toggle-curves" onclick="toggleCurvesCard()" id="showCurvesBtn">▼ Show Curves</button>
-                </h2>
+                <h2>Mixer Channels</h2>
                 <div id="chList"></div>
-            </div>
-        </div>
-
-        <div>
-            <!--
-                <div class="card">
-                    <h2>Sound Drops</h2>
-                    <div id="dropsList"></div>
-                </div>
-            -->
-
-            <div class="card">
-                <h2>Pipeline Log</h2>
-                <button onclick="fetchMixerDump()" style="font-size: 10px;">Refresh Dump</button>
-                <textarea id="debugLog" readonly></textarea>
             </div>
         </div>
     </div>
 
     <audio id="audioPlayer"></audio>
-
-    <div class="card" id="curvesCard" style="display:none;">
-        <h2>
-            Signal Curves
-            <button class="btn-toggle-curves" onclick="toggleCurvesCard()" style="font-weight:normal;">▲ Hide</button>
-        </h2>
-        <div class="curves-grid" id="curvesGrid"></div>
-    </div>
 
     <script>
         const audio = document.getElementById('audioPlayer');
@@ -589,16 +564,6 @@
         document.getElementById('localVolVal').innerText = 
             parseFloat(document.getElementById('localVol').value).toFixed(2);
 
-        // --- CURVES CARD TOGGLE ---
-
-        let curvesVisible = false;
-        function toggleCurvesCard() {
-            curvesVisible = !curvesVisible;
-            document.getElementById('curvesCard').style.display = curvesVisible ? '' : 'none';
-            const btn = document.getElementById('showCurvesBtn');
-            if (btn) btn.textContent = curvesVisible ? '▲ Hide Curves' : '▼ Show Curves';
-        }
-
         // --- SVG CURVE HELPERS ---
 
         const SVG_W = 230, SVG_H = 130, SVG_PAD = { t: 8, r: 8, b: 28, l: 36 };
@@ -713,36 +678,32 @@
         // Channel curve data keyed by channel name
         const channelCurveData = {};
 
-        function buildCurvesCard(channels) {
-            const grid = document.getElementById('curvesGrid');
-            grid.innerHTML = '';
+        function buildChannelCurvePanel(ch) {
+            if (!ch.curveSamples || ch.curveSamples.length < 2) return null;
+            channelCurveData[ch.name] = ch;
 
-            channels.forEach(ch => {
-                if (!ch.curveSamples || ch.curveSamples.length < 2) return;
-                channelCurveData[ch.name] = ch;
+            const yVals = ch.curveSamples.map(s => s[1]);
+            const yMin = Math.min(...yVals);
+            const yMax = Math.max(...yVals);
 
-                const yVals = ch.curveSamples.map(s => s[1]);
-                const yMin = Math.min(...yVals);
-                const yMax = Math.max(...yVals);
+            const panel = document.createElement('div');
+            panel.className = 'curve-panel';
+            const title = document.createElement('h4');
+            title.textContent = `k8s metric → intensity`;
+            panel.appendChild(title);
 
-                const panel = document.createElement('div');
-                panel.className = 'curve-panel';
-                const title = document.createElement('h4');
-                title.textContent = `${ch.name.toUpperCase()} — k8s metric → intensity`;
-                panel.appendChild(title);
+            const svg = buildCurveSvg(
+                `ch-${ch.name}`, title.textContent,
+                ch.curveSamples, ch.curveRawSamples || null,
+                `metric (${fmt(ch.curveMinInput)}–${fmt(ch.curveMaxInput)})`, 'intensity (0–100)',
+                ch.curveMinInput, ch.curveMaxInput,
+                yMin, Math.max(yMax, 0.001)
+            );
+            panel.appendChild(svg);
+            return panel;
+        }
 
-                const svg = buildCurveSvg(
-                    `ch-${ch.name}`, title.textContent,
-                    ch.curveSamples, ch.curveRawSamples || null,
-                    `metric (${fmt(ch.curveMinInput)}–${fmt(ch.curveMaxInput)})`, 'intensity (0–100)',
-                    ch.curveMinInput, ch.curveMaxInput,
-                    yMin, Math.max(yMax, 0.001)
-                );
-                panel.appendChild(svg);
-                grid.appendChild(panel);
-            });
-
-            // VolumeScaler cubic curve — computed entirely in JS
+        function buildVolumeCurvePanel() {
             const volPanel = document.createElement('div');
             volPanel.className = 'curve-panel';
             const volTitle = document.createElement('h4');
@@ -755,44 +716,24 @@
             }
             const volSvg = buildCurveSvg('vol', volTitle.textContent, volSamples, null, 'intensity (0–100)', 'GStreamer (0–1)', 0, 100, 0, 1);
             volPanel.appendChild(volSvg);
-            grid.appendChild(volPanel);
+            return volPanel;
         }
 
         // --- PIPELINE RENDERING ---
 
         function buildPipelineHTML(ch) {
-            const sourceSegment = ch.isDrop ? `
-                <div class="pipe-node pipe-node-drop" data-seg="drop">
-                    <span class="node-label">Event</span>
-                    <button class="btn-simulate-event" data-channel="${ch.name}"
-                        title="Simulate a k8s event triggering this drop">▶ Simulate Event</button>
-                </div>` : (() => {
-                    const curveMax = (ch.curveMaxInput != null && ch.curveMaxInput > 0) ? ch.curveMaxInput : 1000;
-                    return `
-                <div class="pipe-node" data-seg="k8s">
-                    <span class="node-label">K8s Metric</span>
-                    <span class="node-value" data-pipe-val="rawMetric">—</span>
-                    <input type="number" class="metric-sim-input" data-channel="${ch.name}"
-                        min="0" max="${curveMax}" step="any"
-                        placeholder="sim value"
-                        title="Enter a raw metric value to simulate (applies when k8s sync is paused)">
-                </div>
-                <span class="pipe-arrow" data-seg="k8s">▶</span>
-                <div class="pipe-node" data-seg="k8s">
-                    <span class="node-label">Curve Map</span>
-                    <span class="node-value" style="font-size:0.85em; color:inherit;">→ intensity</span>
-                </div>
-                <span class="pipe-arrow" data-seg="merge">▶</span>
-                <div class="pipe-node" data-seg="manual">
-                    <span class="node-label">Manual</span>
-                    <span class="node-value" style="font-size:0.85em; color:inherit;">override</span>
-                </div>
-                <span class="pipe-arrow" data-seg="merge">▶</span>`;
-                })();
+            const soundLabel = ch.soundName
+                ? `${ch.soundName} · ${(ch.soundType || '').toLowerCase()}`
+                : (ch.isDrop ? 'drop' : 'channel');
 
-            return `
-            <div class="pipeline-flow" id="pipe-${ch.name}">
-                ${sourceSegment}
+            const k8sBoxLabel = {
+                PROMETHEUS: 'Prometheus',
+                KUBERNETES_STATS: 'k8s Stats',
+                KUBERNETES_EVENT: 'k8s Events'
+            }[ch.sourceType] || 'Signal';
+
+            // Target → Easing → Current → Ceiling are the input channel internals
+            const inputChannelNodes = `
                 <div class="pipe-node" data-seg="flow">
                     <span class="node-label">Target</span>
                     <span class="node-value" data-pipe-val="target">—</span>
@@ -811,29 +752,84 @@
                 <div class="pipe-node" data-seg="flow">
                     <span class="node-label">Ceiling</span>
                     <span class="node-value" data-pipe-val="ceiling">—</span>
-                </div>
+                </div>`;
+
+            // Fader → VolumeScaler x³ → GStreamer in a Mixer box
+            const mixerOutputNodes = `
                 <span class="pipe-arrow" data-seg="flow">▶</span>
-                <div class="pipe-node" data-seg="flow">
-                    <span class="node-label">Fader</span>
-                    <span class="node-value" data-pipe-val="fader">—</span>
+                <div class="pipeline-input-group">
+                    <span class="pipeline-input-group-label">Mixer</span>
+                    <div class="pipe-node" data-seg="flow">
+                        <span class="node-label">Fader</span>
+                        <span class="node-value" data-pipe-val="fader">—</span>
+                    </div>
+                    <span class="pipe-arrow" data-seg="flow">▶</span>
+                    <div class="pipe-node pipe-node-xform" data-seg="flow">
+                        <span class="node-label">VolumeScaler</span>
+                        <span class="node-value">x³</span>
+                    </div>
+                    <span class="pipe-arrow" data-seg="flow">▶</span>
+                    <div class="pipe-node" data-seg="flow">
+                        <span class="node-label">GStreamer</span>
+                        <span class="node-value" data-pipe-val="gst">—</span>
+                    </div>
+                </div>`;
+
+            if (ch.isDrop) {
+                return `
+                <div class="pipeline-flow" id="pipe-${ch.name}">
+                    <div class="pipeline-input-group">
+                        <span class="pipeline-input-group-label">${k8sBoxLabel}</span>
+                        <div class="pipe-node pipe-node-drop" data-seg="drop">
+                            <span class="node-label">Event</span>
+                            <button class="btn-simulate-event" data-channel="${ch.name}"
+                                title="Simulate a k8s event triggering this drop">▶ Simulate Event</button>
+                        </div>
+                    </div>
+                    <span class="pipe-arrow" data-seg="flow">▶</span>
+                    <div class="pipeline-input-group">
+                        <span class="pipeline-input-group-label">${soundLabel}</span>
+                        ${inputChannelNodes}
+                    </div>
+                    ${mixerOutputNodes}
+                </div>`;
+            }
+
+            const curveMax = (ch.curveMaxInput != null && ch.curveMaxInput > 0) ? ch.curveMaxInput : 1000;
+            return `
+            <div class="pipeline-flow" id="pipe-${ch.name}">
+                <div class="pipeline-input-group">
+                    <span class="pipeline-input-group-label">${k8sBoxLabel}</span>
+                    <div class="pipe-node" data-seg="k8s">
+                        <span class="node-label">K8s Metric</span>
+                        <span class="node-value" data-pipe-val="rawMetric">—</span>
+                        <input type="number" class="metric-sim-input" data-channel="${ch.name}"
+                            min="0" max="${curveMax}" step="any"
+                            placeholder="sim value"
+                            title="Enter a raw metric value to simulate (applies when k8s sync is paused)">
+                    </div>
+                    <span class="pipe-arrow" data-seg="k8s">▶</span>
+                    <div class="pipe-node" data-seg="curvemap">
+                        <span class="node-label">Curve Map</span>
+                        <span class="node-value" style="font-size:0.85em; color:inherit;">→ intensity</span>
+                    </div>
                 </div>
-                <span class="pipe-arrow" data-seg="flow">▶</span>
-                <div class="pipe-node" data-seg="flow">
-                    <span class="node-label">GStreamer</span>
-                    <span class="node-value" data-pipe-val="gst">—</span>
+                <span class="pipe-arrow" data-seg="k8s">▶</span>
+                <div class="pipeline-input-group">
+                    <span class="pipeline-input-group-label">${soundLabel}</span>
+                    ${inputChannelNodes}
                 </div>
+                ${mixerOutputNodes}
             </div>`;
         }
 
         function updatePipelineStyles(pipEl, k8sActive) {
             pipEl.querySelectorAll('[data-seg]').forEach(el => {
                 const seg = el.dataset.seg;
-                el.classList.remove('active-k8s', 'active-manual', 'active-flow', 'dimmed');
-                if (seg === 'k8s')         el.classList.add(k8sActive  ? 'active-k8s'  : 'dimmed');
-                else if (seg === 'manual') el.classList.add(k8sActive  ? 'dimmed'       : 'active-manual');
-                else if (seg === 'merge')  el.classList.add(k8sActive  ? 'active-k8s'  : 'active-manual');
-                else if (seg === 'flow')   el.classList.add('active-flow');
-                // drop segment keeps its own .pipe-node-drop styling; no dynamic class needed
+                el.classList.remove('active-k8s', 'active-flow');
+                if (seg === 'k8s')       el.classList.toggle('active-k8s', k8sActive);
+                else if (seg === 'flow') el.classList.add('active-flow');
+                // 'curvemap' and 'drop' never change styling
             });
             // Show the metric sim input only when k8s sync is paused
             const simInput = pipEl.querySelector('.metric-sim-input');
@@ -899,30 +895,40 @@
                 
                 ${buildPipelineHTML(ch)}
 
-                <div class="slider-row">
-                    <label>Signal intensity (target)<abbr class="info-hint" title="Desired signal level (0–100%). This is what you or k8s sync ask for; the sound engine may ramp smoothly toward it.">i</abbr></label>
-                    <div class="intensity-slider-wrap">
-                        <abbr class="current-intensity-badge" title="Current signal level (0–100%) the channel is using right now. It can differ from target while easing or when metrics update.">Live ${Math.round(Math.min(100, Math.max(0, ch.currentIntensity ?? 0)))}%</abbr>
-                        <input type="range" class="intensity-slider" id="int-${ch.name}"
-                            min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.targetIntensity ?? 0))}">
+                <div class="channel-body">
+                    <div class="channel-sliders">
+                        <div class="slider-row">
+                            <label>Signal intensity (target)<abbr class="info-hint" title="Desired signal level (0–100%). This is what you or k8s sync ask for; the sound engine may ramp smoothly toward it.">i</abbr></label>
+                            <div class="intensity-slider-wrap">
+                                <abbr class="current-intensity-badge" title="Current signal level (0–100%) the channel is using right now. It can differ from target while easing or when metrics update.">Live ${Math.round(Math.min(100, Math.max(0, ch.currentIntensity ?? 0)))}%</abbr>
+                                <input type="range" class="intensity-slider" id="int-${ch.name}"
+                                    min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.targetIntensity ?? 0))}">
+                            </div>
+                            <span class="intensity-target-val">${(Math.min(100, Math.max(0, ch.targetIntensity ?? 0))).toFixed(1)}</span>
+                        </div>
+
+                        <div class="slider-row">
+                            <label>Channel ceiling<abbr class="info-hint" title="Output ceiling (0–100) — caps this channel's contribution to the mix">i</abbr></label>
+                            <input type="range" class="fader-slider ch-fader" id="chanFade-${ch.name}" 
+                                min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.chanVol))}">
+                            <span class="chFader-val">${Math.min(100, Math.max(0, ch.chanVol)).toFixed(2)}</span>
+                        </div>
+
+                        <div class="slider-row">
+                            <label>Mixer fader</label>
+                            <input type="range" class="fader-slider mix-fader" id="mixerFade-${ch.name}" 
+                                min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.mixerVol))}">
+                            <span class="mixFader-val">${ch.mixerVol.toFixed(2)}</span>
+                        </div>
                     </div>
-                    <span class="intensity-target-val">${(Math.min(100, Math.max(0, ch.targetIntensity ?? 0))).toFixed(1)}</span>
-                </div>
-
-                <div class="slider-row">
-                    <label>Channel ceiling<abbr class="info-hint" title="Output ceiling (0–100) — caps this channel's contribution to the mix">i</abbr></label>
-                    <input type="range" class="fader-slider ch-fader" id="chanFade-${ch.name}" 
-                        min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.chanVol))}">
-                    <span class="chFader-val">${Math.min(100, Math.max(0, ch.chanVol)).toFixed(2)}</span>
-                </div>
-
-                <div class="slider-row">
-                    <label>Mixer fader</label>
-                    <input type="range" class="fader-slider mix-fader" id="mixerFade-${ch.name}" 
-                        min="0" max="100" step="0.01" value="${Math.min(100, Math.max(0, ch.mixerVol))}">
-                    <span class="mixFader-val">${ch.mixerVol.toFixed(2)}</span>
                 </div>
                 `;
+                // Inline curve panel — placed alongside sliders in the channel-body flex row
+                const curvePanel = buildChannelCurvePanel(ch);
+                if (curvePanel) {
+                    div.querySelector('.channel-body').appendChild(curvePanel);
+                }
+
                 list.appendChild(div);
 
                 // Wire up pipeline initial state (k8s status unknown until first poll; default active)
@@ -982,7 +988,8 @@
                 }
             });
 
-            buildCurvesCard(channels);
+            // VolumeScaler curve shown once after all channels
+            list.appendChild(buildVolumeCurvePanel());
 
             // Start Polling every 500ms
             setInterval(syncState, 500);

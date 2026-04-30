@@ -67,6 +67,8 @@ public class AudioControlResource {
             dto.currentIntensity = ch.getCurrentIntensity();
             dto.isDrop = ch.isDrop();
             dto.sourceType = ch.getSourceType();
+            dto.soundName = ch.getSoundDefinition().name();
+            dto.soundType = ch.getSoundDefinition().soundType().name();
             SignalCurveMap curve = ch.getCurve();
             dto.curveSamples = sampleCurve(curve);
             dto.curveRawSamples = sampleCurveUnclamped(curve);
@@ -232,6 +234,8 @@ public class AudioControlResource {
         public double currentIntensity; // What is actually observed (0-100)
         public boolean isDrop; // To tell the UI to show the "Play" button
         public SourceType sourceType;
+        public String soundName;
+        public String soundType;
         /** Clamped samples [{x, y}] — what actually drives intensity. Populated on initial load only. */
         public List<double[]> curveSamples;
         /** Unclamped raw spline samples [{x, y}] — exposes oscillation/overshoot for diagnostics. */
