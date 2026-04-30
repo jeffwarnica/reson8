@@ -20,12 +20,20 @@ reson8:
         sound: babblingBrook
         source-type: KUBERNETES_STATS
         metric: CPU
+        curve:
+          interpolation: MONOTONE
+          points:
+            - { in: 0,   out: 0  }
+            - { in: 30,  out: 10 }
+            - { in: 50,  out: 50 }
+            - { in: 80,  out: 90 }
+            - { in: 100, out: 100 }
       - name: "Cluster Memory Load"
         sound: "custom/scaled-wind"
         source-type: KUBERNETES_STATS
         metric: MEMORY
       - name: Pending Pods
-        sound: smoothcrickets
+        sound: crickets1
         source-type: KUBERNETES_STATS
         metric: PENDING_PODS
         curve:
@@ -63,16 +71,16 @@ reson8:
   soundscapes:
     - name: forest
       sounds:
-      - name: smoothcrickets
+      - name: crickets1
         sound-type: STOCHASTIC
         stochastic:
-          directory: "sounds/crickets"
+          directory: "sounds/crickets1"
           max-simultaneous: 10
       - name: alarmcrickets
         sound-type: STOCHASTIC
         stochastic:
           ceiling: 30
-          directory: "sounds/crickets"
+          directory: "sounds/crickets2"
           max-simultaneous: 20
       - name: chirp_long1
         sound-type: DROP
@@ -91,7 +99,7 @@ reson8:
         sound-type: LOOP 
         loop:
           filename: "sounds/trickling_water.wav"
-          output-scale: 0.5
+          output-scale: 0.5 
       - name: straight-wind
         sound-type: PROCEDURAL
         procedural:

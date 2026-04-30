@@ -242,7 +242,7 @@ public class K8Client {
             try {
                 var tr = client.serviceAccounts()
                         .inNamespace(client.getNamespace())
-                        .withName("default")
+                        .withName("reson8")
                         .tokenRequest(new TokenRequest());
                 token = tr.getStatus().getToken();
                 Log.info("Exchanged certs for default ServiceAccount token.");

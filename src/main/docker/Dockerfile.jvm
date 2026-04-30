@@ -80,10 +80,13 @@
 # You can find more information about the UBI base runtime images and their configuration here:
 # https://rh-openjdk.github.io/redhat-openjdk-containers/
 ###
-FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:1.24
+FROM image-registry.openshift-image-registry.svc:5000/reson8/reson8-base:latest
 
 ENV LANGUAGE='en_US:en'
+ENV RESON8_AUDIO_PATH=/opt/reson8
 
+# Sound assets — must sit on the filesystem; WavCache loads via Path.of(audioPath).resolve(fragment)
+COPY --chown=185 src/main/resources/sounds/ /opt/reson8/sounds/
 
 # We make four distinct layers so if there are application changes the library layers can be re-used
 COPY --chown=185 target/quarkus-app/lib/ /deployments/lib/

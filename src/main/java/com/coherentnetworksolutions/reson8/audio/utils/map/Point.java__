@@ -1,3 +1,0 @@
-package com.coherentnetworksolutions.reson8.audio.utils.map;
-
-public record Point(double input, double output) {}
