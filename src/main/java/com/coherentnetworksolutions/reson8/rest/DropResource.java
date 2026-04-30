@@ -7,6 +7,7 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -65,6 +66,8 @@ public class DropResource {
         return Response.ok().build();
     }
 
+    @SuppressFBWarnings(value = "UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD",
+        justification = "Field is written by Jackson via reflection for JSON deserialization")
     public static class DropRequest {
         public String drop;
     }

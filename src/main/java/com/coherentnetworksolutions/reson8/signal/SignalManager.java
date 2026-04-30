@@ -40,8 +40,8 @@ public class SignalManager {
     @Inject CurveMapFactory curveFactory;
 
     private final Map<String, SignalBucket> buckets = new ConcurrentHashMap<>();
-    private boolean ready = false;
-    private boolean k8sSync = true;
+    private volatile boolean ready = false;
+    private volatile boolean k8sSync = true;
 
     private final AtomicBoolean isWired = new AtomicBoolean(false);
 
@@ -131,7 +131,7 @@ public class SignalManager {
 
         for (SignalBucket bucket : buckets.values()) {
             if (bucket.getSourceType() == SourceType.KUBERNETES_EVENT) {
-                ArrayNode bucketMatch = bucket.JsonPath().read(eventNode, JSON_NODE_CONF);
+                ArrayNode bucketMatch = bucket.getJsonPath().read(eventNode, JSON_NODE_CONF);
                 
                 if (!bucketMatch.isEmpty()) {
                     matchedTo.add(bucket.getName());

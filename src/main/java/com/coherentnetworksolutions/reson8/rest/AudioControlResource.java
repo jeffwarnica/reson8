@@ -12,6 +12,7 @@ import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quarkus.logging.Log;
 import io.vertx.mutiny.core.eventbus.EventBus;
 
@@ -194,12 +195,16 @@ public class AudioControlResource {
     }
 
 
+    @SuppressFBWarnings(value = "UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD",
+        justification = "Fields are written by Jackson via reflection for JSON deserialization")
     public static class ChannelVolumeRequest {
         public String channel;
         public double mixVol;
         public double chVol;
     }
 
+    @SuppressFBWarnings(value = {"URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", "UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"},
+        justification = "Fields are read by Jackson via reflection for JSON serialization")
     public static class ChannelInfo {
         public String name;
         public boolean supportsIntensity;
@@ -220,12 +225,16 @@ public class AudioControlResource {
         }
     }
 
+    @SuppressFBWarnings(value = {"URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", "EI_EXPOSE_REP2", "SIC_INNER_SHOULD_BE_STATIC"},
+        justification = "Fields serialized by Jackson; outer-class ref is intentional for non-static inner DTO")
     public class MixerStateDTO {
         public double masterVolume;
         public boolean k8sSyncActive;
         public List<ChannelStateDTO> channels;
     }
 
+    @SuppressFBWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+        justification = "Fields are read by Jackson via reflection for JSON serialization")
     public static class ChannelStateDTO {
         public String name;
         public double chanVol;

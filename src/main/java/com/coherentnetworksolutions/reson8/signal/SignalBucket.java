@@ -156,7 +156,7 @@ public class SignalBucket {
         return isDrop;
     }
 
-    public JsonPath JsonPath() {
+    public JsonPath getJsonPath() {
         return jsonPath;
     }
 

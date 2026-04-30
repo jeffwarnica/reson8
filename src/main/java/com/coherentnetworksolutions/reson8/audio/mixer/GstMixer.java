@@ -445,7 +445,12 @@ public class GstMixer implements Mixer {
                     // Manually query the 'last-sample' or properties if supported, 
                     // but better yet, let's fix the sync handler.
                     Log.tracef("Pipeline State: %s", pipeline.getState(0));
-                } catch (Exception e) {}
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    Log.warnf("Pipeline state watcher error: %s", e.getMessage());
+                }
             }
         }).start();
     }

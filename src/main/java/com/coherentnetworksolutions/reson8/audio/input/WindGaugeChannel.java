@@ -29,7 +29,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final double smoothingRate;
     private final double outputScale;
-    private final double targetVolume = 50;
+    private static final double targetVolume = 50;
     private final GstToolkit toolkit;
     private final Caps caps;// = Caps.fromString(Mixer.CAPS);
 
