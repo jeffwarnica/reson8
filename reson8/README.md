@@ -21,7 +21,7 @@ Actual sound design, very much a TODO.
 
 ## Architecture
 
-The sound engine leverages GStreamer through the [gst1-java-core](https://github.com/gstreamer-java/gst1-java-core) bindings, wrapped behind a `GsToolkit` abstraction so production code and unit tests never call native GStreamer APIs directly. The engine models a physical mixer console: input channels feed into `GsMixer`, which outputs a single HTTP `audio/wav` stream for browser clients.
+The sound engine leverages GStreamer through the [gst1-java-core](https://github.com/gstreamer-java/gst1-java-core) bindings. Pipeline construction—`Gst.init`, element factories, caps—is centralized in `GsToolkit` and `GsMixer`; domain layers (`signal`, REST, k8s clients) do not construct native objects (enforced by ArchUnit). Code under `audio.*` may use vendor types for bins, pads, and buffers while obtaining elements through the toolkit. Unit tests mock `GsToolkit` and must not initialize native GStreamer; integration tests using `GsTestProfile` exercise the real bindings intentionally. The engine models a physical mixer console: input channels feed into `GsMixer`, which outputs a single HTTP `audio/wav` stream for browser clients.
 
 Above the mixer sits a signal pipeline that connects cluster telemetry to audio:
 
@@ -42,9 +42,11 @@ K8s / Thanos / Prometheus
     GsMixer  ──► HTTP audio/wav stream  ──► browser
 ```
 
-`GstChannelFactory` selects the correct `InputChannel` implementation based on the sound type declared in `application.yml` (`PROCEDURAL`, `LOOP`, `STOCHASTIC`, `DROP`). `SignalCurveMap` shapes the raw metric value before it reaches the channel so the audio response is perceptually calibrated.
+`InputChannelFactory` selects the correct `InputChannel` implementation based on the sound type declared in `application.yml` (`PROCEDURAL`, `LOOP`, `STOCHASTIC`, `DROP`). CDI provides `GsChannelFactory` when `reson8dev.audiopath=gs` and `SilentInputChannelFactory` when it is `silent` (see `@IfBuildProperty` below). `SignalCurveMap` shapes the raw metric value before it reaches the channel so the audio response is perceptually calibrated.
 
 This is a Quarkus project and heavily leverages its CDI, REST, and testing framework features. The `@IfBuildProperty(name="reson8dev.audiopath")` mechanism selects between the real GStreamer stack (`gs`) and a fully silent stub (`silent`) used in unit tests.
+
+The Git repository root is a Maven parent (`reson8-parent`) that also lists a separate `helloweb` module: a generic Quarkus/OpenShift scaffold with no dependency on this audio engine.
 
 ## Status
 

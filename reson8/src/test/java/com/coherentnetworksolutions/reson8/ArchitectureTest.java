@@ -127,9 +127,9 @@ public class ArchitectureTest {
     // -----------------------------------------------------------------------
     // volume-intensity-ranges.mdc — VolumeScaler is the only crossing point
     //
-    // Classes outside audio.utils.map must not call VolumeScaler directly on
-    // the wrong domain. Enforcing that only audio.* and signal.* may even
-    // import VolumeScaler keeps the crossing-point narrow and auditable.
+    // Only com.coherentnetworksolutions.reson8.audio.. and .signal.. may
+    // reference VolumeScaler. Layers such as REST, k8s, and manager must not
+    // import it so human↔GStreamer scaling stays auditable.
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule volume_scaler_only_used_in_audio_and_signal =

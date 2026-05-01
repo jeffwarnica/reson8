@@ -5,7 +5,11 @@ alwaysApply: true
 
 # GStreamer Access Policy
 
-All GStreamer operations **must** go through the `GsToolkit` abstraction. Direct use of the native GStreamer API in production code (outside the Mixer) or in unit tests is a bug.
+**Element construction** (and caps strings used to configure new elements) **must** go through `GsToolkit` / `GsMixer` — not raw `ElementFactory`, `Caps.fromString`, or `Gst.init` in domain or transport layers. See [ArchitectureTest.java](reson8/src/test/java/com/coherentnetworksolutions/reson8/ArchitectureTest.java) (ArchUnit): those calls are confined to `audio.providers` and `audio.mixer`.
+
+**Vendor types in production**: code under `com.coherentnetworksolutions.reson8.audio..` may hold and manipulate `org.freedesktop.gstreamer.*` handles (bins, pads, buffers) once elements exist. That is **not** the same as bypassing `GsToolkit` to construct the graph. Leaking those types into `signal`, `rest`, `k8s`, or `manager` is a bug (also enforced by ArchUnit).
+
+**Unit tests** must not initialise native GStreamer (`Gst.init`); use `MockGsToolkit`. See below.
 
 ## Naming boundary: "us" (`Gs`) vs "them" (`Gst`)
 
@@ -36,21 +40,21 @@ import org.freedesktop.gstreamer.Element;
 ```
 
 ```java
-// ❌ Mixed signal (abstraction class named like vendor API)
-class GstDropChannelTest { ... } // tests GsDropChannel
+// ❌ Mixed signal (abstraction-level test named like vendor API)
+// Bad class or filename: GstDropChannelTest — prefer GsDropChannelTest for tests of GsDropChannel
 ```
 
-## Forbidden in production code (outside Mixer)
+## Forbidden: bypassing GsToolkit / GsMixer for construction
 
 ```java
-// ❌ Direct native calls — route through GsToolkit instead
+// ❌ Outside audio.providers / GsMixer — route through GsToolkit instead
 Caps.fromString("audio/x-raw,...");
 ElementFactory.make("fakesrc", "name");
 Gst.init("AppName");
 ```
 
 ```java
-// ✅ Route through GsToolkit
+// ✅ Domain code obtains elements via GsToolkit; mixer bootstraps the main bus
 toolkit.capsFromString("audio/x-raw,...");
 toolkit.createElement("fakesrc", "name");
 // Gst.init() is called exclusively inside GsMixer.@PostConstruct

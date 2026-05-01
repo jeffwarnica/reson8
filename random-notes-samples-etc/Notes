@@ -13,3 +13,4 @@ oc adm policy add-cluster-role-to-user cluster-monitoring-view -z default -n str
 
 ./mvnw quarkus:dev -pl reson8
 ./mvnw clean verify -pl reson8
+
