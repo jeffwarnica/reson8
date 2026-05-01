@@ -1,0 +1,54 @@
+---
+description: Volume and intensity value ranges — human scale (0–100), GStreamer scale (0–1), k8s metrics (unconstrained)
+alwaysApply: true
+---
+
+# Volume & Intensity Value Ranges
+
+There are three distinct numeric domains in this codebase. Never mix them.
+
+## The three domains
+
+| Domain | Range | Carrier types | Notes |
+|--------|-------|---------------|-------|
+| **Human / application** | `0.0 – 100.0` | `ceiling`, `volume`, `intensity`, `targetIntensity`, `currentIntensity` | Validated with `@Min(0) @Max(100)`. Can never be outside this range. |
+| **GStreamer** | `0.0 – 1.0` | GStreamer `volume` element, any element's `volume` property | Values above 1.0 cause clipping and distortion — treat as a bug. |
+| **k8s / Prometheus metrics** | Unconstrained | Raw metric values (hits/sec, pod counts, etc.) | Must pass through a `SignalCurveMap` before entering the human domain. |
+
+## Crossing the boundary: always use VolumeScaler
+
+```java
+// ❌ Raw division / multiplication — loses the perceptual curve
+double gst = humanVolume / 100.0;
+
+// ✅ Correct — applies cubic (x³) perceptual scaling
+double gst = VolumeScaler.humanToGsVolume(humanVolume);   // 0–100 → 0–1
+double human = VolumeScaler.gsToHumanVolume(gstVolume);   // 0–1   → 0–100
+```
+
+## Crossing from k8s metrics into human scale: always use SignalCurveMap
+
+```java
+// ❌ Direct assignment of raw metric as intensity
+bucket.setIntensity(promVal);
+
+// ✅ Configurable mapping first
+double intensity = bucket.getCurve().map(promVal);   // unconstrained → 0–100
+bucket.setIntensity(intensity);
+```
+
+## Validation
+
+Every method that accepts human-scale data should be annotated:
+
+```java
+void setCeiling(@Min(0) @Max(100) double ceiling) { ... }
+void setTargetIntensity(@Min(0) @Max(100) double intensity) { ... }
+```
+
+## Watch-list: easy mistakes
+
+- Storing a GStreamer volume in a field named `volume` and then passing it unscaled to the human layer.
+- Passing a raw k8s metric value directly to `setIntensity()` without going through `SignalCurveMap`.
+- Setting a GStreamer element property above 1.0 (e.g., `element.set("volume", 80.0)`).
+- Calling `VolumeScaler.humanToGsVolume()` on a value that is already in the 0–1 range.

@@ -1,0 +1,57 @@
+---
+description: GStreamer access must be routed through GsToolkit; unit tests must not touch native GStreamer
+alwaysApply: true
+---
+
+# GStreamer Access Policy
+
+All GStreamer operations **must** go through the `GsToolkit` abstraction. Direct use of the native GStreamer API in production code (outside the Mixer) or in unit tests is a bug.
+
+## Forbidden in production code (outside Mixer)
+
+```java
+// ❌ Direct native calls — route through GsToolkit instead
+Caps.fromString("audio/x-raw,...");
+ElementFactory.make("fakesrc", "name");
+Gst.init("AppName");
+```
+
+```java
+// ✅ Route through GsToolkit
+toolkit.capsFromString("audio/x-raw,...");
+toolkit.createElement("fakesrc", "name");
+// Gst.init() is called exclusively inside GsMixer.@PostConstruct
+```
+
+## Unit tests must not initialise GStreamer
+
+Unit tests use `MockGsToolkit`. They must **never** trigger `Gst.isInitialized() == true`.
+Add the following guard to every unit test class that could leak native GStreamer:
+
+```java
+@BeforeEach
+void assertNotNativeGst() {
+    assertFalse(Gst.isInitialized(),
+        "Toolkit abstraction leak: a production class is calling " +
+        "Caps.fromString() or ElementFactory.make() directly.");
+}
+```
+
+## Integration tests that intentionally use native GStreamer
+
+Annotate them with `@TestProfile(GsTestProfile.class)`. Do **not** add the `assertNotNativeGst` guard to these classes — native GStreamer is expected.
+
+```java
+@QuarkusTest
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
+class WindGaugeChannelIntegrationTest { ... }
+```
+
+## Mixer scope rules
+
+- `GsMixer` — **must remain `@Singleton`**. Its `@PostConstruct initGStreamer()` calls `Gst.init()`, which must run eagerly before `Reson8Orchestrator.onStart()`. Changing to `@ApplicationScoped` defers this init and breaks GStreamer plugin loading.
+- `SilentMixer` — `@ApplicationScoped` is correct (no native init, mockable in tests).
+
+## WavCache
+
+`WavCache.toolkit` must be an **instance** field (not `static`). CDI does not inject static fields. `CachedWav.create()` receives `GsToolkit` as a parameter passed from `WavCache.loadFromDisk()`.
