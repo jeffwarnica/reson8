@@ -1,0 +1,103 @@
+---
+reson8:
+  audio-path: ${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}
+  k8s:
+    cluster: self # uses standard kube env vars 
+    namespaces:
+      all: false
+    map: cool_project_map
+  signal-map:
+    name: cool_project_map
+    default-soundscape: forest    # define default for unqualified names
+    inputs:
+      - name: "Cluster CPU Load"
+        sound: babblingBrook
+        source-type: KUBERNETES_STATS
+        metric: CPU
+        curve:
+          interpolation: MONOTONE
+          points:
+            - { in: 0,   out: 0  }
+            - { in: 30,  out: 10 }
+            - { in: 50,  out: 50 }
+            - { in: 80,  out: 90 }
+            - { in: 100, out: 100 }
+      - name: "Cluster Memory Load"
+        sound: "custom/scaled-wind"
+        source-type: KUBERNETES_STATS
+        metric: MEMORY
+      - name: Pending Pods
+        sound: crickets1
+        source-type: KUBERNETES_STATS
+        metric: PENDING_PODS
+        curve:
+          interpolation: MONOTONE
+          points:
+            - { in: 0,   out: 0  }
+            - { in: 2,   out: 10 }
+            - { in: 10,  out: 40 }
+            - { in: 30,  out: 75 }
+            - { in: 100, out: 100 }
+      - name: Pod Startup
+        sound: chirp_short1
+        source-type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'Started' && @.regarding.kind == 'Pod')]
+      - name: Pod Failed Scheduling
+        sound: chirp_long1
+        source-type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'FailedScheduling' && @.regarding.kind == 'Pod')]
+      - name: Pod Killed
+        sound: chirp_short2
+        source-type: KUBERNETES_EVENT
+        query: $.[?(@.reason == 'Killing' && @.regarding.kind == 'Pod')]
+      - name: Web Crashes
+        sound: alarmcrickets
+        source-type: PROMETHEUS
+        query: 'sum(rate(http_server_requests_seconds_count{status="500"}[5m])) * 60'
+        curve:
+          interpolation: MONOTONE
+          points:
+            - { in: 0,    out: 0.0  }
+            - { in: 1,    out: 20   }
+            - { in: 10,   out: 50   }
+            - { in: 200,  out: 80   }
+            - { in: 1000, out: 100  }
+  soundscapes:
+    - name: forest
+      sounds:
+      - name: crickets1
+        sound-type: STOCHASTIC
+        stochastic:
+          directory: "sounds/crickets1"
+          max-simultaneous: 10
+      - name: alarmcrickets
+        sound-type: STOCHASTIC
+        stochastic:
+          ceiling: 30
+          directory: "sounds/crickets2"
+          max-simultaneous: 20
+      - name: chirp_long1
+        sound-type: DROP
+        drop:
+          filename: "sounds/chirp_long1.wav"
+          ceiling: 100
+      - name: chirp_short1
+        sound-type: DROP
+        drop:
+          filename: "sounds/chirp_short1.wav"
+      - name: chirp_short2
+        sound-type: DROP
+        drop:
+          filename: "sounds/chirp_short2.wav"
+      - name: babblingBrook
+        sound-type: LOOP 
+        loop:
+          filename: "sounds/trickling_water.wav"
+          output-scale: 0.5
+    - name: custom
+      sounds:
+        - name: scaled-wind
+          sound-type: PROCEDURAL
+          procedural:
+            generator: WIND
+            output-scale: 1.0

@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi10/openjdk-21:latest
+USER root
+# Built on a subscribed RHEL 10 host: Podman mounts /run/secrets/rhsm automatically,
+# giving this build access to the full RHEL 10 repo set (including AppStream).
+RUN microdnf install -y \
+      gstreamer1 \
+      gstreamer1-plugins-base \
+      gstreamer1-plugins-good \
+    && microdnf clean all
+USER 185

@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: reson8
+---
+# ServiceMonitor for Prometheus / Thanos to scrape reson8 metrics.
+# Requires the Prometheus Operator CRD to be installed.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: reson8
+  labels:
+    app: reson8
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reson8
+  endpoints:
+    - port: http
+      path: /q/metrics
+      interval: 15s
+      scheme: http
