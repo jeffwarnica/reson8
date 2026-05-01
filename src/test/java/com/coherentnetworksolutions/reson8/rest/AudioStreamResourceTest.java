@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
 
 import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,8 +42,7 @@ public class AudioStreamResourceTest {
         // InputStream stream = response.asInputStream();
 
         // 1. Use a raw connection to ensure no library buffering
-        java.net.URL url = new java.net.URL("http://localhost:8081/audio/stream");
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = (HttpURLConnection) URI.create("http://localhost:8081/audio/stream").toURL().openConnection();
         conn.setReadTimeout(5000); // 5 second read timeout
 
         InputStream stream = conn.getInputStream();
@@ -65,7 +66,8 @@ public class AudioStreamResourceTest {
 
         // 4. Verify the output
         byte[] result = new byte[4];
-        int read = stream.read(result);
+        // int read = 
+        stream.read(result);
         
         assertArrayEquals(testBytes, result);
     }

@@ -11,11 +11,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
-import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.MockGsToolkit;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 public class SilentInputChannelTest {
-    GsToolkit toolkit = new MockGstToolkit();
+    GsToolkit toolkit = new MockGsToolkit();
 
     @BeforeEach
     void assertNotNativeGst() {

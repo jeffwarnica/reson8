@@ -37,7 +37,7 @@ import org.mockito.InOrder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.MockGsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
@@ -52,8 +52,8 @@ class GstDropChannelTest {
     }
 
     /** Used only before {@code spy(...)} so {@code when(mockWav.caps()).thenReturn(...)} does not call the spy mid-stub. */
-    private MockGstToolkit toolkitDelegate;
-    private MockGstToolkit toolkit;
+    private MockGsToolkit toolkitDelegate;
+    private MockGsToolkit toolkit;
     private SignalBucket mockBucket;
     private CachedWav mockWav;
     private GsDropChannel channel;
@@ -61,7 +61,7 @@ class GstDropChannelTest {
     @BeforeEach
     void setUp() {
         // 1. Initialize the Mock Toolkit
-        toolkitDelegate = new MockGstToolkit();
+        toolkitDelegate = new MockGsToolkit();
         Caps wavCaps = toolkitDelegate.capsFromString("audio/x-raw");
         toolkit = spy(toolkitDelegate);
 

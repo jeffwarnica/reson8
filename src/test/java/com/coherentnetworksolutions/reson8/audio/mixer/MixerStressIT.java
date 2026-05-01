@@ -30,7 +30,7 @@ import jakarta.inject.Inject;
 
 @QuarkusTest
 @Timeout(10)
-@TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
 class MixerStressIT {
 
     @Inject

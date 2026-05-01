@@ -33,7 +33,7 @@ public class ArchitectureTest {
     //
     // ElementFactory.make() is the primary bypass vector: any class that calls
     // it directly is constructing GStreamer elements without going through
-    // GsToolkit. Only NativeGsToolkit and GstMixer are permitted.
+    // GsToolkit. Only NativeGsToolkit and GsMixer are permitted.
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule gst_element_factory_only_in_providers_and_mixer =
@@ -42,38 +42,38 @@ public class ArchitectureTest {
             .should().accessClassesThat()
                 .haveFullyQualifiedName("org.freedesktop.gstreamer.ElementFactory")
             .as("ElementFactory.make() must only be called from NativeGsToolkit "
-                + "(audio.providers) or GstMixer (audio.mixer)");
+                + "(audio.providers) or GsMixer (audio.mixer)");
 
     // -----------------------------------------------------------------------
     // gstreamer-access.mdc — Rule 2
-    // "Gst.init() is called exclusively inside GstMixer.@PostConstruct"
+    // "Gst.init() is called exclusively inside GsMixer.@PostConstruct"
     //
     // The Gst class controls the native GStreamer lifecycle. Calling Gst.init()
-    // from any class other than GstMixer changes startup order and breaks
+    // from any class other than GsMixer changes startup order and breaks
     // plugin loading.
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule gst_lifecycle_only_in_mixer =
         noClasses()
             .that().doNotHaveFullyQualifiedName(
-                "com.coherentnetworksolutions.reson8.audio.mixer.GstMixer")
+                "com.coherentnetworksolutions.reson8.audio.mixer.GsMixer")
             .should().accessClassesThat()
                 .haveFullyQualifiedName("org.freedesktop.gstreamer.Gst")
-            .as("org.freedesktop.gstreamer.Gst must only be accessed from GstMixer — "
+            .as("org.freedesktop.gstreamer.Gst must only be accessed from GsMixer — "
                 + "Gst.init() must run in @PostConstruct before Reson8Orchestrator.onStart()");
 
     // -----------------------------------------------------------------------
     // gstreamer-access.mdc — Rule 3
-    // "GstMixer must remain @Singleton. Changing to @ApplicationScoped defers
+    // "GsMixer must remain @Singleton. Changing to @ApplicationScoped defers
     //  this init and breaks GStreamer plugin loading."
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule gst_mixer_must_be_singleton =
         classes()
             .that().haveFullyQualifiedName(
-                "com.coherentnetworksolutions.reson8.audio.mixer.GstMixer")
+                "com.coherentnetworksolutions.reson8.audio.mixer.GsMixer")
             .should().beAnnotatedWith("jakarta.inject.Singleton")
-            .as("GstMixer must be @Singleton — its @PostConstruct initialises GStreamer "
+            .as("GsMixer must be @Singleton — its @PostConstruct initialises GStreamer "
                 + "eagerly; @ApplicationScoped would defer it and break plugin loading");
 
     // -----------------------------------------------------------------------
@@ -104,9 +104,9 @@ public class ArchitectureTest {
             .that().resideInAPackage("com.coherentnetworksolutions.reson8.rest..")
             .should().accessClassesThat()
                 .haveFullyQualifiedName(
-                    "com.coherentnetworksolutions.reson8.audio.mixer.GstMixer")
-            .as("REST layer must depend on the Mixer interface, not the GstMixer "
-                + "implementation — GstMixer is an audio-layer concern");
+                    "com.coherentnetworksolutions.reson8.audio.mixer.GsMixer")
+            .as("REST layer must depend on the Mixer interface, not the GsMixer "
+                + "implementation — GsMixer is an audio-layer concern");
 
     // -----------------------------------------------------------------------
     // Layering — signal package must not depend on rest package

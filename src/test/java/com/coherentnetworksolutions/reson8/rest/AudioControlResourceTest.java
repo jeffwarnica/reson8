@@ -1,12 +1,14 @@
 package com.coherentnetworksolutions.reson8.rest;
 
 import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.BeforeEach;
@@ -172,10 +174,8 @@ class AudioControlResourceTest {
             .then()
             .statusCode(204);
 
-        // Called twice: (1) direct call in the resource body, (2) via the "k8s-sync-enable"
-        // event-bus message whose @ConsumeEvent consumer is registered at Quarkus build time
-        // and still fires against the mock.
-        verify(signalManager, times(2)).setK8sSyncEnabled(true);
+        await().atMost(2, TimeUnit.SECONDS)
+               .untilAsserted(() -> verify(signalManager).setK8sSyncEnabled(true));
     }
 
     @Test
@@ -186,7 +186,8 @@ class AudioControlResourceTest {
             .then()
             .statusCode(204);
 
-        verify(signalManager, times(2)).setK8sSyncEnabled(false);
+        await().atMost(2, TimeUnit.SECONDS)
+               .untilAsserted(() -> verify(signalManager).setK8sSyncEnabled(false));
     }
 
     // ─── POST /audio/control/fader ────────────────────────────────────

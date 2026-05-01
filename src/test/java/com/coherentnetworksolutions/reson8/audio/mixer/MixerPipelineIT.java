@@ -19,7 +19,7 @@ import static org.mockito.Mockito.*;
 @QuarkusTest
 @Timeout(10)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
 class MixerPipelineIT {
 
     @Inject

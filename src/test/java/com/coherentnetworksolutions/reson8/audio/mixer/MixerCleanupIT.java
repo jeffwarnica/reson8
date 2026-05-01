@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @QuarkusTest
-@Timeout(10)
-@TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
+@Timeout(30)
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
 class MixerCleanupIT {
 
     @Inject
@@ -52,16 +52,26 @@ class MixerCleanupIT {
 
         // Wait for the pipeline to stabilise: the "mixer-ready" event published inside
         // initGStreamer() triggers SignalManager.attemptWiring() on the Vert.x event
-        // loop, which asynchronously adds all configured channels. Two consecutive polls
-        // 300 ms apart with the same non-zero element count mean the pipeline is done.
+        // loop, which asynchronously adds all configured channels.
+        //
+        // With real channel factories active (GsTestProfile, audiopath=gs), channels
+        // can arrive in rapid bursts separated by short pauses. Two consecutive equal
+        // counts at 300ms were sufficient when factories were vetoed (no channels),
+        // but insufficient now that real WindGaugeChannel/LoopingGaugeChannel etc. are
+        // being wired. Three consecutive equal counts at 500ms (1 full second of proven
+        // stability) rules out burst gaps before the baseline is captured.
         AtomicInteger lastCount = new AtomicInteger(-1);
-        await().atMost(5, TimeUnit.SECONDS)
+        AtomicInteger stableStreak = new AtomicInteger(0);
+        await().atMost(10, TimeUnit.SECONDS)
                .pollDelay(0, TimeUnit.MILLISECONDS)
-               .pollInterval(300, TimeUnit.MILLISECONDS)
+               .pollInterval(500, TimeUnit.MILLISECONDS)
                .until(() -> {
                    int now = mixer.getPipeline().getElements().size();
-                   if (now > 0 && now == lastCount.get()) return true;
+                   if (now > 0 && now == lastCount.get()) {
+                       return stableStreak.incrementAndGet() >= 3;
+                   }
                    lastCount.set(now);
+                   stableStreak.set(0);
                    return false;
                });
 

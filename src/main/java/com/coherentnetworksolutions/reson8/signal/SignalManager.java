@@ -17,12 +17,12 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.Option;
 
-import io.fabric8.kubernetes.client.utils.Serialization;
 import io.quarkus.logging.Log;
 import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.mutiny.core.eventbus.EventBus;
@@ -38,6 +38,7 @@ public class SignalManager {
     @Inject Mixer mixer;
     @Inject EventBus eventBus;
     @Inject CurveMapFactory curveFactory;
+    @Inject ObjectMapper objectMapper;
 
     private final Map<String, SignalBucket> buckets = new ConcurrentHashMap<>();
     private volatile boolean ready = false;
@@ -124,7 +125,7 @@ public class SignalManager {
     public void processEvent(io.fabric8.kubernetes.api.model.events.v1.Event event) {
         Log.debugf("Signal Manager checking event [%s]", event);
 
-        JsonNode eventNode = Serialization.jsonMapper().valueToTree(event);
+        JsonNode eventNode = objectMapper.valueToTree(event);
         Log.debugf("Event as JsonNode: [%s]", eventNode);
 
         List<String> matchedTo = new ArrayList<String>();

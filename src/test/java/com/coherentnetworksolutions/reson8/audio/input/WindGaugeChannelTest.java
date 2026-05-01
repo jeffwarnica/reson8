@@ -23,7 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.MockGsToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ProceduralConfig;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
@@ -32,7 +32,7 @@ import io.quarkus.logging.Log;
 
 class WindGaugeChannelTest {
 
-    private MockGstToolkit toolkit;
+    private MockGsToolkit toolkit;
     private SignalBucket mockBucket;
     private WindGaugeChannel channel;
     private ProceduralConfig mockProc;
@@ -46,7 +46,7 @@ class WindGaugeChannelTest {
 
     @BeforeEach
     void setUp() {
-        toolkit = spy(new MockGstToolkit());
+        toolkit = spy(new MockGsToolkit());
         mockBucket = mock(SignalBucket.class);
         mockProc = mock(ProceduralConfig.class);
 

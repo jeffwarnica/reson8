@@ -14,7 +14,7 @@ import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 
 @QuarkusTest
-@TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
 class WavCacheIT {
     @Inject
     WavCache wavCache;

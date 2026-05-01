@@ -5,18 +5,18 @@ import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.*;
 
-import com.coherentnetworksolutions.reson8.audio.output.to.GstBrowserSessionManager;
+import com.coherentnetworksolutions.reson8.audio.output.to.GsBrowserSessionManager;
 
 @QuarkusTest
 @Tag("integration")
-@TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
+@TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
 public class MixerIT {
 
     @Inject
     Mixer mixer;
 
     @Inject
-    GstBrowserSessionManager sessionManager;
+    GsBrowserSessionManager sessionManager;
 
     // @BeforeEach
     // void ensurePipelineIsPlaying() {

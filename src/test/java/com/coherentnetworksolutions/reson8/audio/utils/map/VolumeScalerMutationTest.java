@@ -1,6 +1,5 @@
 package com.coherentnetworksolutions.reson8.audio.utils.map;
 
-import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

@@ -41,12 +41,11 @@ public class WavCache {
     private CachedWav loadFromDisk(String filePathFragment) {
         Log.infof("Loading and caching sound file: [%s]", filePathFragment);
     // private void cacheFile(String filePathFragment) {
-        URL gsUri = null;
+        URL gsUri;
         try {
             gsUri = Path.of(config.audioPath()).resolve(filePathFragment).toAbsolutePath().toUri().toURL();
         } catch (MalformedURLException e) {
-            Log.fatalf("Unable to turn [%s] into URL", filePathFragment);
-            e.printStackTrace();
+            throw new RuntimeException("Unable to construct URL for audio file: " + filePathFragment, e);
         }
 
         Log.infof("Attempting to find file at: [%s]", gsUri);

@@ -84,9 +84,7 @@ public class AudioControlResource {
     @POST
     @Path("/k8s-sync/{active}")
     public void setK8sSync(@PathParam("active") boolean active) {
-        
         eventBus.publish("k8s-sync-enable", active);
-        signalManager.setK8sSyncEnabled( active );
         Log.info("K8s Signal Sync set to: " + active);
     }
 

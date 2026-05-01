@@ -18,7 +18,7 @@ import org.freedesktop.gstreamer.elements.PlayBin;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-@io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gst")
+@io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gs")
 public class NativeGstToolkit implements GsToolkit {
 
     @Override

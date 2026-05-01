@@ -14,7 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.MockGsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.DropConfig;
@@ -27,7 +27,7 @@ import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 public class GstChannelFactoryTest {
     private GstChannelFactory factory;
-    private MockGstToolkit toolkit;
+    private MockGsToolkit toolkit;
     /** Holds the channel built each test so @AfterEach can stop its internal scheduler. */
     private InputChannel lastBuiltChannel;
 
@@ -41,7 +41,7 @@ public class GstChannelFactoryTest {
     @BeforeEach
     void setUp() {
         factory = new GstChannelFactory();
-        MockGstToolkit realToolkit = new MockGstToolkit();
+        MockGsToolkit realToolkit = new MockGsToolkit();
         toolkit = spy(realToolkit);
         factory.gstToolkit = toolkit; // Inject the spy toolkit
 

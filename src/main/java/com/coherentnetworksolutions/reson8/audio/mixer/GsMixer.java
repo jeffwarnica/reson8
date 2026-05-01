@@ -523,17 +523,17 @@ public class GsMixer implements Mixer {
     @Override
     public String dumpMixerState() {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("=== RESON8 CONSOLE DUMP [%s] ===\n", pipeline.getState()));
+        sb.append(String.format("=== RESON8 CONSOLE DUMP [%s] ===%n", pipeline.getState()));
 
         // --- MASTER SECTION ---
         double masterVol = (double) masterVolumeElement.get("volume");
-        sb.append(String.format("MASTER BUS: [%s] | Volume: %.2f\n",
+        sb.append(String.format("MASTER BUS: [%s] | Volume: %.2f%n",
                 masterVolumeElement.getState(), masterVol));
 
         // Extract VU from the level probe (GStreamer 'level' element stores last
         // message results)
         // Note: If you aren't capturing the bus messages, this might show 'idle'
-        sb.append(String.format("MASTER VU:  %s\n", getVisualMeter(lastMasterVu)));
+        sb.append(String.format("MASTER VU:  %s%n", getVisualMeter(lastMasterVu)));
         sb.append("----------------------------------------------------------\n");
 
         // --- INPUT CHANNELS ---
@@ -545,14 +545,14 @@ public class GsMixer implements Mixer {
             double faderPos = (sinkPad != null) ? (double) sinkPad.get("volume") : 0.0;
             State srcState = channel.getSrcElement().getState();
 
-            sb.append(String.format("CH: %-15s | SRC: %-7s | CEILING: %.2f | FADER: %.2f\n",
+            sb.append(String.format("CH: %-15s | SRC: %-7s | CEILING: %.2f | FADER: %.2f%n",
                     name.toUpperCase(), srcState, channelCeiling, faderPos));
 
             // Check for common link failures
             if (sinkPad == null || !sinkPad.isLinked()) {
                 sb.append("   [!] DISCONNECTED: Sink pad missing or unlinked.\n");
             } else {
-                sb.append(String.format("   -> Path: %s ->-> Mixer:%s\n",
+                sb.append(String.format("   -> Path: %s ->-> Mixer:%s%n",
                         channel.getSrcElement().getName(),
                         // (gainEl != null ? gainEl.getName() : "DIRECT"),
                         sinkPad.getName()));

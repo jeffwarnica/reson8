@@ -18,7 +18,7 @@ import jakarta.inject.Inject;
 * Channel Factory is responsible for creating the actual InputChannels
 */
 @ApplicationScoped
-@io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gst")
+@io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gs")
 public class GstChannelFactory implements InputChannelFactory {
     @Inject WavCache wavCache;
     @Inject SoundDefinitionRegistry soundRegistry;

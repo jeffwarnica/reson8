@@ -99,14 +99,7 @@ reson8:
         sound-type: LOOP 
         loop:
           filename: "sounds/trickling_water.wav"
-          output-scale: 0.5 
-      - name: straight-wind
-        sound-type: PROCEDURAL
-        procedural:
-          generator: WIND
-          output-scale: 1.0
-          intensity: 50
-          smoothingrate: 0.1
+          output-scale: 0.5
     - name: custom
       sounds:
         - name: scaled-wind

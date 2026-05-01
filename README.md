@@ -21,44 +21,63 @@ Actual sound design, very much a TODO.
 
 ## Architecture
 
-The sound engine itself leverages GStreamer through the [gst1-java-core](https://github.com/gstreamer-java/gst1-java-core) bindings. We model a physical mixer console, with input channels, some mixing controls, and output channels. A browser output channel ultimately produces a HTTP stream of audio/wav. Input Channels will be the primary interface of the eventual cluster monitoring engine.
+The sound engine leverages GStreamer through the [gst1-java-core](https://github.com/gstreamer-java/gst1-java-core) bindings, wrapped behind a `GsToolkit` abstraction so production code and unit tests never call native GStreamer APIs directly. The engine models a physical mixer console: input channels feed into `GsMixer`, which outputs a single HTTP `audio/wav` stream for browser clients.
 
-This is a Quarkus project, and heavily leverages its features of DI, REST management, tuned testing framework, and, implicitly, the rest of this generations healthy enterprisy Java features.
+Above the mixer sits a signal pipeline that connects cluster telemetry to audio:
+
+```
+K8s / Thanos / Prometheus
+        │  metrics & events
+        ▼
+  SignalManager  ◄── application.yml (signal-map)
+        │
+        ▼
+  SignalBucket  (curve mapping: raw metric → 0–100 intensity)
+        │
+        ▼
+  InputChannel  (one of: WindGaugeChannel, LoopingGaugeChannel,
+                          StochasticGaugeChannel, GsDropChannel)
+        │
+        ▼
+    GsMixer  ──► HTTP audio/wav stream  ──► browser
+```
+
+`GstChannelFactory` selects the correct `InputChannel` implementation based on the sound type declared in `application.yml` (`PROCEDURAL`, `LOOP`, `STOCHASTIC`, `DROP`). `SignalCurveMap` shapes the raw metric value before it reaches the channel so the audio response is perceptually calibrated.
+
+This is a Quarkus project and heavily leverages its CDI, REST, and testing framework features. The `@IfBuildProperty(name="reson8dev.audiopath")` mechanism selects between the real GStreamer stack (`gs`) and a fully silent stub (`silent`) used in unit tests.
 
 ## Status
 
-Very early days. This is being developed from the sound engine out. The core "mixer" component is at a credible state; it can output to a browser stream, and has some very ugly "gauge" sounds and can play "drops". A very sketchy SPA web front end is available for testing/demo purposes.
+The core sound engine and signal pipeline are feature-complete for a proof-of-concept. The following are working end-to-end:
 
-There is a credible test suite providing over 80% line coverage, 61% branch coverage. Mixer.java fails us, handling a lot of difficult to trigger exceptions and guard code, with it being the pokey end of our code into gst1-java-core and the GStreamer C libraries itself. The lines/branches being hit by a test may or may not mean its a good test, but at least it doesn't crash.
+- **GsMixer** — GStreamer pipeline with per-channel faders, master volume, VU metering, and clean disposal on Quarkus reload.
+- **Four input channel types** — procedural wind noise (`WindGaugeChannel`), looping WAV playback (`LoopingGaugeChannel`), stochastic one-shot drops (`StochasticGaugeChannel`), and single-play drops (`GsDropChannel`).
+- **Signal pipeline** — `SignalManager` + `SignalBucket` route K8s stats, K8s events, and Prometheus queries to the correct channels via configurable `SignalCurveMap` interpolation (linear, monotone hermite, cubic spline).
+- **K8s / Thanos integration** — `K8Client` watches node metrics and cluster events; `ThanosMetricPoller` polls Prometheus via Thanos.
+- **Configuration engine** — `application.yml` maps arbitrary metric sources to named sounds with per-signal curve definitions. Seven signals are pre-configured (CPU load → babbling brook, memory load → wind, pending pods → crickets, pod lifecycle events → chirps, HTTP 500 errors → alarm crickets).
+- **Browser output** — HTTP `audio/wav` stream with fan-out to multiple simultaneous subscribers.
+- **REST control surface** — channel faders, master volume, k8s-sync toggle, per-signal metric simulation, and a debug dump endpoint.
+- **Test suite** — >80% line coverage with ArchUnit rules, mutation tests (PITest), SpotBugs static analysis, and separate unit / integration test tiers (`GsTestProfile` for native GStreamer ITs, `silent` backend for unit tests).
 
 ## Roadmap
 
-In vague order, not quite and both depth and breadth first.
-* Cleanup gs objects on Quarkus reload.
-* Continue moving out from the sound core, adding    
-    * New channel types
-        * Better sounding *generated* "always" sounds
-        * Looping "always" sounds from WAVs
-        * Something to deal with histogram sources
-* Dummy event engine
-    * Move our sample sounds & drops 
-    * Work out abstraction between "metric" and "sound"
-    * Random over time simulation
-* k8s engine
-    * Connect to cluster, setup (canned) channel list 
-        * POC: (cpu, mem, pod start, pod stop, pod crash)
-    * Loop and feed k8s metrics to generators
-* Configuration engine
-    * Map feed sources to channel types
-    * Named drops (not just file name)
-    * Arbitrary configuration items fed to the monitoring loops
-    * Demonstrate connecting, via configuration, arbitrary prom metrics
-* Come up with some abstractions and names for things
+### Completed
+* ~~Cleanup GStreamer objects on Quarkus reload~~
+* ~~Looping "always" sounds from WAVs~~
+* ~~Configuration engine — full metric-to-sound mapping, named drops, arbitrary Prometheus queries~~
+* ~~k8s engine POC — CPU, memory, pod start / stop / crash~~
+* ~~Histogram → stochastic channel type~~
+
+### Remaining / next steps
+* Better sounding generated procedural audio (wind algorithm improvements — current output is recognisable but rough)
+* Proper histogram metric handling: map histogram bucket rates to stochastic channel frequency / rhythm
+* Remove or promote the `helloweb` submodule (currently undocumented and unused in the main build)
+* Horizontal scalability: the GStreamer pipeline is inherently single-replica; document or address this constraint before any production deployment
 
 ### Wishlist
-* Consider k8s influenced channels?
-    * Configured by name, but waiting
+* Consider k8s influenced channels configured by name
     * e.g. CRD annotations `reson8.io/monitor: true` + `reson8.io/channel: ireallycareaboutthistoday`
+* Native executable (GraalVM) — currently blocked by GStreamer JNI bindings
 
 # Quarkus Notes
 

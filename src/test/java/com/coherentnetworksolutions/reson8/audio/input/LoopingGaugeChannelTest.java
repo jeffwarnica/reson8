@@ -23,7 +23,7 @@ import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.Gst;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
-import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.MockGsToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
@@ -31,7 +31,7 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefi
 import io.quarkus.logging.Log;
 
 public class LoopingGaugeChannelTest {
-    private MockGstToolkit toolkit;
+    private MockGsToolkit toolkit;
     private LoopingGaugeChannel channel;
 
     @BeforeEach
@@ -43,7 +43,7 @@ public class LoopingGaugeChannelTest {
 
     @BeforeEach
     void setUp() {
-        toolkit = spy(new MockGstToolkit());
+        toolkit = spy(new MockGsToolkit());
         SignalBucket signalBucket = mock(SignalBucket.class);
 
         when(signalBucket.getName()).thenReturn("TestLoop");
@@ -87,22 +87,23 @@ public class LoopingGaugeChannelTest {
 
     @Test
     void testSetIntensityUpdatesVolume() {
-        // 1. Set intensity
+        // setTargetIntensity() stores the value; the actual GStreamer volume write
+        // happens inside intensityTick() on the scheduler thread (initialDelay=0,
+        // period=500ms). Wait for at least one tick to fire before verifying.
         channel.setTargetIntensity(80.0);
 
-        // 2. If you use a scheduler (like WindGauge), use await()
-        // If it's direct, just verify.
-        // We assume playbin's internal volume or an attached volume element is touched.
-        // Element playBin = toolkit.createdElements.get("playbin");
         Log.debugf("created Elements keys are: [%s]", toolkit.createdElements.keySet());
-        
+
         Element volume = toolkit.createdElements.keySet().stream()
-            .filter(name -> name.endsWith("vol"))
+                .filter(name -> name.endsWith("vol"))
                 .map(toolkit.createdElements::get).findFirst().orElseThrow();
 
-        Log.debugf("Found playBin element: [%s]", volume);
-        verify(toolkit, atLeastOnce()).setElementProperty(eq(volume), eq("volume"), 
-                argThat(val -> (Double) val > 0.0));
+        Log.debugf("Found volume element: [%s]", volume);
+
+        await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
+            verify(toolkit, atLeastOnce()).setElementProperty(eq(volume), eq("volume"),
+                    argThat(val -> (Double) val > 0.0))
+        );
     }
 
     @Test

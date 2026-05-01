@@ -26,7 +26,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 @io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "silent")
-public class MockGstToolkit implements GsToolkit {
+public class MockGsToolkit implements GsToolkit {
     // Trackers for "Refcount" style verification
     public Map<String, Element> createdElements = new ConcurrentHashMap<>();
     public Set<Pad> requestedPads = ConcurrentHashMap.newKeySet();
