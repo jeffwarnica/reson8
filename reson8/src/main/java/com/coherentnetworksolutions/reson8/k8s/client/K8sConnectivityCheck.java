@@ -6,6 +6,7 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Readiness;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -21,6 +22,7 @@ public class K8sConnectivityCheck implements HealthCheck {
             client.nodes().list(); // Simple ping
             return HealthCheckResponse.up("Kubernetes Connectivity");
         } catch (Exception e) {
+            Log.error("Kubernetes connectivity health check failed.", e);
             return HealthCheckResponse.down("Kubernetes Connectivity");
         }
     }

@@ -42,7 +42,7 @@ import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
-class GstDropChannelTest {
+class GsDropChannelTest {
 
     @BeforeEach
     void assertNotNativeGst() {
@@ -69,7 +69,7 @@ class GstDropChannelTest {
         mockBucket = mock(SignalBucket.class);
         mockWav = mock(CachedWav.class);
 
-        // SoundDefinition.drop() must be non-empty: GstDropChannel uses drop().get().ceiling().
+        // SoundDefinition.drop() must be non-empty: GsDropChannel uses drop().get().ceiling().
         // @WithDefault on DropConfig does not apply to Mockito mocks — stub ceiling() or NPE on unboxing.
         var mockDef = mock(Reson8Config.SoundDefinition.class);
         var mockDropDef = mock(Reson8Config.DropConfig.class);

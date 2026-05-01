@@ -10,7 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * Single source of truth for the k8s-sync enabled/disabled flag.
  * <p>
  * {@link com.coherentnetworksolutions.reson8.signal.SignalManager},
- * {@link com.coherentnetworksolutions.reson8.k8s.client.K8Client}, and
+ * {@link com.coherentnetworksolutions.reson8.k8s.client.K8sClient}, and
  * {@link com.coherentnetworksolutions.reson8.k8s.client.ThanosMetricPoller}
  * previously each maintained an independent copy of this boolean. All three
  * now inject this bean and call {@link #isEnabled()}.

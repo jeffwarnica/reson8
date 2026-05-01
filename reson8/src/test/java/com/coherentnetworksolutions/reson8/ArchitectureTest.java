@@ -33,7 +33,7 @@ public class ArchitectureTest {
     //
     // ElementFactory.make() is the primary bypass vector: any class that calls
     // it directly is constructing GStreamer elements without going through
-    // GsToolkit. Only NativeGsToolkit and GsMixer are permitted.
+    // GsToolkit. Only NativeGstToolkit and GsMixer are permitted.
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule gst_element_factory_only_in_providers_and_mixer =
@@ -41,7 +41,7 @@ public class ArchitectureTest {
             .that().resideOutsideOfPackages(PROVIDERS, MIXER)
             .should().accessClassesThat()
                 .haveFullyQualifiedName("org.freedesktop.gstreamer.ElementFactory")
-            .as("ElementFactory.make() must only be called from NativeGsToolkit "
+            .as("ElementFactory.make() must only be called from NativeGstToolkit "
                 + "(audio.providers) or GsMixer (audio.mixer)");
 
     // -----------------------------------------------------------------------
@@ -92,9 +92,9 @@ public class ArchitectureTest {
             .as("WavCache.toolkit must be an instance field — CDI does not inject static fields");
 
     // -----------------------------------------------------------------------
-    // Layering — REST must not depend on the GstMixer implementation
+    // Layering — REST must not depend on the GsMixer implementation
     //
-    // REST resources must inject the Mixer interface, not GstMixer directly.
+    // REST resources must inject the Mixer interface, not GsMixer directly.
     // Bypassing the interface couples the REST layer to the GStreamer
     // implementation, preventing testing with SilentMixer.
     // -----------------------------------------------------------------------

@@ -43,7 +43,7 @@ public class GsChannelFactoryTest {
         factory = new GsChannelFactory();
         MockGsToolkit realToolkit = new MockGsToolkit();
         toolkit = spy(realToolkit);
-        factory.gstToolkit = toolkit; // Inject the spy toolkit
+        factory.gsToolkit = toolkit; // Inject the spy toolkit
 
         factory.wavCache = mock(WavCache.class);
         factory.config = mock(Reson8Config.class);

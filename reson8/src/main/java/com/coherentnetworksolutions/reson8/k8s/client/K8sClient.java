@@ -30,7 +30,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 @ApplicationScoped
-public class K8Client {
+public class K8sClient {
     public record ClusterCapacity(long cpuNano, long memBytes) {
     }
 
@@ -78,7 +78,7 @@ public class K8Client {
     @ConsumeEvent(value = "k8s-sync-enable")
     @Blocking
     public void onSyncToggle(boolean newState) {
-        Log.debugf("K8Client: sync toggled to [%s]", newState);
+        Log.debugf("K8sClient: sync toggled to [%s]", newState);
         if (newState) {
             startK8sWatchers();
         } else {

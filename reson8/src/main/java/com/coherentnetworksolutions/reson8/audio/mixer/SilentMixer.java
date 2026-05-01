@@ -54,7 +54,7 @@ public class SilentMixer implements Mixer {
 
     @Override
     public void setMasterVolume(double uiVolume) {
-        return;
+        volume = Math.max(0.0, Math.min(100.0, uiVolume));
     }
 
     @Override
@@ -74,8 +74,8 @@ public class SilentMixer implements Mixer {
 
     @Override
     public void setOutputChannelVolume(String channelName, double uiVolume) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setOutputChannelVolume'");
+        volume = Math.max(0.0, Math.min(100.0, uiVolume));
+        Log.debugf("SilentMixer ignored setOutputChannelVolume for [%s] at [%s]", channelName, volume);
     }
 
     @Override
@@ -90,22 +90,22 @@ public class SilentMixer implements Mixer {
 
     @Override
     public Map<String, InputChannel> getInputChannels() {
-        return inputChannels;
+        return Map.copyOf(inputChannels);
     }
 
     @Override
     public Map<String, MixerOutputToClientManagerChannel> getOutputChannels() {
-        return outputChannels;
+        return Map.copyOf(outputChannels);
     }
 
     @Override
     public Object getMixerElement() {
-        throw new UnsupportedOperationException("SilentMixer has no native mixer element");
+        return null;
     }
 
     @Override
     public Object getPipeline() {
-        throw new UnsupportedOperationException("SilentMixer has no native pipeline");
+        return null;
     }
 
     @Override
@@ -135,19 +135,24 @@ public class SilentMixer implements Mixer {
 
     @Override
     public List<Object> dumpAllElements() {
-        throw new UnsupportedOperationException("SilentMixer has no native pipeline elements");
+        return List.of();
     }
 
     @Override
     public void dispose() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'dispose'");
+        inputChannels.clear();
+        outputChannels.clear();
+        masterOutputChannel = null;
+        volume = 0.0;
+        Log.debug("SilentMixer dispose() completed as no-op cleanup.");
     }
 
     @Override
     public String dumpMixerState() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'dumpMixerState'");
+        String state = "SilentMixer{inputs=%d, outputs=%d, volume=%.2f}"
+            .formatted(inputChannels.size(), outputChannels.size(), volume);
+        Log.debug(state);
+        return state;
     }
 
     private void snark() {

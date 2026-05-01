@@ -30,22 +30,20 @@ class MixerPipelineIT {
         Log.infof("Right now this test case has a mixer of type: [%s]", mixer.getClass());
         mixer.initGStreamer();
         pipeline().setState(State.PLAYING);
-        // Small delay to ensure background threads from previous tests 
-        // have actually exited their while loops
-        try { Thread.sleep(500); } catch (InterruptedException e) {}
+        await()
+            .atMost(2, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> State.PLAYING == pipeline().getState());
     }
 
     @AfterEach
     void tearDown() {
         // Everything is now handled internally by the Mixer
         mixer.dispose();
-
-        // Recommendation: Keep a tiny sleep if you are seeing
-        // "Address already in use" errors with the browser stream
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException e) {
-        }
+        await()
+            .atMost(2, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> mixer.getPipeline() == null);
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.coherentnetworksolutions.reson8.audio.mixer;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,6 +29,7 @@ import io.quarkus.logging.Log;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
+import static org.awaitility.Awaitility.await;
 
 @QuarkusTest
 @Timeout(10)
@@ -48,13 +50,10 @@ class MixerStressIT {
     void tearDown() {
         // Everything is now handled internally by the Mixer
         mixer.dispose();
-
-        // Recommendation: Keep a tiny sleep if you are seeing
-        // "Address already in use" errors with the browser stream
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException e) {
-        }
+        await()
+            .atMost(2, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> mixer.getPipeline() == null);
     }
 
     @Test
@@ -115,6 +114,15 @@ class MixerStressIT {
         // This ensures cpu-noise::123 doesn't match cpu-noise-extra::456
         assertTrue("cpu-noise::12345::gain".startsWith(name + "::"));
         assertFalse("cpu-noise-extra::12345::gain".startsWith(name + "::"));
+    }
+
+    @Test
+    @DisplayName("Mixer channel snapshots are immutable")
+    void testChannelSnapshotsAreImmutable() {
+        assertThrows(UnsupportedOperationException.class,
+            () -> mixer.getInputChannels().put("x", mock(InputChannel.class)));
+        assertThrows(UnsupportedOperationException.class,
+            () -> mixer.getOutputChannels().clear());
     }
 
     private Pipeline pipeline() {

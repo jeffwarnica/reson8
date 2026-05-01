@@ -6,8 +6,8 @@ import io.quarkus.logging.Log;
 
 public class SilentDropChannel extends BaseInputChannel implements DropChannel {
 
-    public SilentDropChannel(SignalBucket signalEndpoint) {
-        super(signalEndpoint.getName(), 0.0, 0.0);
+    public SilentDropChannel(SignalBucket signalBucket) {
+        super(signalBucket.getName(), 0.0, 0.0);
     }
 
     @Override

@@ -4,6 +4,6 @@ import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 public interface InputChannelFactory {
 
-    InputChannel buildChannel(SignalBucket signalEndpoint);
+    InputChannel buildChannel(SignalBucket signalBucket);
 
 }

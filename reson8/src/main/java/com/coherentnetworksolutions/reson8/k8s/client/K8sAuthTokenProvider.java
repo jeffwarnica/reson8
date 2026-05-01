@@ -9,8 +9,8 @@ import jakarta.inject.Inject;
 /**
  * Provides a Kubernetes/OpenShift bearer token for outbound HTTP calls (e.g. Thanos).
  * <p>
- * Extracted from {@link K8Client} so that {@link ThanosMetricPoller} can obtain the
- * token without depending on the full {@code K8Client} bean.
+ * Extracted from {@link K8sClient} so that {@link ThanosMetricPoller} can obtain the
+ * token without depending on the full {@code K8sClient} bean.
  */
 @ApplicationScoped
 public class K8sAuthTokenProvider {

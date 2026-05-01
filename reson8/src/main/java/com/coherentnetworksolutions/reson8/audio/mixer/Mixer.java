@@ -45,8 +45,14 @@ public interface Mixer {
 
     MixerOutputToClientManagerChannel getOutputChannel(String channelName);
 
+    /**
+     * Returns a read-only snapshot of currently registered input channels.
+     */
     Map<String, InputChannel> getInputChannels();
 
+    /**
+     * Returns a read-only snapshot of currently registered output channels.
+     */
     Map<String, MixerOutputToClientManagerChannel> getOutputChannels();
 
     /**

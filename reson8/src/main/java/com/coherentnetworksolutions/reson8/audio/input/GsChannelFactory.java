@@ -25,7 +25,7 @@ public class GsChannelFactory implements InputChannelFactory {
     @Inject SoundDefinitionRegistry soundRegistry;
     @Inject Reson8Config config;
     @Inject Mixer mixer;
-    @Inject GsToolkit gstToolkit;
+    @Inject GsToolkit gsToolkit;
     
     @Override
     public InputChannel buildChannel(SignalBucket signalBucket) {
@@ -35,29 +35,29 @@ public class GsChannelFactory implements InputChannelFactory {
         return switch (type) {
             case LOOP -> {
                 // var config = soundDef.loop().orElseThrow();
-                yield new LoopingGaugeChannel(signalBucket, config, gstToolkit);
+                yield new LoopingGaugeChannel(signalBucket, config, gsToolkit);
             }
             case PROCEDURAL -> {
                 yield createProcedural(signalBucket);
             }
             case STOCHASTIC -> {
-                yield new StochasticGaugeChannel(signalBucket, config, wavCache, gstToolkit);
+                yield new StochasticGaugeChannel(signalBucket, config, wavCache, gsToolkit);
                 // throw new UnsupportedOperationException("Stochastic sound type is not yet implemented");
             }
             case DROP -> {
                 // var drop = soundDef.drop().orElseThrow();
-                // yield dropFactory.createDropDefinition(signalEndpoint);
+                // yield dropFactory.createDropDefinition(signalBucket);
                 String filename = signalBucket.getSoundDefinition()
                         .drop()
                         .orElseThrow()
                         .filename();
                 try {
                     WavCache.CachedWav soundData = wavCache.getOrLoad(filename);
-                    yield new GsDropChannel(signalBucket, soundData, gstToolkit);
+                    yield new GsDropChannel(signalBucket, soundData, gsToolkit);
                 } catch (RuntimeException e) {
                     Log.errorf("Channel [%s] failed: %s. Falling back to Silent.", signalBucket.getName(),
                         e.getMessage());
-                    yield new SilentInputChannel(signalBucket, gstToolkit);
+                    yield new SilentInputChannel(signalBucket, gsToolkit);
                 }
             }
             default -> throw new IllegalArgumentException("Type " + type + " is unknown");
@@ -69,7 +69,7 @@ public class GsChannelFactory implements InputChannelFactory {
         GeneratorType generator = procedureConfig.generatorType();
 
         return switch (generator) {
-            case WIND -> new WindGaugeChannel(signalBucket, gstToolkit);
+            case WIND -> new WindGaugeChannel(signalBucket, gsToolkit);
         };
     }
 

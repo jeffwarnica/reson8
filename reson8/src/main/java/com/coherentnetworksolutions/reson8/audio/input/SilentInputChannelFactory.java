@@ -15,11 +15,11 @@ public class SilentInputChannelFactory implements InputChannelFactory {
     @Inject public GsToolkit toolkit;
 
     @Override
-    public InputChannel buildChannel(SignalBucket signalEndpoint) {
-        if (signalEndpoint.getSoundType() == SoundType.DROP) {
-            return new SilentDropChannel(signalEndpoint);
+    public InputChannel buildChannel(SignalBucket signalBucket) {
+        if (signalBucket.getSoundType() == SoundType.DROP) {
+            return new SilentDropChannel(signalBucket);
         }
-        return new SilentInputChannel(signalEndpoint, toolkit);
+        return new SilentInputChannel(signalBucket, toolkit);
     }
     
 }

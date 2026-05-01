@@ -25,7 +25,7 @@ import jakarta.inject.Inject;
 
 @QuarkusTest
 @TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
-class GstDropChannelAudioFlowIT {
+class GsDropChannelAudioFlowIT {
 
     @Inject
     GsToolkit toolkit; // NativeGsToolkit in this profile

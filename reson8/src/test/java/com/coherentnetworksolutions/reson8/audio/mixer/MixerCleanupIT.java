@@ -86,13 +86,9 @@ class MixerCleanupIT {
     void tearDown() {
         // Everything is now handled internally by the Mixer
         mixer.dispose();
-
-        // Recommendation: Keep a tiny sleep if you are seeing
-        // "Address already in use" errors with the browser stream
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException e) {
-        }
+        await().atMost(2, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .until(() -> mixer.getPipeline() == null);
     }
 
     

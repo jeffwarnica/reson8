@@ -43,6 +43,7 @@ public class ThanosMetricPoller {
 
     private String authToken;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final AtomicBoolean startupObserved = new AtomicBoolean(false);
     private final Map<String, String> activeQueries = new ConcurrentHashMap<>();
 
     private String thanosUrl;
@@ -51,6 +52,11 @@ public class ThanosMetricPoller {
     @ConsumeEvent("k8s-client-ready")
     @Blocking
     void thanosStartup(String msg) {
+        startupObserved.set(true);
+        initializePoller();
+    }
+
+    private void initializePoller() {
         if (new File("/var/run/secrets/kubernetes.io").exists()) {
             thanosUrl = config.k8s().thanos().inClusterUrl();
         } else {
@@ -65,9 +71,10 @@ public class ThanosMetricPoller {
             .trustAll(config.k8s().thanos().ignoreCerts()) // Map your config here
             .build(ThanosRestClient.class);
 
-        authToken = "Bearer " + authTokenProvider.getToken();
+        refreshAuthToken();
         
         if (checkThanosHealth()) {
+            activeQueries.clear();
             signalManager.getSignalBuckets().stream()
                 .peek(bucket -> Log.debugf("My bucket [%s] is of type [%s] and has query [%s]", 
                     bucket.getName(), bucket.getSourceType(), bucket.getQuery()))
@@ -80,11 +87,19 @@ public class ThanosMetricPoller {
             Log.info("Thanos connectivity is healthy. Metric polling initialized.");
             Log.debugf("My activeQueries: [%s]", activeQueries);
         } else {
+            initialized.set(false);
             Log.error("Thanos connectivity isn't healthy. Metric polling won't start.");
         }
+    }
 
-        
-    }   
+    @Scheduled(every = "10s")
+    void retryInitialization() {
+        if (!startupObserved.get() || initialized.get() || !k8sSyncState.isEnabled()) {
+            return;
+        }
+        Log.warn("Thanos poller is not initialized; retrying startup.");
+        initializePoller();
+    }
 
     @Scheduled(every = "2s")
     void pollMetrics() {
@@ -100,6 +115,10 @@ public class ThanosMetricPoller {
                 signalManager.updateSignalIntensity(signalId, value);
             } catch (Exception e) {
                 Log.error("Failed to pull metrics for signalId: " + signalId, e);
+                if (isLikelyAuthFailure(e)) {
+                    Log.warn("Refreshing Thanos auth token after query auth failure.");
+                    refreshAuthToken();
+                }
             }
         });
     }
@@ -118,10 +137,30 @@ public class ThanosMetricPoller {
     private boolean checkThanosHealth() {
         try {
             ThanosLabelResponse response = restClient.checkHealth(authToken);
-            return response.status().equals("success");
+            return "success".equals(response.status());
         } catch (Exception e) {
-            Log.error("Thanos health check failed: " + e.getMessage());
+            Log.error("Thanos health check failed.", e);
             return false;
         }
+    }
+
+    private void refreshAuthToken() {
+        String token = authTokenProvider.getToken();
+        if (token == null || token.isBlank()) {
+            authToken = null;
+            Log.warn("K8sAuthTokenProvider returned an empty token.");
+            return;
+        }
+        authToken = "Bearer " + token;
+    }
+
+    private boolean isLikelyAuthFailure(Exception e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return false;
+        }
+        String lowered = message.toLowerCase();
+        return lowered.contains("401") || lowered.contains("403") || lowered.contains("unauthorized")
+            || lowered.contains("forbidden");
     }
 }

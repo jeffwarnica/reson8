@@ -3,7 +3,7 @@ import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.output.from.ClientChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClientManagerChannel;
-import com.coherentnetworksolutions.reson8.k8s.client.K8Client;
+import com.coherentnetworksolutions.reson8.k8s.client.K8sClient;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
@@ -23,7 +23,7 @@ public class Reson8Orchestrator {
     @Inject ClientChannelFactory outputChannelFactory;
     @Inject SoundDefinitionRegistry soundRegistry;
     @Inject SignalManager signalManager;
-    @Inject K8Client k8sclient;
+    @Inject K8sClient k8sClient;
 
     void onStart(@Observes StartupEvent ev) {
         Log.info("Reson8 Engine Starting...");

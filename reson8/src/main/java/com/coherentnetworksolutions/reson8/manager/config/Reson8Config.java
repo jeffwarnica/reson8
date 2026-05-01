@@ -53,10 +53,10 @@ public interface Reson8Config {
     /**
      * Namespace filtering configuration.
      * <p>
-     * Currently only the {@link #all()} flag is wired to {@code K8Client} (via
+     * Currently only the {@link #all()} flag is wired to {@code K8sClient} (via
      * {@code inAnyNamespace()} when {@code true}). The {@code include} and {@code
      * exclude} lists that appeared in earlier revisions have been removed — they were
-     * never evaluated. Implement per-namespace filtering in {@code K8Client.startK8sWatchers()}
+     * never evaluated. Implement per-namespace filtering in {@code K8sClient.startK8sWatchers()}
      * when a scoped watch is needed.
      */
     interface NamespaceConfig {

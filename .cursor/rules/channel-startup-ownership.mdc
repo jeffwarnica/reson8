@@ -1,0 +1,38 @@
+---
+description: Single-owner channel startup lifecycle between SignalManager and Mixer
+alwaysApply: true
+---
+
+# Input Channel Startup Ownership
+
+`InputChannel.start()` must have exactly one lifecycle owner per add/wire path.
+
+## Ownership rule
+
+- `GsMixer.addInputChannel(...)` is the startup owner.
+- `SignalManager` wiring (`attemptWiring`) must attach and configure channels, but must **not** call `channel.start()`.
+- Each channel should start exactly once per add/wire flow.
+
+## Correct wiring sequence
+
+```java
+// SignalManager wiring path
+mixer.addInputChannel(channel);             // mixer starts channel
+mixer.setInputChannelVolume(name, 80.0);
+channel.setTargetIntensity(50);
+```
+
+## Forbidden pattern
+
+```java
+// ❌ Double-start risk across layers
+mixer.addInputChannel(channel);
+channel.start();
+```
+
+## Regression guard
+
+When changing startup/wiring behavior, keep or update a unit test that verifies:
+
+- `SignalManager` does not call `channel.start()`
+- startup remains delegated to `Mixer` attach logic

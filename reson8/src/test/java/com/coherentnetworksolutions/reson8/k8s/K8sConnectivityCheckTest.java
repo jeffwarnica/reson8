@@ -2,8 +2,12 @@ package com.coherentnetworksolutions.reson8.k8s;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.fabric8.kubernetes.api.model.NodeList;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.kubernetes.client.KubernetesServer;
 import io.quarkus.test.kubernetes.client.KubernetesTestServer;
@@ -15,6 +19,7 @@ import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import java.lang.reflect.Field;
 
 import com.coherentnetworksolutions.reson8.k8s.client.K8sConnectivityCheck;
 
@@ -49,12 +54,19 @@ class K8sConnectivityCheckTest {
 
     @Test
     @DisplayName("Kubernetes Connectivity health check returns DOWN when the client throws an exception")
-    void testHealthCheckDown() {
-        mockServer.expect().withPath("/api/v1/nodes").andReturn(500, Object.class).always();
-        
-        connectivityCheck = new K8sConnectivityCheck();
+    @SuppressWarnings("unchecked")
+    void testHealthCheckDown() throws Exception {
+        KubernetesClient throwingClient = mock(KubernetesClient.class);
+        MixedOperation<?, ?, ?> nodesOp = mock(MixedOperation.class);
+        when(throwingClient.nodes()).thenReturn((MixedOperation) nodesOp);
+        when(nodesOp.list()).thenThrow(new RuntimeException("simulated failure"));
 
-        HealthCheckResponse response = connectivityCheck.call();
+        K8sConnectivityCheck check = new K8sConnectivityCheck();
+        Field clientField = K8sConnectivityCheck.class.getDeclaredField("client");
+        clientField.setAccessible(true);
+        clientField.set(check, throwingClient);
+
+        HealthCheckResponse response = check.call();
 
         assertEquals(HealthCheckResponse.Status.DOWN, response.getStatus(), "Expected Kubernetes Connectivity health check to report DOWN");
     }

@@ -50,12 +50,12 @@ public class GsDropChannel extends BaseInputChannel implements DropChannel {
         return t;
     });
 
-    public GsDropChannel(SignalBucket signalEndpoint, CachedWav cachedWav, GsToolkit toolkit) {
-        super(signalEndpoint.getName(), 0.0, 0.0);
+    public GsDropChannel(SignalBucket signalBucket, CachedWav cachedWav, GsToolkit toolkit) {
+        super(signalBucket.getName(), 0.0, 0.0);
         this.cachedWav = cachedWav;
         this.toolkit = toolkit;
 
-        initCeiling(signalEndpoint.getSoundDefinition().drop().get().ceiling());
+        initCeiling(signalBucket.getSoundDefinition().drop().get().ceiling());
 
         this.channelBin = toolkit.createBin(getChannelName() + "_bin");
         this.channelMixer = toolkit.makeElement("audiomixer", getChannelName() + "_sum");

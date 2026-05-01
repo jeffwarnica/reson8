@@ -7,6 +7,39 @@ alwaysApply: true
 
 All GStreamer operations **must** go through the `GsToolkit` abstraction. Direct use of the native GStreamer API in production code (outside the Mixer) or in unit tests is a bug.
 
+## Naming boundary: "us" (`Gs`) vs "them" (`Gst`)
+
+Treat naming as an architecture signal:
+
+- **Us / project abstraction (`Gs`)**: our interfaces, adapters, and domain-facing classes (`GsToolkit`, `GsMixer`, `GsDropChannel`, etc.).
+- **Them / native vendor API (`Gst`)**: direct references to `org.freedesktop.gstreamer` types and lifecycle calls (`Gst`, `Element`, `Caps`, etc.).
+
+Rules:
+
+- Prefer `Gs*` names for project-owned code that wraps or hides native APIs.
+- Reserve `Gst` naming for direct native touchpoints only (vendor types, vendor lifecycle references, or code explicitly about native behavior).
+- Do not name abstraction-level tests/classes `Gst*` when they exercise `Gs*` code paths.
+- If a class leaks native `Gst` semantics to non-audio layers, treat that as a boundary violation.
+
+Quick examples:
+
+```java
+// ✅ Us (abstraction)
+class GsChannelFactory { ... }
+class GsDropChannelTest { ... }
+```
+
+```java
+// ✅ Them (native touchpoint)
+import org.freedesktop.gstreamer.Gst;
+import org.freedesktop.gstreamer.Element;
+```
+
+```java
+// ❌ Mixed signal (abstraction class named like vendor API)
+class GstDropChannelTest { ... } // tests GsDropChannel
+```
+
 ## Forbidden in production code (outside Mixer)
 
 ```java

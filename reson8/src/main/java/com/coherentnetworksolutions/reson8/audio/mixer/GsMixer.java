@@ -130,7 +130,7 @@ public class GsMixer implements Mixer {
 
     // Start the entire pipeline (play audio)
     @Override
-    public void start() {
+    public synchronized void start() {
         Log.info("Starting pipeline...");
         
         // Set everything to PLAYING
@@ -140,7 +140,7 @@ public class GsMixer implements Mixer {
 
     // Stop the pipeline
     @Override
-    public void stop() {
+    public synchronized void stop() {
         pipeline.stop();
     }    
 
@@ -236,20 +236,20 @@ public class GsMixer implements Mixer {
 
     // Set the master volume for the mixer
     @Override
-    public void setMasterVolume(double uiVolume) {
+    public synchronized void setMasterVolume(double uiVolume) {
         double scaledVol = VolumeScaler.humanToGsVolume(uiVolume);
         masterVolumeElement.set("volume", scaledVol);
     }
 
     @Override
-    public double getMasterVolume() {
+    public synchronized double getMasterVolume() {
         double gsVol = (double) masterVolumeElement.get("volume");
         double humanVol = VolumeScaler.gsToHumanVolume(gsVol);
         return humanVol;
     }
 
     @Override
-    public void setInputChannelVolume(String channelName, double humanVolume) {
+    public synchronized void setInputChannelVolume(String channelName, double humanVolume) {
         // 1. Get the pad from our registry, NOT the channel itself
         Pad mixerSinkPad = volPadsOfInputs.get(channelName);
         
@@ -265,7 +265,7 @@ public class GsMixer implements Mixer {
         }
     }
     @Override
-    public double getInputChannelVolume(String channelName) {
+    public synchronized double getInputChannelVolume(String channelName) {
         Log.tracef("Trying to get channelPad [%s], current channelPads: [%s]", channelName, volPadsOfInputs.keySet());
         Pad mixerSinkPad = volPadsOfInputs.get(channelName);
         if (mixerSinkPad == null) {
@@ -282,7 +282,7 @@ public class GsMixer implements Mixer {
 
     // Set the volume for a specific output channel
     @Override
-    public void setOutputChannelVolume(String channelName, double uiVolume) {
+    public synchronized void setOutputChannelVolume(String channelName, double uiVolume) {
         MixerOutputToClientManagerChannel channel = outputChannels.get(channelName);
         if (channel != null) {
             Element element = channel.getElement();
@@ -295,35 +295,35 @@ public class GsMixer implements Mixer {
 
     // Method to retrieve an input channel by name
     @Override
-    public InputChannel getInputChannel(String channelName) {
+    public synchronized InputChannel getInputChannel(String channelName) {
         return inputChannels.get(channelName);
     }
 
     // Method to retrieve an output channel by name
     @Override
-    public MixerOutputToClientManagerChannel getOutputChannel(String channelName) {
+    public synchronized MixerOutputToClientManagerChannel getOutputChannel(String channelName) {
         return outputChannels.get(channelName);
     }
 
     // Method to retrieve an input channel by name
     @Override
-    public Map<String, InputChannel> getInputChannels() {
-        return inputChannels;
+    public synchronized Map<String, InputChannel> getInputChannels() {
+        return Map.copyOf(inputChannels);
     }
 
     // Method to retrieve an output channel by name
     @Override
-    public Map<String, MixerOutputToClientManagerChannel> getOutputChannels() {
-        return outputChannels;
+    public synchronized Map<String, MixerOutputToClientManagerChannel> getOutputChannels() {
+        return Map.copyOf(outputChannels);
     }
 
     @Override
-    public Object getMixerElement() {
+    public synchronized Object getMixerElement() {
         return mixerElement;
     }
 
     @Override
-    public Object getPipeline() {
+    public synchronized Object getPipeline() {
         return pipeline;
     }
 
@@ -389,7 +389,7 @@ public class GsMixer implements Mixer {
     }
 
     @Override
-    public MixerOutputToClientManagerChannel getMasterOutput() {
+    public synchronized MixerOutputToClientManagerChannel getMasterOutput() {
         return masterOutput;
     }
 
@@ -479,7 +479,7 @@ public class GsMixer implements Mixer {
     }
 
     @Override
-    public List<Object> dumpAllElements() {
+    public synchronized List<Object> dumpAllElements() {
         return new java.util.ArrayList<>(pipeline.getElementsRecursive());
     }
 
@@ -520,7 +520,7 @@ public class GsMixer implements Mixer {
     }
 
     @Override
-    public String dumpMixerState() {
+    public synchronized String dumpMixerState() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("=== RESON8 CONSOLE DUMP [%s] ===%n", pipeline.getState()));
 

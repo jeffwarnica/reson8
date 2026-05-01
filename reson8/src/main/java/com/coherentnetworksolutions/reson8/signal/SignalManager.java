@@ -185,7 +185,7 @@ public class SignalManager {
      * and applies the result as the target intensity (0–100) of the associated
      * {@link com.coherentnetworksolutions.reson8.audio.input.InputChannel}.
      * <p>
-     * Used by both the k8s stats path ({@code K8Client}) and the Prometheus/Thanos path
+     * Used by both the k8s stats path ({@code K8sClient}) and the Prometheus/Thanos path
      * ({@code ThanosMetricPoller}).
      *
      * @param signalId the bucket name (must match a registered {@link SignalBucket})
@@ -225,12 +225,11 @@ public class SignalManager {
                     // Find the associated sound and give it a default "heartbeat" intensity
                     InputChannel channel = entry.getInputChannel();
                     if (channel != null) {
-                        Log.debugf("starting channel [%s]", channel.getChannelName());
-                        // Ensure it's started so the pipeline can PLAY
+                        Log.debugf("wiring channel [%s]", channel.getChannelName());
+                        // Mixer owns channel startup to avoid double-start races.
                         mixer.addInputChannel(channel);
                         mixer.setInputChannelVolume(channel.getChannelName(), 80.0);
                         channel.setTargetIntensity(50);
-                        channel.start();
                     } else {
                         Log.warnf("Signal Endpoint [%s] has no associated channel and will not be played", entry.getName());
                     }

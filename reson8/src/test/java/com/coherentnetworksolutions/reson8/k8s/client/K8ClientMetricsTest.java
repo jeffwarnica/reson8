@@ -32,7 +32,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.*;
 
 @ExtendWith(MockitoExtension.class)
-class K8ClientMetricsTest {
+class K8sClientMetricsTest {
 
     @Mock
     KubernetesClient client;
@@ -56,19 +56,19 @@ class K8ClientMetricsTest {
     io.vertx.mutiny.core.eventbus.EventBus eventBus;
 
     @InjectMocks
-    K8Client k8Client;
+    K8sClient k8sClient;
 
     @BeforeEach
     void assertNotNativeGst() {
         assertFalse(Gst.isInitialized(),
-                "Toolkit abstraction leak detected in K8ClientMetricsTest.");
+                "Toolkit abstraction leak detected in K8sClientMetricsTest.");
     }
 
     @BeforeEach
     void setFlowing() throws Exception {
-        var f = K8Client.class.getDeclaredField("isFlowing");
+        var f = K8sClient.class.getDeclaredField("isFlowing");
         f.setAccessible(true);
-        ((AtomicBoolean) f.get(k8Client)).set(true);
+        ((AtomicBoolean) f.get(k8sClient)).set(true);
         lenient().when(k8sSyncState.isEnabled()).thenReturn(true);
     }
 
@@ -84,12 +84,12 @@ class K8ClientMetricsTest {
         when(nodeOp.list()).thenReturn(nodeList);
         doReturn(nodeOp).when(client).nodes();
 
-        k8Client.pullCapacity();
+        k8sClient.pullCapacity();
 
         // gotCapacity should remain false — no interaction with clusterCapacity
-        var gotCap = K8Client.class.getDeclaredField("gotCapacity");
+        var gotCap = K8sClient.class.getDeclaredField("gotCapacity");
         gotCap.setAccessible(true);
-        assertFalse((boolean) gotCap.get(k8Client));
+        assertFalse((boolean) gotCap.get(k8sClient));
     }
 
     @Test
@@ -97,7 +97,7 @@ class K8ClientMetricsTest {
     void pullCapacity_syncDisabled_skips() throws Exception {
         when(k8sSyncState.isEnabled()).thenReturn(false);
 
-        k8Client.pullCapacity();
+        k8sClient.pullCapacity();
 
         verify(client, never()).nodes();
     }
@@ -185,14 +185,14 @@ class K8ClientMetricsTest {
     }
 
     private double invokeComputeDeploymentHealthPct() throws Exception {
-        var m = K8Client.class.getDeclaredMethod("computeDeploymentHealthPct");
+        var m = K8sClient.class.getDeclaredMethod("computeDeploymentHealthPct");
         m.setAccessible(true);
-        return (double) m.invoke(k8Client);
+        return (double) m.invoke(k8sClient);
     }
 
     private void invokePushStatsBucket(ClusterMetric metric, double rawValue) throws Exception {
-        var m = K8Client.class.getDeclaredMethod("pushStatsBucket", ClusterMetric.class, double.class);
+        var m = K8sClient.class.getDeclaredMethod("pushStatsBucket", ClusterMetric.class, double.class);
         m.setAccessible(true);
-        m.invoke(k8Client, metric, rawValue);
+        m.invoke(k8sClient, metric, rawValue);
     }
 }

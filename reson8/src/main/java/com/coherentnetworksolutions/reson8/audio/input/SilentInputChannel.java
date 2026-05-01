@@ -13,8 +13,8 @@ import com.coherentnetworksolutions.reson8.signal.SignalBucket;
  */
 public class SilentInputChannel extends BaseInputChannel {
 
-    public SilentInputChannel(SignalBucket signalEndpoint, GsToolkit toolkit) {
-        super(signalEndpoint.getName(), 0.0, 0.0);
+    public SilentInputChannel(SignalBucket signalBucket, GsToolkit toolkit) {
+        super(signalBucket.getName(), 0.0, 0.0);
     }
 
     @Override
