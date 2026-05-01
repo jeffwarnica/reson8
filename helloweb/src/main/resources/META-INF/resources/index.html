@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanks for the Clicks!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        button {
+            padding: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        .success-btn {
+            background-color: #4CAF50;
+        }
+        .success-btn:hover {
+            background-color: #45a049;
+        }
+        .notfound-btn {
+            background-color: #ff9800;
+        }
+        .notfound-btn:hover {
+            background-color: #e68900;
+        }
+        .error-btn {
+            background-color: #f44336;
+        }
+        .error-btn:hover {
+            background-color: #da190b;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        .status.show {
+            display: block;
+        }
+        .status.running {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.completed {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        .label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Thanks for the Clicks! 🎉</h1>
+        <p class="subtitle">Load test your server with custom rate and duration</p>
+        
+        <div class="controls">
+            <div>
+                <label class="label">Rate (requests/sec):</label>
+                <input type="number" id="rate" value="10" min="1" max="1000">
+            </div>
+            <div>
+                <label class="label">Duration (seconds):</label>
+                <input type="number" id="duration" value="60" min="1" max="3600">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="success-btn" onclick="startLoadTest('success')">200 OK (Success)</button>
+            <button class="notfound-btn" onclick="startLoadTest('notfound')">404 Not Found</button>
+            <button class="error-btn" onclick="startLoadTest('error')">500 Server Error</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        let isRunning = false;
+
+        async function startLoadTest(testType) {
+            const rate = parseInt(document.getElementById('rate').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const statusDiv = document.getElementById('status');
+
+            if (!rate || !duration) {
+                alert('Please enter valid rate and duration values');
+                return;
+            }
+
+            if (isRunning) {
+                alert('Test already running!');
+                return;
+            }
+
+            isRunning = true;
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            statusDiv.className = 'status show running';
+            statusDiv.innerHTML = `Running ${testType} test: ${rate} req/sec for ${duration} seconds...`;
+
+            const interval = 1000 / rate;
+            const endTime = Date.now() + (duration * 1000);
+            let requestCount = 0;
+
+            const makeRequest = async () => {
+                try {
+                    let url;
+                    if (testType === 'success') {
+                        url = '/api/test/success';
+                    } else if (testType === 'notfound') {
+                        url = '/api/test/notfound';
+                    } else if (testType === 'error') {
+                        url = '/api/test/error';
+                    }
+                    
+                    const response = await fetch(url, { method: 'GET' });
+                    requestCount++;
+                } catch (err) {
+                    requestCount++;
+                }
+            };
+
+            const timer = setInterval(async () => {
+                if (Date.now() >= endTime) {
+                    clearInterval(timer);
+                    isRunning = false;
+                    buttons.forEach(btn => btn.disabled = false);
+                    statusDiv.className = 'status show completed';
+                    statusDiv.innerHTML = `✓ Test completed! Sent ${requestCount} requests (${testType})`;
+                    return;
+                }
+                makeRequest();
+            }, interval);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleDashboard
+metadata:
+  name: quarkus-http-dashboard
+spec:
+  title: Quarkus HTTP Overview
+  charts:
+    - title: Traffic (RPS)
+      type: LineGraph
+      query: |
+        sum(rate(http_server_requests_seconds_count[5m]))
+
+    - title: Status Codes
+      type: StackedArea
+      query: |
+        sum by (status) (
+          rate(http_server_requests_seconds_count[5m])
+        )
+
+    - title: Error Rate (5xx)
+      type: LineGraph
+      query: |
+        sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+
+    - title: Top Endpoints
+      type: BarGraph
+      query: |
+        topk(10,
+          sum by (uri) (
+            rate(http_server_requests_seconds_count[5m])
+          )
+        )
+
+    - title: p95 Latency
+      type: LineGraph
+      query: |
+        histogram_quantile(
+          0.95,
+          sum by (le, uri) (
+            rate(http_server_requests_seconds_bucket[5m])
+          )
+        )
