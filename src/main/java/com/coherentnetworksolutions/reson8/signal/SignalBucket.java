@@ -35,10 +35,9 @@ public class SignalBucket {
     private SoundType soundType;
     private boolean isDrop;
 
-    InputChannelFactory channelFactory;
-    SoundDefinitionRegistry soundRegistry;
-
-    SignalManager signalManager;
+    // private final InputChannelFactory channelFactory;
+    // private final SoundDefinitionRegistry soundRegistry;
+    private final SignalManager signalManager;
     private CurveConfig curveConfig;
     
     private SignalCurveMap curve;
@@ -51,8 +50,8 @@ public class SignalBucket {
             this.query = mapping.query().orElse("");
             this.metric = mapping.metric().orElse(null);
             this.soundDefinition = soundDefinition;
-            this.channelFactory = channelFactory;
-            this.soundRegistry = soundRegistry;
+            // this.channelFactory = channelFactory;
+            // this.soundRegistry = soundRegistry;
             this.isDrop = (soundDefinition.soundType() == SoundType.DROP);
             this.soundType = soundDefinition.soundType();
             this.signalManager = signalManager;
@@ -130,19 +129,8 @@ public class SignalBucket {
     /**
      * @return the output ceiling of the channel (0–100)
      */
-    public double getVolume() {
+    public double getCeiling() {
         return inputChannel.getCeiling();
-    }
-
-    /**
-     * @deprecated Use {@link com.coherentnetworksolutions.reson8.audio.input.InputChannel#setCeiling(double)}
-     *             directly on the underlying channel, or call the fader REST endpoint
-     *             ({@code PATCH /audio/channels/{name}/fader}) to adjust the ceiling.
-     */
-    @Deprecated
-    public void setVolume(@Min(0) @Max(100) double vol){
-        Log.debugf("[%s].setVolume([%s]), pass to inputChannel", name, vol);
-        inputChannel.setCeiling(vol);
     }
 
 

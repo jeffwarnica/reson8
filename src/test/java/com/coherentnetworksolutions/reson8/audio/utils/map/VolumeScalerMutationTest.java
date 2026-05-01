@@ -19,7 +19,7 @@ class VolumeScalerMutationTest {
     private static final double DELTA = 0.0001;
 
     // -----------------------------------------------------------------------
-    // humanToGstVolume — boundary clamps
+    // humanToGsVolume — boundary clamps
     // -----------------------------------------------------------------------
 
     @Test
@@ -54,7 +54,7 @@ class VolumeScalerMutationTest {
     }
 
     // -----------------------------------------------------------------------
-    // gstToHumanVolume — boundary clamps
+    // gsToHumanVolume — boundary clamps
     // -----------------------------------------------------------------------
 
     @Test

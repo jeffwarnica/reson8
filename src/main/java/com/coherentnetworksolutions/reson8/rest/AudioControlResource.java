@@ -65,7 +65,7 @@ public class AudioControlResource {
             ChannelStateDTO dto = new ChannelStateDTO();
             dto.name = ch.getName();
             dto.mixerVol = mixer.getInputChannelVolume(ch.getName());
-            dto.chanVol = ch.getVolume();
+            dto.chanVol = ch.getCeiling();
             dto.targetIntensity = ch.getIntensity();
             dto.currentIntensity = ch.getCurrentIntensity();
             dto.isDrop = ch.isDrop();
@@ -102,7 +102,7 @@ public class AudioControlResource {
             ChannelStateDTO dto = new ChannelStateDTO();
             dto.name = ch.getName();
             dto.mixerVol = mixer.getInputChannelVolume(ch.getName());
-            dto.chanVol = ch.getVolume();
+            dto.chanVol = ch.getCeiling();
             dto.targetIntensity = ch.getIntensity();
             dto.currentIntensity = ch.getCurrentIntensity();
             dto.isDrop = ch.isDrop();
@@ -123,10 +123,10 @@ public class AudioControlResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response setChannelFader(ChannelVolumeRequest req) {
         Log.debugf("[%s] chVol -> [%s], mixVol -> [%s]", req.channel, req.chVol, req.mixVol);
-        if (req.chVol >= 0) {
+        if (req.mixVol >= 0) {
             mixer.setInputChannelVolume(req.channel, req.mixVol);
         }
-        if (req.mixVol >= 0) {
+        if (req.chVol >= 0) {
             InputChannel ch = mixer.getInputChannel(req.channel);
             if (ch == null) {
                 return Response.status(Response.Status.NOT_FOUND)

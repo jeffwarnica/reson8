@@ -4,9 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.freedesktop.gstreamer.Element;
-import org.freedesktop.gstreamer.Pipeline;
-
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
 import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClientManagerChannel;
 
@@ -102,15 +99,13 @@ public class SilentMixer implements Mixer {
     }
 
     @Override
-    public Element getMixerElement() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMixerElement'");
+    public Object getMixerElement() {
+        throw new UnsupportedOperationException("SilentMixer has no native mixer element");
     }
 
     @Override
-    public Pipeline getPipeline() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getPipeline'");
+    public Object getPipeline() {
+        throw new UnsupportedOperationException("SilentMixer has no native pipeline");
     }
 
     @Override
@@ -139,9 +134,8 @@ public class SilentMixer implements Mixer {
     }
 
     @Override
-    public List<Element> dumpAllElements() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'dumpAllElements'");
+    public List<Object> dumpAllElements() {
+        throw new UnsupportedOperationException("SilentMixer has no native pipeline elements");
     }
 
     @Override

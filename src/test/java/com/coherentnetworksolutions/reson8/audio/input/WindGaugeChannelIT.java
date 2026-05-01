@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
-import org.freedesktop.gstreamer.Caps;
 import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
@@ -28,7 +27,7 @@ class WindGaugeChannelIT {
     @Test
     void getCapsReturnsNonNullFixedCaps() {
         WindGaugeChannel ch = new WindGaugeChannel(buildBucket(), toolkit);
-        Caps caps = ch.getCaps();
+        String caps = ch.getCapsString();
         assertNotNull(caps);
         assertTrue(caps.toString().contains("audio/x-raw"));
         ch.dispose();

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URI;
 
 import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,8 +15,11 @@ import com.coherentnetworksolutions.reson8.audio.output.to.BrowserSessionManager
 import com.coherentnetworksolutions.reson8.audio.utils.WavHeaderUtils;
 
 import io.quarkus.logging.Log;
+import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+
+import java.net.URL;
 
 @QuarkusTest
 public class AudioStreamResourceTest {
@@ -33,16 +35,17 @@ public class AudioStreamResourceTest {
     @Inject
     BrowserSessionManager sessionManager;
 
+    @TestHTTPResource("/audio/stream")
+    URL audioStreamUrl;
+
     @Test
     public void testAudioStreamFlow() throws Exception {
         Log.infof("My BrowserSessionManager is type [%s]", sessionManager.getClass());
         byte[] expectedHeader = WavHeaderUtils.createPcmHeader(48000, 16, 2);
         Log.infof("Size of expected(wav) header is [%s]", expectedHeader.length);
-        // Response response = RestAssured.get("/audio/stream");
-        // InputStream stream = response.asInputStream();
 
         // 1. Use a raw connection to ensure no library buffering
-        HttpURLConnection conn = (HttpURLConnection) URI.create("http://localhost:8081/audio/stream").toURL().openConnection();
+        HttpURLConnection conn = (HttpURLConnection) audioStreamUrl.openConnection();
         conn.setReadTimeout(5000); // 5 second read timeout
 
         InputStream stream = conn.getInputStream();

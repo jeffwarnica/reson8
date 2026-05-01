@@ -11,6 +11,7 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -19,7 +20,7 @@ import jakarta.inject.Inject;
 */
 @ApplicationScoped
 @io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gs")
-public class GstChannelFactory implements InputChannelFactory {
+public class GsChannelFactory implements InputChannelFactory {
     @Inject WavCache wavCache;
     @Inject SoundDefinitionRegistry soundRegistry;
     @Inject Reson8Config config;
@@ -72,4 +73,8 @@ public class GstChannelFactory implements InputChannelFactory {
         };
     }
 
+    @PreDestroy
+    void shutdown() {
+        GsDropChannel.shutdownExecutor();
+    }
 }

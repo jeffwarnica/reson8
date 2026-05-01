@@ -34,18 +34,33 @@ public interface Reson8Config {
     interface ThanosConfig {
         String baseUrl();
 
+        /**
+         * In-cluster Thanos Querier URL used when the application is running inside
+         * Kubernetes and the in-cluster secrets directory exists.
+         * <p>
+         * Defaults to the standard OpenShift monitoring endpoint. Override via
+         * {@code reson8.k8s.thanos.in-cluster-url} when running in a non-standard
+         * cluster setup.
+         */
+        @WithDefault("https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/api/v1")
+        @WithName("in-cluster-url")
+        String inClusterUrl();
+
         @WithDefault("false")
         boolean ignoreCerts();
     }
 
+    /**
+     * Namespace filtering configuration.
+     * <p>
+     * Currently only the {@link #all()} flag is wired to {@code K8Client} (via
+     * {@code inAnyNamespace()} when {@code true}). The {@code include} and {@code
+     * exclude} lists that appeared in earlier revisions have been removed — they were
+     * never evaluated. Implement per-namespace filtering in {@code K8Client.startK8sWatchers()}
+     * when a scoped watch is needed.
+     */
     interface NamespaceConfig {
         boolean all();
-
-        @WithDefault("")
-        List<String> include();
-
-        @WithDefault("")
-        List<String> exclude();
     }
 
     interface SignalMap {

@@ -6,7 +6,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.freedesktop.gstreamer.Bin;
-import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.PlayBin;
@@ -28,7 +27,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     /** Linear multiplier on procedural VCA (0–1), from loop config output-scale. */
     private final double outputScale;
     private final GsToolkit toolkit;
-    private final Caps caps;
+    private final String capsString;
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private Double smoothingRate;
@@ -39,7 +38,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     public LoopingGaugeChannel(SignalBucket signalBucket, Reson8Config config, GsToolkit toolkit) {
         super(signalBucket.getName(), 0.0, 0.0);
         this.toolkit = toolkit;
-        this.caps = toolkit.capsFromString("audio/x-raw");
+        this.capsString = "audio/x-raw";
         this.bin = toolkit.createBin(getChannelName() + "_bin");
         this.smoothingRate = signalBucket.getSoundDefinition().loop().get().smoothingrate();
         
@@ -119,12 +118,12 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
     }
 
     @Override
-    public Caps getCaps() {
-        return caps;
+    public String getCapsString() {
+        return capsString;
     }
 
     @Override
-    public Element getSrcElement() {
+    public Object getSrcElement() {
         return bin;
     }
 

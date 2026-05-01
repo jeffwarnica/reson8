@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
+import com.coherentnetworksolutions.reson8.signal.K8sSyncState;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
 import io.quarkus.logging.Log;
@@ -29,28 +30,29 @@ public class ThanosMetricPoller {
     @Inject
     Reson8Config config;
 
-    // @RestClient
-    ThanosRestClient restClient; 
-
     @Inject
-    K8Client k8sClient; // To access the SignalManager and update intensities
+    K8sAuthTokenProvider authTokenProvider;
 
     @Inject
     SignalManager signalManager;
 
+    @Inject
+    K8sSyncState k8sSyncState;
+
+    ThanosRestClient restClient;
+
     private String authToken;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
-    private final AtomicBoolean k8sSync = new AtomicBoolean(true);
     private final Map<String, String> activeQueries = new ConcurrentHashMap<>();
 
     private String thanosUrl;
 
     // 1. Wait for the K8s signal
-    @ConsumeEvent("K8sClientReady")
+    @ConsumeEvent("k8s-client-ready")
     @Blocking
     void thanosStartup(String msg) {
         if (new File("/var/run/secrets/kubernetes.io").exists()) {
-            thanosUrl = "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/api/v1";
+            thanosUrl = config.k8s().thanos().inClusterUrl();
         } else {
             thanosUrl = config.k8s().thanos().baseUrl();
             if (!thanosUrl.endsWith("/api/v1")) {
@@ -63,7 +65,7 @@ public class ThanosMetricPoller {
             .trustAll(config.k8s().thanos().ignoreCerts()) // Map your config here
             .build(ThanosRestClient.class);
 
-        authToken = "Bearer " + k8sClient.getAuthToken(); 
+        authToken = "Bearer " + authTokenProvider.getToken();
         
         if (checkThanosHealth()) {
             signalManager.getSignalBuckets().stream()
@@ -84,17 +86,9 @@ public class ThanosMetricPoller {
         
     }   
 
-    // NEW: Listener for the GUI toggle
-    @ConsumeEvent(value = "k8s-sync-enable")
-    public void setK8sSyncEnabled(boolean state) {
-        Log.debugf("Thanos poller updating sync mode to [%s]", state);
-        k8sSync.set(state);
-    }
-
-
     @Scheduled(every = "2s")
     void pollMetrics() {
-        if (!initialized.get() || !k8sSync.get()) {
+        if (!initialized.get() || !k8sSyncState.isEnabled()) {
             return;
         }
         Log.debugf("Polling Thanos for metrics...");
@@ -103,7 +97,7 @@ public class ThanosMetricPoller {
                 ThanosResponse response = restClient.query(promql, authToken);
                 double value = parseResponse(response);
                 Log.debugf("Thanos response for signal [%s]: %f", signalId, value);
-                signalManager.updateSignalIntensityFromPromVal(signalId, value);
+                signalManager.updateSignalIntensity(signalId, value);
             } catch (Exception e) {
                 Log.error("Failed to pull metrics for signalId: " + signalId, e);
             }

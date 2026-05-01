@@ -25,8 +25,8 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefi
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
-public class GstChannelFactoryTest {
-    private GstChannelFactory factory;
+public class GsChannelFactoryTest {
+    private GsChannelFactory factory;
     private MockGsToolkit toolkit;
     /** Holds the channel built each test so @AfterEach can stop its internal scheduler. */
     private InputChannel lastBuiltChannel;
@@ -40,7 +40,7 @@ public class GstChannelFactoryTest {
 
     @BeforeEach
     void setUp() {
-        factory = new GstChannelFactory();
+        factory = new GsChannelFactory();
         MockGsToolkit realToolkit = new MockGsToolkit();
         toolkit = spy(realToolkit);
         factory.gstToolkit = toolkit; // Inject the spy toolkit
@@ -152,7 +152,7 @@ public class GstChannelFactoryTest {
 
     @Test
     void testBuildWindChannelViaEnum() {
-        // The GeneratorType enum switch in GstChannelFactory is exhaustive at compile
+        // The GeneratorType enum switch in GsChannelFactory is exhaustive at compile
         // time; there is no longer a runtime "unknown procedural" case. This test
         // confirms that a WIND generator produces a WindGaugeChannel, complementing
         // testBuildWindChannel which uses the full mock setup.

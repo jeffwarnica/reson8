@@ -155,7 +155,7 @@ public class GsMixer implements Mixer {
             return;
         inputChannels.put(inputChannel.getChannelName(), inputChannel);
 
-        Element srcBin = inputChannel.getSrcElement();
+        Element srcBin = (Element) inputChannel.getSrcElement();
         String prefix = inputChannel.getChannelName() + CHANNEL_DELINEATOR + System.nanoTime() + CHANNEL_DELINEATOR;
 
         Element convert = ElementFactory.make("audioconvert", prefix + "conv");
@@ -318,12 +318,12 @@ public class GsMixer implements Mixer {
     }
 
     @Override
-    public Element getMixerElement() {
+    public Object getMixerElement() {
         return mixerElement;
     }
-    
+
     @Override
-    public Pipeline getPipeline() {
+    public Object getPipeline() {
         return pipeline;
     }
 
@@ -334,7 +334,7 @@ public class GsMixer implements Mixer {
         Pad mixerSinkPad = volPadsOfInputs.remove(channelName);
 
         if (channel != null) {
-            channel.getSrcElement().setState(State.NULL);
+            ((Element) channel.getSrcElement()).setState(State.NULL);
 
             // Find and remove all elements belonging to this channel
             // This handles the conv, res, and queue elements
@@ -479,9 +479,8 @@ public class GsMixer implements Mixer {
     }
 
     @Override
-    public List<Element> dumpAllElements() {
-        List<Element> elements = pipeline.getElementsRecursive();
-        return elements;
+    public List<Object> dumpAllElements() {
+        return new java.util.ArrayList<>(pipeline.getElementsRecursive());
     }
 
     public synchronized void dispose() {
@@ -538,23 +537,22 @@ public class GsMixer implements Mixer {
 
         // --- INPUT CHANNELS ---
         inputChannels.forEach((name, channel) -> {
-            
+
             Pad sinkPad = volPadsOfInputs.get(name);
 
             double channelCeiling = channel.getCeiling();
             double faderPos = (sinkPad != null) ? (double) sinkPad.get("volume") : 0.0;
-            State srcState = channel.getSrcElement().getState();
+            Element srcElement = (Element) channel.getSrcElement();
+            State srcState = srcElement != null ? srcElement.getState() : State.NULL;
 
             sb.append(String.format("CH: %-15s | SRC: %-7s | CEILING: %.2f | FADER: %.2f%n",
                     name.toUpperCase(), srcState, channelCeiling, faderPos));
 
-            // Check for common link failures
             if (sinkPad == null || !sinkPad.isLinked()) {
                 sb.append("   [!] DISCONNECTED: Sink pad missing or unlinked.\n");
             } else {
                 sb.append(String.format("   -> Path: %s ->-> Mixer:%s%n",
-                        channel.getSrcElement().getName(),
-                        // (gainEl != null ? gainEl.getName() : "DIRECT"),
+                        srcElement != null ? srcElement.getName() : "null",
                         sinkPad.getName()));
             }
         });

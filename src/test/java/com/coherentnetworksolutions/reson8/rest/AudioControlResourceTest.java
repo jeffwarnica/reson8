@@ -21,6 +21,7 @@ import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefinition;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SourceType;
+import com.coherentnetworksolutions.reson8.signal.K8sSyncState;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
@@ -36,6 +37,9 @@ class AudioControlResourceTest {
 
     @InjectMock
     SignalManager signalManager;
+
+    @InjectMock
+    K8sSyncState k8sSyncState;
 
     @BeforeEach
     void assertNotNativeGst() {
@@ -69,7 +73,7 @@ class AudioControlResourceTest {
     void getChannels_mapsBucketFieldsToDTO() {
         SignalBucket bucket = mock(SignalBucket.class);
         when(bucket.getName()).thenReturn("wind");
-        when(bucket.getVolume()).thenReturn(70.0);
+        when(bucket.getCeiling()).thenReturn(70.0);
         when(bucket.getIntensity()).thenReturn(50.0);
         when(bucket.getCurrentIntensity()).thenReturn(45.0);
         when(bucket.isDrop()).thenReturn(false);
@@ -167,27 +171,27 @@ class AudioControlResourceTest {
     // ─── POST /audio/control/k8s-sync/{active} ────────────────────────
 
     @Test
-    @DisplayName("POST /k8s-sync/true: enables k8s sync on SignalManager")
-    void setK8sSync_true_invokesSignalManagerEnable() {
+    @DisplayName("POST /k8s-sync/true: publishes k8s-sync-enable event which enables K8sSyncState")
+    void setK8sSync_true_updatesK8sSyncState() {
         given()
             .when().post("/audio/control/k8s-sync/true")
             .then()
             .statusCode(204);
 
         await().atMost(2, TimeUnit.SECONDS)
-               .untilAsserted(() -> verify(signalManager).setK8sSyncEnabled(true));
+               .untilAsserted(() -> verify(k8sSyncState).onSyncToggle(true));
     }
 
     @Test
-    @DisplayName("POST /k8s-sync/false: disables k8s sync on SignalManager")
-    void setK8sSync_false_invokesSignalManagerDisable() {
+    @DisplayName("POST /k8s-sync/false: publishes k8s-sync-enable event which disables K8sSyncState")
+    void setK8sSync_false_updatesK8sSyncState() {
         given()
             .when().post("/audio/control/k8s-sync/false")
             .then()
             .statusCode(204);
 
         await().atMost(2, TimeUnit.SECONDS)
-               .untilAsserted(() -> verify(signalManager).setK8sSyncEnabled(false));
+               .untilAsserted(() -> verify(k8sSyncState).onSyncToggle(false));
     }
 
     // ─── POST /audio/control/fader ────────────────────────────────────
@@ -205,15 +209,15 @@ class AudioControlResourceTest {
             .then()
             .statusCode(200);
 
-        // chVol (50.0) ≥ 0 → setInputChannelVolume called (using req.mixVol as value)
+        // mixVol (80.0) ≥ 0 → setInputChannelVolume called with mixVol
         verify(mixer).setInputChannelVolume("wind", 80.0);
-        // mixVol (80.0) ≥ 0 → setCeiling called (using req.chVol as value)
+        // chVol (50.0) ≥ 0 → setCeiling called with chVol
         verify(mockChannel).setCeiling(50.0);
     }
 
     @Test
-    @DisplayName("POST /fader: negative chVol skips the mixer fader update")
-    void setFader_negativeChVol_skipsSetInputChannelVolume() {
+    @DisplayName("POST /fader: negative chVol skips the channel ceiling update")
+    void setFader_negativeChVol_skipsSetCeiling() {
         InputChannel mockChannel = mock(InputChannel.class);
         when(mixer.getInputChannel("wind")).thenReturn(mockChannel);
 
@@ -224,12 +228,18 @@ class AudioControlResourceTest {
             .then()
             .statusCode(200);
 
-        verify(mixer, never()).setInputChannelVolume(anyString(), anyDouble());
+        // chVol (-1.0) < 0 → getInputChannel never called, setCeiling never called
+        verify(mixer, never()).getInputChannel(anyString());
+        // mixVol (80.0) ≥ 0 → setInputChannelVolume is still called
+        verify(mixer).setInputChannelVolume("wind", 80.0);
     }
 
     @Test
-    @DisplayName("POST /fader: negative mixVol skips the channel ceiling update")
-    void setFader_negativeMixVol_skipsSetCeiling() {
+    @DisplayName("POST /fader: negative mixVol skips the mixer fader update")
+    void setFader_negativeMixVol_skipsSetInputChannelVolume() {
+        InputChannel mockChannel = mock(InputChannel.class);
+        when(mixer.getInputChannel("wind")).thenReturn(mockChannel);
+
         given()
             .contentType(ContentType.JSON)
             .body("{\"channel\":\"wind\",\"chVol\":50.0,\"mixVol\":-1.0}")
@@ -237,8 +247,10 @@ class AudioControlResourceTest {
             .then()
             .statusCode(200);
 
-        // mixVol (-1.0) < 0 → getInputChannel never called, setCeiling never called
-        verify(mixer, never()).getInputChannel(anyString());
+        // mixVol (-1.0) < 0 → setInputChannelVolume never called
+        verify(mixer, never()).setInputChannelVolume(anyString(), anyDouble());
+        // chVol (50.0) ≥ 0 → setCeiling is still called
+        verify(mockChannel).setCeiling(50.0);
     }
 
     // ─── PATCH /audio/control/channels/{name}/target-intensity ────────

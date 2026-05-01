@@ -46,7 +46,7 @@ public class SilentInputChannelTest {
         when(mockBucket.getName()).thenReturn("SilentTest");
 
         SilentInputChannel silent = new SilentInputChannel(mockBucket, toolkit);
-        assertEquals("audio/x-raw", silent.getCaps().toString());
+        assertEquals("audio/x-raw", silent.getCapsString());
     }
 
     @Test

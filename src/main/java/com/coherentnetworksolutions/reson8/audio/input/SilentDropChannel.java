@@ -1,8 +1,5 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
-import org.freedesktop.gstreamer.Caps;
-import org.freedesktop.gstreamer.Element;
-
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
@@ -25,13 +22,12 @@ public class SilentDropChannel extends BaseInputChannel implements DropChannel {
     }
 
     @Override
-    public Element getSrcElement() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSrcElement'");
+    public Object getSrcElement() {
+        throw new UnsupportedOperationException("SilentDropChannel has no native source element");
     }
 
     @Override
-    public Caps getCaps() {
-        throw new UnsupportedOperationException("Unimplemented method 'getCaps'");
+    public String getCapsString() {
+        throw new UnsupportedOperationException("SilentDropChannel has no caps");
     }
 }

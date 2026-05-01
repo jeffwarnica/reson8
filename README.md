@@ -71,8 +71,21 @@ The core sound engine and signal pipeline are feature-complete for a proof-of-co
 ### Remaining / next steps
 * Better sounding generated procedural audio (wind algorithm improvements — current output is recognisable but rough)
 * Proper histogram metric handling: map histogram bucket rates to stochastic channel frequency / rhythm
-* Remove or promote the `helloweb` submodule (currently undocumented and unused in the main build)
 * Horizontal scalability: the GStreamer pipeline is inherently single-replica; document or address this constraint before any production deployment
+
+## Security Posture (POC — intentionally open)
+
+All REST endpoints are currently **unauthenticated**. This is intentional for the POC phase to simplify local development and cluster deployment. The following mutation endpoints are the highest-priority surfaces to gate before any production or multi-tenant deployment:
+
+| Endpoint | Method | Risk |
+|---|---|---|
+| `POST /audio/control/fader` | Mutation | Sets per-channel fader / ceiling |
+| `POST /audio/control/k8s-sync/{active}` | Mutation | Enables/disables k8s metric ingestion |
+| `POST /audio/control/simulate-metric` | Mutation | Injects arbitrary signal values |
+| `POST /audio/drop` | Mutation | Triggers one-shot audio drops |
+| `PUT /audio/control/master-volume` | Mutation | Changes master volume |
+
+**Before production:** add JWT (`quarkus-smallrye-jwt`) or OIDC (`quarkus-oidc`) protection to these endpoints, or place the service behind an OpenShift Route with OAuth proxy sidecar.
 
 ### Wishlist
 * Consider k8s influenced channels configured by name

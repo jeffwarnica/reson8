@@ -6,7 +6,6 @@ import java.util.concurrent.Executors;
 
 import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Buffer;
-import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.Format;
 import org.freedesktop.gstreamer.Pad;
@@ -105,17 +104,37 @@ public class GsDropChannel extends BaseInputChannel implements DropChannel {
     }
 
     @Override
-    public Caps getCaps() {
-        return cachedWav.caps();
+    public String getCapsString() {
+        return cachedWav.caps().toString();
     }
 
     @Override
-    public Element getSrcElement() {
+    public Object getSrcElement() {
         return channelBin;
     }
 
+    /**
+     * Stops the channel bin and releases native GStreamer resources.
+     * Called by {@code GsMixer.removeInputChannel()} during ordered teardown.
+     */
     @Override
     public void dispose() {
+        synchronized (binLock) {
+            if (channelBin != null) {
+                toolkit.setElementState(channelBin, State.NULL);
+                channelBin = null;
+            }
+            channelMixer = null;
+        }
+    }
+
+    /**
+     * Shuts down the shared trigger executor. Should only be called once at
+     * application shutdown; in normal operation the CDI bean owning the factory
+     * (e.g. {@code GsChannelFactory}) calls this via {@code @PreDestroy}.
+     */
+    public static void shutdownExecutor() {
+        TRIGGER_EXECUTOR.shutdown();
     }
 
     private class DropInstance {

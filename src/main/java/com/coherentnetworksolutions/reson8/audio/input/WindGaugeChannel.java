@@ -5,7 +5,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.freedesktop.gstreamer.Bin;
-import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.State;
 
@@ -28,7 +27,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     private final double smoothingRate;
     private final double outputScale;
     private final GsToolkit toolkit;
-    private final Caps caps;// = Caps.fromString(Mixer.CAPS);
+    private final String capsString;
 
     public WindGaugeChannel(SignalBucket signalBucket, GsToolkit toolkit) {
         
@@ -37,7 +36,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
                signalBucket.getProcedureConf().intensity(),
                 0.0);
         this.toolkit = toolkit;
-        this.caps = toolkit.capsFromString(Mixer.CAPS);
+        this.capsString = Mixer.CAPS;
         ProceduralConfig procedureConfig =signalBucket.getProcedureConf();
         this.smoothingRate = procedureConfig.smoothingrate();
         this.outputScale = signalBucket.getSoundDefinition().procedural().orElseThrow().outputScale();
@@ -102,8 +101,8 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     
 
     @Override
-    public Caps getCaps() {
-        return caps;
+    public String getCapsString() {
+        return capsString;
     }
 
     @Override
@@ -111,7 +110,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
     }
 
     @Override
-    public Element getSrcElement() {
+    public Object getSrcElement() {
         Log.debugf("my 'src' element is [%s]", bin);
         return bin;
     }

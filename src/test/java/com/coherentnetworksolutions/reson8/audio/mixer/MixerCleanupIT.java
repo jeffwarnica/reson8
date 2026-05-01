@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.ElementFactory;
+import org.freedesktop.gstreamer.Pipeline;
 import org.freedesktop.gstreamer.State;
 import org.junit.jupiter.api.Timeout;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannel;
@@ -48,7 +49,7 @@ class MixerCleanupIT {
     void setup() {
         Log.infof("Right now this test case has a mixer of type: [%s]", mixer.getClass());
         mixer.initGStreamer();
-        mixer.getPipeline().setState(State.PLAYING);
+        pipeline().setState(State.PLAYING);
 
         // Wait for the pipeline to stabilise: the "mixer-ready" event published inside
         // initGStreamer() triggers SignalManager.attemptWiring() on the Vert.x event
@@ -66,7 +67,7 @@ class MixerCleanupIT {
                .pollDelay(0, TimeUnit.MILLISECONDS)
                .pollInterval(500, TimeUnit.MILLISECONDS)
                .until(() -> {
-                   int now = mixer.getPipeline().getElements().size();
+                   int now = pipeline().getElements().size();
                    if (now > 0 && now == lastCount.get()) {
                        return stableStreak.incrementAndGet() >= 3;
                    }
@@ -75,7 +76,7 @@ class MixerCleanupIT {
                    return false;
                });
 
-        quiescentNames = mixer.getPipeline().getElements().stream()
+        quiescentNames = pipeline().getElements().stream()
                 .map(Element::getName)
                 .collect(Collectors.toSet());
         Log.infof("Quiescent pipeline (%d elements): %s", quiescentNames.size(), quiescentNames);
@@ -109,14 +110,14 @@ class MixerCleanupIT {
                 ElementFactory.make("fakesrc", chName + "::fakesrc_static_name"));
 
         mixer.addInputChannel(mockCh);
-        assertTrue(mixer.getPipeline().getElements().size() > baseCount,
+        assertTrue(pipeline().getElements().size() > baseCount,
                 "Pipeline should have grown after addInputChannel");
 
         // 2. Remove the channel
         mixer.removeInputChannel(chName);
 
         // 3. Snapshot after removal
-        Set<String> afterNames = mixer.getPipeline().getElements().stream()
+        Set<String> afterNames = pipeline().getElements().stream()
                 .map(Element::getName)
                 .collect(Collectors.toSet());
 
@@ -145,7 +146,7 @@ class MixerCleanupIT {
         mixer.addInputChannel(createMockChannel(shortName)); // Will be cpu::123::...
         mixer.addInputChannel(createMockChannel(longName));  // Will be cpu-noise::456::...
 
-        int countWithBoth = mixer.getPipeline().getElements().size();
+        int countWithBoth = pipeline().getElements().size();
 
         // Remove the short one
         mixer.removeInputChannel(shortName);
@@ -153,7 +154,11 @@ class MixerCleanupIT {
         assertTrue(mixer.getInputChannels().containsKey(longName), 
             "The longer channel name was accidentally deleted by the shorter prefix!");
         
-        assertTrue(mixer.getPipeline().getElements().size() < countWithBoth);
+        assertTrue(pipeline().getElements().size() < countWithBoth);
+    }
+
+    private Pipeline pipeline() {
+        return (Pipeline) mixer.getPipeline();
     }
 
     private InputChannel createMockChannel(String name) {

@@ -7,11 +7,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.ClusterMetric;
+import com.coherentnetworksolutions.reson8.signal.K8sSyncState;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.Quantity;
-import io.fabric8.kubernetes.api.model.authentication.TokenRequest;
 import io.fabric8.kubernetes.api.model.events.v1.Event;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.NodeMetrics;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -44,9 +44,12 @@ public class K8Client {
     SignalManager signalManager;
     @Inject
     EventBus eventBus;
+    @Inject
+    K8sSyncState k8sSyncState;
+    @Inject
+    K8sAuthTokenProvider authTokenProvider;
 
     private final AtomicBoolean isFlowing = new AtomicBoolean(false);
-    private final AtomicBoolean k8sSync = new AtomicBoolean(true);
     private Watch k8sEventWatch;
 
     private volatile boolean gotCapacity = false;
@@ -61,26 +64,24 @@ public class K8Client {
      */
     private final AtomicReference<ClusterCapacity> clusterCapacity = new AtomicReference<>(new ClusterCapacity(1, 1));
 
-    @ConsumeEvent(value = "signalManager-ready")
+    @ConsumeEvent(value = "signal-manager-ready")
     @Blocking
     void onSignalManagerReady(String msg) {
         if (mixer.isReady() && isFlowing.compareAndSet(false, true)) {
             pullCapacity();
             startK8sWatchers();
-            eventBus.publish("K8sClientReady", null);
+            eventBus.publish("k8s-client-ready", null);
             Log.info("K8s Client is now LIVE and processing signals.");
         }
     }
 
     @ConsumeEvent(value = "k8s-sync-enable")
     @Blocking
-    public void setK8sSyncEnabled(boolean state) {
-        Log.debugf("Updating sync mode to [%s]", state);
-        boolean previous = k8sSync.getAndSet(state);
-
-        if (state && !previous) {
+    public void onSyncToggle(boolean newState) {
+        Log.debugf("K8Client: sync toggled to [%s]", newState);
+        if (newState) {
             startK8sWatchers();
-        } else if (!state && previous) {
+        } else {
             stopK8sWatchers();
         }
     }
@@ -105,7 +106,10 @@ public class K8Client {
 
                     @Override
                     public void onClose(WatcherException cause) {
-                        Log.warn("K8s Watch closed. Attempting reconnect...");
+                        Log.warnf("K8s Watch closed unexpectedly (%s), scheduling reconnect in 5s...",
+                                cause != null ? cause.getMessage() : "no cause");
+                        k8sEventWatch = null;
+                        vertx.setTimer(5_000, id -> startK8sWatchers());
                     }
                 });
     }
@@ -120,7 +124,7 @@ public class K8Client {
 
     @Scheduled(every = "2m", concurrentExecution = ConcurrentExecution.SKIP)
     void pullCapacity() {
-        if (!(isFlowing.get() && k8sSync.get()))
+        if (!(isFlowing.get() && k8sSyncState.isEnabled()))
             return;
 
         Log.debugf("Refreshing cluster capacity");
@@ -136,6 +140,11 @@ public class K8Client {
             if (cpu != null) totalCpuCapNano += Quantity.getAmountInBytes(cpu).longValue();
             if (mem != null) totalMemCapacityBytes += Quantity.getAmountInBytes(mem).longValue();
         }
+        if (totalCpuCapNano == 0 || totalMemCapacityBytes == 0) {
+            Log.warnf("pullCapacity: zero capacity computed (cpu=%d, mem=%d) — skipping update to avoid division by zero",
+                    totalCpuCapNano, totalMemCapacityBytes);
+            return;
+        }
         clusterCapacity.set(new ClusterCapacity(totalCpuCapNano, totalMemCapacityBytes));
         Log.debugf("Mem: [%.2f], CPU:[%.2f]", (float) clusterCapacity.get().memBytes, (float) clusterCapacity.get().cpuNano);
         gotCapacity = true;
@@ -143,7 +152,7 @@ public class K8Client {
 
     @Scheduled(every = "10s", concurrentExecution = ConcurrentExecution.SKIP)
     void pullMetrics() {
-        if (!(isFlowing.get() && k8sSync.get()))
+        if (!(isFlowing.get() && k8sSyncState.isEnabled()))
             return;
 
         Log.debugf("Scheduled pull");
@@ -152,14 +161,19 @@ public class K8Client {
             pullCapacity();
         }
 
-        pushStatsBucket(ClusterMetric.CPU, computeCpuPercent());
-        pushStatsBucket(ClusterMetric.MEMORY, computeMemPercent());
+        double[] usage = computeNodeUsagePercents();
+        pushStatsBucket(ClusterMetric.CPU, usage[0]);
+        pushStatsBucket(ClusterMetric.MEMORY, usage[1]);
         pushStatsBucket(ClusterMetric.PENDING_PODS, (double) countPendingPods());
         pushStatsBucket(ClusterMetric.NODE_READINESS, computeNodeReadinessPct());
         pushStatsBucket(ClusterMetric.DEPLOYMENT_HEALTH, computeDeploymentHealthPct());
     }
 
-    private double computeCpuPercent() {
+    /**
+     * Queries the Metrics API once and returns both CPU% and memory% as {@code [cpu, mem]}.
+     * Both values are computed in a single API call to avoid duplicate round-trips per tick.
+     */
+    private double[] computeNodeUsagePercents() {
         ClusterCapacity currentCapacity = clusterCapacity.get();
         var nodeMetrics = client.top().nodes().metrics();
 
@@ -181,15 +195,7 @@ public class K8Client {
         Log.debugf("USAGE: CPU: [%.2f], MEM: [%.2f]", (float) currentCpuUsageNano, (float) currentMemUsageBytes);
         Log.debugf("%%:     CPU: [%.2f], MEM: [%.2f]", cpuPercent, memPercent);
 
-        // Cache mem for computeMemPercent so we don't call the Metrics API twice per tick.
-        lastMemPercent = memPercent;
-        return cpuPercent;
-    }
-
-    private volatile double lastMemPercent = 0.0;
-
-    private double computeMemPercent() {
-        return lastMemPercent;
+        return new double[]{ cpuPercent, memPercent };
     }
 
     private int countPendingPods() {
@@ -225,27 +231,15 @@ public class K8Client {
 
     private void pushStatsBucket(ClusterMetric metric, double rawValue) {
         signalManager.getBucketByMetric(metric).ifPresentOrElse(
-            bucket -> signalManager.updateSignalIntensityFromRaw(bucket.getName(), rawValue),
+            bucket -> signalManager.updateSignalIntensity(bucket.getName(), rawValue),
             () -> Log.tracef("No bucket configured for ClusterMetric [%s], skipping", metric)
         );
     }
 
+    /** @deprecated Inject {@link K8sAuthTokenProvider} directly instead. */
+    @Deprecated
     public String getAuthToken() {
-        String token = client.getConfiguration().getOauthToken();
-
-        if (token == null || token.isEmpty()) {
-            try {
-                var tr = client.serviceAccounts()
-                        .inNamespace(client.getNamespace())
-                        .withName("reson8")
-                        .tokenRequest(new TokenRequest());
-                token = tr.getStatus().getToken();
-                Log.info("Exchanged certs for default ServiceAccount token.");
-            } catch (Exception e) {
-                Log.error("Failed to request token: " + e.getMessage());
-            }
-        }
-        return token;
+        return authTokenProvider.getToken();
     }
 
     @PreDestroy

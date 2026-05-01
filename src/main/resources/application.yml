@@ -5,12 +5,6 @@ reson8:
     cluster: self # uses standard kube env vars 
     namespaces:
       all: false
-      include: 
-        - "openshift-*" #wildcards OK
-        - "my_cool_project"
-      exclude:
-        - "openshift-node"
-        - "openshift-oper*"
     map: cool_project_map
   signal-map:
     name: cool_project_map

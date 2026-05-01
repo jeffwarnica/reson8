@@ -375,11 +375,10 @@ class GstDropChannelTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void testDisposeIsNoOp() {
-        // dispose() has an intentionally empty body but must not throw,
-        // and channel internals must remain accessible afterwards.
+    void testDisposeReleasesNativeResources() {
+        // dispose() sets the channel bin to NULL state and releases native resources.
         assertDoesNotThrow(() -> channel.dispose());
-        assertNotNull(channel.getSrcElement(), "channelBin must survive dispose()");
+        assertNull(channel.getSrcElement(), "channelBin must be null after dispose() — native resources released");
     }
 
     // -----------------------------------------------------------------------

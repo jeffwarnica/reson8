@@ -1,7 +1,5 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
-import org.freedesktop.gstreamer.Caps;
-
 import io.quarkus.logging.Log;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -107,7 +105,7 @@ public abstract class BaseInputChannel implements InputChannel {
     }
 
     @Override
-    public abstract Caps getCaps();
+    public abstract String getCapsString();
 
     /**
      * Directly set the reported current intensity (0–100), e.g. after custom physics.

@@ -142,4 +142,38 @@ public class ArchitectureTest {
                     "com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler")
             .as("VolumeScaler (human↔GStreamer scale crossing) must only be used "
                 + "within the audio or signal layers");
+
+    // -----------------------------------------------------------------------
+    // gstreamer-access.mdc — Rule 5
+    // "InputChannel and Mixer are domain interfaces. Caps and Element must not
+    //  appear in any class outside audio.input, audio.mixer, and audio.providers."
+    //
+    // These GStreamer types appearing in signal, rest, k8s, or manager packages
+    // create a transitive compile-time dependency on gst1-java-core in code that
+    // has no business knowing about native GStreamer.
+    // -----------------------------------------------------------------------
+    @ArchTest
+    static final ArchRule gst_caps_only_in_audio_layers =
+        noClasses()
+            .that().resideOutsideOfPackages(
+                "com.coherentnetworksolutions.reson8.audio..",
+                "com.coherentnetworksolutions.reson8.audio.mixer..",
+                "com.coherentnetworksolutions.reson8.audio.providers..")
+            .should().accessClassesThat()
+                .haveFullyQualifiedName("org.freedesktop.gstreamer.Caps")
+            .as("org.freedesktop.gstreamer.Caps must only be used within the audio layer "
+                + "(audio.input, audio.mixer, audio.providers) — domain interfaces must be "
+                + "toolkit-neutral");
+
+    @ArchTest
+    static final ArchRule gst_element_type_only_in_audio_layers =
+        noClasses()
+            .that().resideOutsideOfPackages(
+                "com.coherentnetworksolutions.reson8.audio..",
+                "com.coherentnetworksolutions.reson8.audio.mixer..",
+                "com.coherentnetworksolutions.reson8.audio.providers..")
+            .should().accessClassesThat()
+                .haveFullyQualifiedName("org.freedesktop.gstreamer.Element")
+            .as("org.freedesktop.gstreamer.Element must only be used within the audio layer "
+                + "— domain interfaces (InputChannel, Mixer) must not expose GStreamer types");
 }

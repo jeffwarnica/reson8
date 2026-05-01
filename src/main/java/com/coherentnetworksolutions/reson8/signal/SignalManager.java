@@ -40,9 +40,10 @@ public class SignalManager {
     @Inject CurveMapFactory curveFactory;
     @Inject ObjectMapper objectMapper;
 
+    @Inject K8sSyncState k8sSyncState;
+
     private final Map<String, SignalBucket> buckets = new ConcurrentHashMap<>();
     private volatile boolean ready = false;
-    private volatile boolean k8sSync = true;
 
     private final AtomicBoolean isWired = new AtomicBoolean(false);
 
@@ -55,6 +56,7 @@ public class SignalManager {
     @PostConstruct
     public void onStart() {
         Log.debug("onStart() starting");
+        validateConfiguration();
         String defaultScape = config.signalMap().defaultSoundscape();
 
         config.signalMap().inputs().forEach(mapping -> {
@@ -79,6 +81,44 @@ public class SignalManager {
 
     }
 
+    /**
+     * Validates required configuration entries before channel construction begins.
+     * Collects all errors into a single exception so operators see every problem at once.
+     *
+     * @throws IllegalStateException if any mandatory config is missing or invalid
+     */
+    private void validateConfiguration() {
+        List<String> errors = new ArrayList<>();
+
+        if (config.signalMap() == null) {
+            errors.add("reson8.signal-map is missing");
+        } else {
+            if (config.signalMap().inputs() == null || config.signalMap().inputs().isEmpty()) {
+                errors.add("reson8.signal-map.inputs must contain at least one entry");
+            } else {
+                config.signalMap().inputs().forEach(mapping -> {
+                    if (mapping.name() == null || mapping.name().isBlank()) {
+                        errors.add("An input mapping is missing a 'name'");
+                    }
+                    if (mapping.sound() == null || mapping.sound().isBlank()) {
+                        errors.add("Input mapping '" + mapping.name() + "' is missing a 'sound'");
+                    }
+                });
+            }
+            if (config.signalMap().defaultSoundscape() == null || config.signalMap().defaultSoundscape().isBlank()) {
+                errors.add("reson8.signal-map.default-soundscape is missing");
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            String message = "Startup configuration validation failed:\n  - " + String.join("\n  - ", errors);
+            Log.error(message);
+            throw new IllegalStateException(message);
+        }
+
+        Log.debug("Configuration validation passed.");
+    }
+
     @ConsumeEvent("mixer-ready")
     void onMixerReady(String msg) {
         Log.debug("Got a mixer-ready signal");
@@ -91,10 +131,10 @@ public class SignalManager {
         attemptWiring();
     }
 
-    @ConsumeEvent("k8s-sync-enable")
+    /** @deprecated Sync state is now managed centrally by {@link K8sSyncState}. */
+    @Deprecated
     public void setK8sSyncEnabled(boolean state) {
-        Log.debugf("Updating sync mode to [%s]", state);
-        k8sSync = state;
+        k8sSyncState.onSyncToggle(state);
     }
 
     public SignalBucket getSignalBucket(String bucket) {
@@ -111,15 +151,10 @@ public class SignalManager {
             .findFirst();
     }
 
+    /** @deprecated Use {@link #updateSignalIntensity(String, double)} instead. */
+    @Deprecated
     public void updateSignalIntensityFromRaw(String signalId, double rawValue) {
-        SignalBucket bucket = buckets.get(signalId);
-        if (bucket == null) {
-            Log.warnf("No bucket found for signal [%s]", signalId);
-            return;
-        }
-        double intensity = bucket.getCurve().map(rawValue);
-        bucket.setIntensity(intensity);
-        Log.debugf("Updated intensity for signal [%s] to [%f] from raw [%f]", signalId, intensity, rawValue);
+        updateSignalIntensity(signalId, rawValue);
     }
 
     public void processEvent(io.fabric8.kubernetes.api.model.events.v1.Event event) {
@@ -146,23 +181,31 @@ public class SignalManager {
     }
 
     /**
-     * Updates the intensity of a signal based on an external Prometheus metric value.
-     * The raw metric is passed through the bucket's {@link com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap}
-     * to produce a value in the 0–100 intensity scale, which is then applied to the
-     * associated {@link com.coherentnetworksolutions.reson8.signal.SignalBucket} and its {@link com.coherentnetworksolutions.reson8.audio.input.InputChannel}.
+     * Maps a raw (unconstrained) metric value through the bucket's {@link com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap}
+     * and applies the result as the target intensity (0–100) of the associated
+     * {@link com.coherentnetworksolutions.reson8.audio.input.InputChannel}.
+     * <p>
+     * Used by both the k8s stats path ({@code K8Client}) and the Prometheus/Thanos path
+     * ({@code ThanosMetricPoller}).
      *
      * @param signalId the bucket name (must match a registered {@link SignalBucket})
-     * @param promVal  the raw Prometheus metric value (unconstrained; mapped via {@code SignalCurveMap})
+     * @param rawValue the raw metric value (unconstrained; mapped via {@code SignalCurveMap})
      */
-    public void updateSignalIntensityFromPromVal(String signalId, double promVal) {
+    public void updateSignalIntensity(String signalId, double rawValue) {
         SignalBucket bucket = buckets.get(signalId);
         if (bucket == null) {
             Log.warnf("No bucket found for signal [%s]", signalId);
             return;
         }
-        double intensity = bucket.getCurve().map(promVal);
+        double intensity = bucket.getCurve().map(rawValue);
         bucket.setIntensity(intensity);
-        Log.debugf("Updated intensity for signal [%s] to [%f] from promVal [%f]", signalId, intensity, promVal);
+        Log.debugf("Updated intensity for signal [%s] to [%f] from rawValue [%f]", signalId, intensity, rawValue);
+    }
+
+    /** @deprecated Use {@link #updateSignalIntensity(String, double)} instead. */
+    @Deprecated
+    public void updateSignalIntensityFromPromVal(String signalId, double promVal) {
+        updateSignalIntensity(signalId, promVal);
     }
 
     private void attemptWiring() {
@@ -192,7 +235,7 @@ public class SignalManager {
                         Log.warnf("Signal Endpoint [%s] has no associated channel and will not be played", entry.getName());
                     }
                 });
-                eventBus.publish("signalManager-ready", null);
+                eventBus.publish("signal-manager-ready", null);
             } catch (Exception e) {
                 Log.error("Failed to wire Signal Buckets to Mixer", e); 
                 isWired.set(false);
@@ -201,7 +244,7 @@ public class SignalManager {
     }
         
     public boolean isK8sSyncEnabled() {
-        return k8sSync;
+        return k8sSyncState.isEnabled();
     }
     
     public boolean isReady() {

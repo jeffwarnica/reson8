@@ -236,13 +236,13 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
     }
 
     @Override
-    public Element getSrcElement() {
+    public Object getSrcElement() {
         return channelBin;
     }
 
     @Override
-    public Caps getCaps() {
-        return bundleCaps;
+    public String getCapsString() {
+        return bundleCaps.toString();
     }
 
     @Override

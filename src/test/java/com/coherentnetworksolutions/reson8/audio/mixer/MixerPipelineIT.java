@@ -29,7 +29,7 @@ class MixerPipelineIT {
     void setup() {
         Log.infof("Right now this test case has a mixer of type: [%s]", mixer.getClass());
         mixer.initGStreamer();
-        mixer.getPipeline().setState(State.PLAYING);
+        pipeline().setState(State.PLAYING);
         // Small delay to ensure background threads from previous tests 
         // have actually exited their while loops
         try { Thread.sleep(500); } catch (InterruptedException e) {}
@@ -57,7 +57,7 @@ class MixerPipelineIT {
         await()
             .atMost(20, TimeUnit.SECONDS)
             .pollInterval(500, TimeUnit.MILLISECONDS)
-            .until(() -> State.PLAYING == mixer.getPipeline().getState() );
+            .until(() -> State.PLAYING == pipeline().getState() );
 
         assertTrue(mixer.isReady(), "Mixer not ready after startup.");
         // assertEquals(State.PLAYING, mixer.getPipeline().getState(0));
@@ -165,4 +165,7 @@ class MixerPipelineIT {
         assertDoesNotThrow(() -> mixer.setOutputChannelVolume("non-existent-out", 0.8));
     }
 
+    private Pipeline pipeline() {
+        return (Pipeline) mixer.getPipeline();
+    }
 }

@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.freedesktop.gstreamer.ElementFactory;
+import org.freedesktop.gstreamer.Pipeline;
 import org.freedesktop.gstreamer.State;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,7 @@ class MixerStressIT {
     void setup() {
         Log.infof("Right now this test case has a mixer of type: [%s]", mixer.getClass());
         mixer.initGStreamer();
-        mixer.getPipeline().setState(State.PLAYING);
+        pipeline().setState(State.PLAYING);
     }
 
     @AfterEach
@@ -114,5 +115,9 @@ class MixerStressIT {
         // This ensures cpu-noise::123 doesn't match cpu-noise-extra::456
         assertTrue("cpu-noise::12345::gain".startsWith(name + "::"));
         assertFalse("cpu-noise-extra::12345::gain".startsWith(name + "::"));
-    }    
+    }
+
+    private Pipeline pipeline() {
+        return (Pipeline) mixer.getPipeline();
+    }
 }
