@@ -10,8 +10,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 /*
     * Factory for creating SignalMapper instances based on Reson8Config.CurveConfig.
      * Handles both linear and smooth (spline) interpolation types.     
-     * If no curveConfig is provided, defaults to a simple linear mapping from 0 to 100 input mapped to 0.0 to 1.0 output.  
-     * Validates the provided configuration and throws IllegalArgumentException for unsupported interpolation types or invalid point configurations.    
+     *  * If no curveConfig is provided, defaults to a linear identity mapping
+     *  from 0–100 input to 0–100 output (human intensity scale).
+     *  Supports linear, smooth (spline), and monotone (PCHIP) interpolation types.
      * 
  */
 @ApplicationScoped

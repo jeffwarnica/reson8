@@ -35,10 +35,7 @@ public class SignalBucket {
     private SoundType soundType;
     private boolean isDrop;
 
-    // @Inject
     InputChannelFactory channelFactory;
-
-    // @Inject
     SoundDefinitionRegistry soundRegistry;
 
     SignalManager signalManager;
@@ -101,8 +98,11 @@ public class SignalBucket {
 
     public void trigger() {
         Log.debugf("SignalEndpoint[%s] is type[%s]", name, soundType);
-        if (soundType == SoundType.DROP) {
-            ((DropChannel) inputChannel).trigger(inputChannel.getCeiling());
+        if (inputChannel instanceof DropChannel dc) {
+            dc.trigger();
+        } else {
+            Log.warnf("[%s] trigger() called but inputChannel is not a DropChannel (type: %s)",
+                    name, inputChannel == null ? "null" : inputChannel.getClass().getSimpleName());
         }
     }
     
@@ -136,7 +136,7 @@ public class SignalBucket {
 
     @Deprecated
     public void setVolume(@Min(0) @Max(100) double vol){
-        Log.debugf("[%s].setVolume([%s]), pass to inputChanel", name, vol);
+        Log.debugf("[%s].setVolume([%s]), pass to inputChannel", name, vol);
         inputChannel.setCeiling(vol);
     }
 

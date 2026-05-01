@@ -10,7 +10,7 @@ import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.AppSrc;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
-public interface GstToolkit {
+public interface GsToolkit {
     Bin createBin(String name);
     Element makeElement(String factory, String name);
     AppSrc makeAppSrc(String name);

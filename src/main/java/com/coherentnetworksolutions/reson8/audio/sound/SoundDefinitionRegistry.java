@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.*;
 
@@ -14,7 +13,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * SoundManager holds our SoundDefinitions, allowing for lookup by "path"
+  * Holds registered {@link SoundDefinition}s, allowing lookup by config path.
  */
 @ApplicationScoped
 public class SoundDefinitionRegistry {
@@ -23,9 +22,6 @@ public class SoundDefinitionRegistry {
 
     @Inject
     Reson8Config config;
-
-    @Inject
-    InputChannelFactory channelFactory;
 
     @PostConstruct
     public void onStart() {
@@ -39,15 +35,8 @@ public class SoundDefinitionRegistry {
             });
     }
 
-    // public void register(String configPath, SoundDefinition def) {
-    //     Log.debugf("Registering sound [%s]", configPath);
-    //     registry.put(configPath, def);
-    // }
-
-    
     /**
-     * @param configPath To get {@SoundDefinition} by path
-     * @return
+     * @param configPath the key used to look up the sound (format: {@code soundscape/sound})
      */
     public SoundDefinition get(String configPath) {
         Log.debugf("Looking for sound definition: [%s]", configPath);

@@ -5,6 +5,6 @@ import jakarta.validation.constraints.Min;
 
 public interface DropChannel {
 
-    void trigger(@Min(0) @Max(100) double volume);
+    void trigger();
 
 }

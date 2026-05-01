@@ -30,6 +30,7 @@ import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Buffer;
 import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
+import org.freedesktop.gstreamer.Gst;
 import org.freedesktop.gstreamer.Pad;
 import org.freedesktop.gstreamer.State;
 import org.mockito.InOrder;
@@ -43,12 +44,19 @@ import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 class GstDropChannelTest {
 
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "Toolkit abstraction leak: a production class is calling " +
+                "Caps.fromString() or ElementFactory.make() directly.");
+    }
+
     /** Used only before {@code spy(...)} so {@code when(mockWav.caps()).thenReturn(...)} does not call the spy mid-stub. */
     private MockGstToolkit toolkitDelegate;
     private MockGstToolkit toolkit;
     private SignalBucket mockBucket;
     private CachedWav mockWav;
-    private GstDropChannel channel;
+    private GsDropChannel channel;
 
     @BeforeEach
     void setUp() {
@@ -82,7 +90,7 @@ class GstDropChannelTest {
         when(mockWav.sampleRate()).thenReturn(44100.0);
 
         // 3. Create the channel with the mock toolkit
-        channel = new GstDropChannel(mockBucket, mockWav, toolkit);
+        channel = new GsDropChannel(mockBucket, mockWav, toolkit);
     }
 
     @Test
@@ -102,13 +110,13 @@ class GstDropChannelTest {
         when(def.drop()).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class,
-                () -> new GstDropChannel(bucket, mockWav, toolkitDelegate));
+                () -> new GsDropChannel(bucket, mockWav, toolkitDelegate));
     }
 
     @Test
     void testTriggerCreatesInstance() {
         // Execute
-        channel.trigger(80.0);
+        channel.trigger();
 
         // Verify: Use timeout because of the runAsync
         verify(toolkit, timeout(1000)).makeAppSrc(contains("TestChannel_inst_"));
@@ -120,7 +128,7 @@ class GstDropChannelTest {
     @Test
     void testNeedDataSlicing() {
 
-        channel.trigger(100.0);
+        channel.trigger();
 
         // capturedNeedData is set at [14] connectNeedData, after addMany[10]/linkMany[11] — safe barrier
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
@@ -142,7 +150,7 @@ class GstDropChannelTest {
 
     @Test
     void testTriggerAllocatesResources() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         // Verify the AppSrc was made (wait for async if needed)
         verify(toolkit, timeout(1000)).makeAppSrc(anyString());
@@ -153,7 +161,7 @@ class GstDropChannelTest {
 
     @Test
     void testAudioDataFlow() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         // capturedCleanupTask is set at [19] addEosProbe — after linkPads[17] in linkAndStart
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
@@ -169,7 +177,7 @@ class GstDropChannelTest {
 
     @Test
     void testCleanupReleasesPad() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
@@ -186,7 +194,7 @@ class GstDropChannelTest {
 
     @Test
     void testTriggerAddsElementsToBin() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         // lastCreatedAppSrc is set at [3] makeAppSrc — too early; addMany is at [10].
         // capturedNeedData is set at [14] connectNeedData (end of constructor) — correct barrier.
@@ -198,7 +206,7 @@ class GstDropChannelTest {
 
     @Test
     void testCleanupRemovesInstanceFromBin() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         // 1. Wait for the async thread to finish construction (capturedCleanupTask is last step [19])
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
@@ -227,7 +235,7 @@ class GstDropChannelTest {
 
     @Test
     void testCleanupDoesNotDestroyChannelMixer() {
-        channel.trigger(100.0);
+        channel.trigger();
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
 
         // The channelMixer is shared across all triggers — cleanup must not touch its state.
@@ -241,7 +249,7 @@ class GstDropChannelTest {
 
     @Test
     void testInstanceLinksToMixer() {
-        channel.trigger(100.0);
+        channel.trigger();
 
         // linkPads is at [17]; capturedCleanupTask is set at [19] addEosProbe, after linkPads — correct barrier
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedCleanupTask != null);
@@ -272,7 +280,7 @@ class GstDropChannelTest {
         // Setup: Return empty PCM data
         when(mockWav.pcmData()).thenReturn(new byte[0]);
 
-        channel.trigger(100.0);
+        channel.trigger();
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         // Simulate request: Should trigger EOS immediately
@@ -284,8 +292,8 @@ class GstDropChannelTest {
 
     @Test
     void testSpamTriggers() {
-        channel.trigger(100.0);
-        channel.trigger(90.0);
+        channel.trigger();
+        channel.trigger();
 
         // Verify two different AppSrcs were created
         verify(toolkit, timeout(1000).times(2)).makeAppSrc(anyString());
@@ -304,7 +312,7 @@ class GstDropChannelTest {
         byte[] threeFrames = new byte[4 * 3];
         when(mockWav.pcmData()).thenReturn(threeFrames);
 
-        channel.trigger(100.0);
+        channel.trigger();
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         // First request: 8 bytes (frames 0-1). Second request: 4 bytes (frame 2).
@@ -322,7 +330,7 @@ class GstDropChannelTest {
         // Exactly 2 frames — after the data is exhausted the next needData must fire EOS.
         when(mockWav.pcmData()).thenReturn(new byte[4 * 2]);
 
-        channel.trigger(100.0);
+        channel.trigger();
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 8); // consumes all 8 bytes
@@ -339,7 +347,7 @@ class GstDropChannelTest {
         // Second needData: remaining = 1; 1 - (1 % 4) = 0 → EOS.
         when(mockWav.pcmData()).thenReturn(new byte[5]);
 
-        channel.trigger(100.0);
+        channel.trigger();
         await().atMost(1, TimeUnit.SECONDS).until(() -> toolkit.capturedNeedData != null);
 
         toolkit.capturedNeedData.needData(toolkit.lastCreatedAppSrc, 5);
@@ -356,7 +364,7 @@ class GstDropChannelTest {
     @Test
     void testTriggerWithZeroVolume() {
         // A trigger with volume 0 must still create and wire up an AppSrc instance.
-        channel.trigger(0.0);
+        channel.trigger();
 
         verify(toolkit, timeout(1000)).makeAppSrc(anyString());
         assertFalse(toolkit.requestedPads.isEmpty(), "Pad must be reserved even at zero volume");
@@ -380,8 +388,8 @@ class GstDropChannelTest {
 
     @Test
     void testConcurrentTriggersBothCleanUp() {
-        channel.trigger(100.0);
-        channel.trigger(90.0);
+        channel.trigger();
+        channel.trigger();
 
         // Wait until both async tasks have registered their EOS probes.
         await().atMost(2, TimeUnit.SECONDS)

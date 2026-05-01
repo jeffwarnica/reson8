@@ -17,7 +17,7 @@ import org.freedesktop.gstreamer.Format;
 import org.freedesktop.gstreamer.State;
 import org.freedesktop.gstreamer.elements.AppSrc;
 
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundHitBundle;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
@@ -42,7 +42,7 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
     private static final int TICK_MS = 50;
     private static final double SMOOTHING_EPSILON = 0.1;
 
-    private final GstToolkit toolkit;
+    private final GsToolkit toolkit;
     private final SoundHitBundle hitBundle;
     private final Bin channelBin;
     private final Element channelMixer;
@@ -68,7 +68,7 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
     });
 
     public StochasticGaugeChannel(SignalBucket signalBucket, Reson8Config config, WavCache wavCache,
-            GstToolkit toolkit) {
+            GsToolkit toolkit) {
         super(signalBucket.getName(), 0.0, 0.0);
         this.toolkit = toolkit;
 
@@ -142,7 +142,7 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
             }
             CachedWav wav = hitBundle.getRandomCachedWav();
             if (wav == null) break;
-            slot.play(wav, VolumeScaler.humanToGstVolume(getCeiling()));
+            slot.play(wav, VolumeScaler.humanToGsVolume(getCeiling()));
         }
     }
 

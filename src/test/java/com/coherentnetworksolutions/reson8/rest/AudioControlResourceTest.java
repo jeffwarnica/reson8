@@ -2,11 +2,13 @@ package com.coherentnetworksolutions.reson8.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
 
+import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,13 @@ class AudioControlResourceTest {
 
     @InjectMock
     SignalManager signalManager;
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "Toolkit abstraction leak: a production class is calling " +
+                "Caps.fromString() or ElementFactory.make() directly.");
+    }
 
     @BeforeEach
     void setUp() {

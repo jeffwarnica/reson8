@@ -8,8 +8,7 @@ import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
 
-// @ApplicationScoped
-// @RegisterRestClient(configKey = "thanos-api")
+
 public interface ThanosRestClient {
     @GET
     @Path("/query")

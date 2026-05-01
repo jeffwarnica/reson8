@@ -75,7 +75,7 @@ public abstract class BaseInputChannel implements InputChannel {
 
     @Override
     public void setTargetIntensity(@Min(0) @Max(100) double intensityPercent) {
-        Log.debugf("setIntensity([%s]) on [%s]", intensityPercent, getChannelName());
+        Log.debugf("setTargetIntensity([%s]) on [%s]", intensityPercent, getChannelName());
         double clamped = clampIntensity(intensityPercent);
         synchronized (intensityLock) {
             this.targetIntensity = clamped;

@@ -34,7 +34,7 @@ public interface InputChannel {
         void setTargetIntensity(@Min(0) @Max(100) double d);
         
         /**
-         * Gets the target intensity (what was set via setIntensity)
+         * Gets the target intensity (what was set via setTargetIntensity)
          * @return target intensity 0-100
          */
         double getTargetIntensity();

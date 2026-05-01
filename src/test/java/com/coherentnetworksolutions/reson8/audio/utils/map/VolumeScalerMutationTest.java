@@ -25,22 +25,22 @@ class VolumeScalerMutationTest {
 
     @Test
     void humanToGst_negative_clampsToZero() {
-        assertEquals(0.0, VolumeScaler.humanToGstVolume(-10.0), DELTA);
+        assertEquals(0.0, VolumeScaler.humanToGsVolume(-10.0), DELTA);
     }
 
     @Test
     void humanToGst_zero_isZero() {
-        assertEquals(0.0, VolumeScaler.humanToGstVolume(0.0), DELTA);
+        assertEquals(0.0, VolumeScaler.humanToGsVolume(0.0), DELTA);
     }
 
     @Test
     void humanToGst_hundredPercent_isOne() {
-        assertEquals(1.0, VolumeScaler.humanToGstVolume(100.0), DELTA);
+        assertEquals(1.0, VolumeScaler.humanToGsVolume(100.0), DELTA);
     }
 
     @Test
     void humanToGst_overHundred_clampsToOne() {
-        assertEquals(1.0, VolumeScaler.humanToGstVolume(150.0), DELTA);
+        assertEquals(1.0, VolumeScaler.humanToGsVolume(150.0), DELTA);
     }
 
     @ParameterizedTest
@@ -51,7 +51,7 @@ class VolumeScalerMutationTest {
         "25.0,  0.015625" // quarter: (0.25)^3
     })
     void humanToGst_cubicScaling(double human, double expectedGst) {
-        assertEquals(expectedGst, VolumeScaler.humanToGstVolume(human), DELTA);
+        assertEquals(expectedGst, VolumeScaler.humanToGsVolume(human), DELTA);
     }
 
     // -----------------------------------------------------------------------
@@ -60,22 +60,22 @@ class VolumeScalerMutationTest {
 
     @Test
     void gstToHuman_negative_clampsToZero() {
-        assertEquals(0.0, VolumeScaler.gstToHumanVolume(-0.5), DELTA);
+        assertEquals(0.0, VolumeScaler.gsToHumanVolume(-0.5), DELTA);
     }
 
     @Test
     void gstToHuman_zero_isZero() {
-        assertEquals(0.0, VolumeScaler.gstToHumanVolume(0.0), DELTA);
+        assertEquals(0.0, VolumeScaler.gsToHumanVolume(0.0), DELTA);
     }
 
     @Test
     void gstToHuman_one_isHundred() {
-        assertEquals(100.0, VolumeScaler.gstToHumanVolume(1.0), DELTA);
+        assertEquals(100.0, VolumeScaler.gsToHumanVolume(1.0), DELTA);
     }
 
     @Test
     void gstToHuman_overOne_clampsToHundred() {
-        assertEquals(100.0, VolumeScaler.gstToHumanVolume(2.5), DELTA);
+        assertEquals(100.0, VolumeScaler.gsToHumanVolume(2.5), DELTA);
     }
 
     @ParameterizedTest
@@ -86,7 +86,7 @@ class VolumeScalerMutationTest {
         "0.015625, 25.0"  // ∛0.015625 * 100 = 25
     })
     void gstToHuman_cubeRootScaling(double gst, double expectedHuman) {
-        assertEquals(expectedHuman, VolumeScaler.gstToHumanVolume(gst), 0.01);
+        assertEquals(expectedHuman, VolumeScaler.gsToHumanVolume(gst), 0.01);
     }
 
     // -----------------------------------------------------------------------
@@ -96,7 +96,7 @@ class VolumeScalerMutationTest {
     @ParameterizedTest
     @CsvSource({"1.0", "10.0", "25.0", "50.0", "75.0", "99.0", "100.0"})
     void roundTrip_humanToGstToHuman(double human) {
-        double recovered = VolumeScaler.gstToHumanVolume(VolumeScaler.humanToGstVolume(human));
+        double recovered = VolumeScaler.gsToHumanVolume(VolumeScaler.humanToGsVolume(human));
         assertEquals(human, recovered, DELTA, "Round-trip failed for human=" + human);
     }
 
@@ -106,9 +106,9 @@ class VolumeScalerMutationTest {
 
     @Test
     void humanToGst_isStrictlyMonotone() {
-        double prev = VolumeScaler.humanToGstVolume(0.0);
+        double prev = VolumeScaler.humanToGsVolume(0.0);
         for (int i = 1; i <= 100; i++) {
-            double curr = VolumeScaler.humanToGstVolume(i);
+            double curr = VolumeScaler.humanToGsVolume(i);
             assertTrue(curr >= prev, "Monotonicity violated at human=" + i);
             prev = curr;
         }

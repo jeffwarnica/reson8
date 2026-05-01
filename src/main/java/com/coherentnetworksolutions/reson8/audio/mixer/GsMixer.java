@@ -26,14 +26,14 @@ import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClient
 import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
 
 import io.quarkus.logging.Log;
+import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import io.vertx.mutiny.core.eventbus.EventBus;
 
 @Singleton
-@io.quarkus.arc.properties.IfBuildProperty(name="reson8dev.audiopath", stringValue = "gst")
-public class GstMixer implements Mixer {
+@io.quarkus.arc.properties.IfBuildProperty(name="reson8dev.audiopath", stringValue = "gs")
+public class GsMixer implements Mixer {
 
     private volatile boolean ready = false;
 
@@ -50,14 +50,13 @@ public class GstMixer implements Mixer {
     private Element levelProbe;
 
     @Inject EventBus eventBus;
-    // @Inject VolumeScaler volumeScaler;
 
     private volatile double lastMasterVu;
 
 
     @Override
     @PostConstruct
-    public void initGStreamer() {
+    public synchronized void initGStreamer() {
         if (!Gst.isInitialized()) {
             Gst.init("Reson8Engine");
             
@@ -194,7 +193,7 @@ public class GstMixer implements Mixer {
     }
 
     @Override
-    public void addOutputChannel(MixerOutputToClientManagerChannel outputChannel) {
+    public synchronized void addOutputChannel(MixerOutputToClientManagerChannel outputChannel) {
         outputChannels.put(outputChannel.getChannelName(), outputChannel);
         if (masterOutput == null) masterOutput = outputChannel;
 
@@ -238,14 +237,14 @@ public class GstMixer implements Mixer {
     // Set the master volume for the mixer
     @Override
     public void setMasterVolume(double uiVolume) {
-        double scaledVol = VolumeScaler.humanToGstVolume(uiVolume);
+        double scaledVol = VolumeScaler.humanToGsVolume(uiVolume);
         masterVolumeElement.set("volume", scaledVol);
     }
 
     @Override
     public double getMasterVolume() {
-        double gstVol = (double) masterVolumeElement.get("volume");
-        double humanVol = VolumeScaler.gstToHumanVolume(gstVol);
+        double gsVol = (double) masterVolumeElement.get("volume");
+        double humanVol = VolumeScaler.gsToHumanVolume(gsVol);
         return humanVol;
     }
 
@@ -255,7 +254,7 @@ public class GstMixer implements Mixer {
         Pad mixerSinkPad = volPadsOfInputs.get(channelName);
         
         if (mixerSinkPad != null) {
-            double scaledVol = VolumeScaler.humanToGstVolume(humanVolume);
+            double scaledVol = VolumeScaler.humanToGsVolume(humanVolume);
             
             Log.debugf("Setting mixer sink pad volume for [%s] from uiVol [%s] to GS vol [%s]", channelName, humanVolume, scaledVol);
             
@@ -273,10 +272,10 @@ public class GstMixer implements Mixer {
             Log.warnf("Attempted to get volume on non-registered channel: [%s]", channelName);
             return 0;
         }
-        double gstVol = (double) mixerSinkPad.get("volume");
-        double uiVol = VolumeScaler.gstToHumanVolume(gstVol);
+        double gsVol = (double) mixerSinkPad.get("volume");
+        double uiVol = VolumeScaler.gsToHumanVolume(gsVol);
         
-        Log.tracef("returning ui vol [%s] from gstVol [%s]", uiVol, gstVol);
+        Log.tracef("returning ui vol [%s] from gsVol [%s]", uiVol, gsVol);
         return uiVol;
     }
 
@@ -287,7 +286,7 @@ public class GstMixer implements Mixer {
         MixerOutputToClientManagerChannel channel = outputChannels.get(channelName);
         if (channel != null) {
             Element element = channel.getElement();
-            double scaledVol = VolumeScaler.humanToGstVolume(uiVolume);
+            double scaledVol = VolumeScaler.humanToGsVolume(uiVolume);
             element.set("volume", scaledVol);
         } else {
             Log.errorf("Error: Output channel [%s] not found", channelName);
@@ -488,15 +487,12 @@ public class GstMixer implements Mixer {
     public synchronized void dispose() {
         if (pipeline == null) return;
 
-        // 1. Force state to NULL
-        pipeline.setState(State.NULL);
-        
-        // 2. BLOCK until it's actually NULL. 
-        // If this times out, the native threads are hung.
+        // 1. Request transition to NULL, then block until the state change completes
+        // or times out (hung native threads). getState() is the blocking call.
         pipeline.setState(State.NULL);
         State ret = pipeline.getState(2, TimeUnit.SECONDS);
         
-        if (ret == State.NULL) {
+        if (ret != State.NULL) {
             Log.error("Pipeline failed to reach NULL state. Forcing disposal anyway.");
         }
 
@@ -514,6 +510,12 @@ public class GstMixer implements Mixer {
         } finally {
             pipeline = null;
         }
+
+        inputChannels.clear();
+        outputChannels.clear();
+        volPadsOfInputs.clear();
+        masterOutput = null;
+        ready = false;
 
         // Gst.deinit();
     }

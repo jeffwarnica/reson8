@@ -1,7 +1,7 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
 import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
@@ -24,7 +24,7 @@ public class GstChannelFactory implements InputChannelFactory {
     @Inject SoundDefinitionRegistry soundRegistry;
     @Inject Reson8Config config;
     @Inject Mixer mixer;
-    @Inject GstToolkit gstToolkit;
+    @Inject GsToolkit gstToolkit;
     
     @Override
     public InputChannel buildChannel(SignalBucket signalBucket) {
@@ -52,7 +52,7 @@ public class GstChannelFactory implements InputChannelFactory {
                         .filename();
                 try {
                     WavCache.CachedWav soundData = wavCache.getOrLoad(filename);
-                    yield new GstDropChannel(signalBucket, soundData, gstToolkit);
+                    yield new GsDropChannel(signalBucket, soundData, gstToolkit);
                 } catch (RuntimeException e) {
                     Log.errorf("Channel [%s] failed: %s. Falling back to Silent.", signalBucket.getName(),
                         e.getMessage());

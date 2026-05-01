@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.freedesktop.gstreamer.Caps;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
@@ -23,7 +23,7 @@ import jakarta.inject.Inject;
 class WindGaugeChannelIT {
 
     @Inject
-    GstToolkit toolkit; // NativeGstToolkit in this profile
+    GsToolkit toolkit; // NativeGsToolkit in this profile
 
     @Test
     void getCapsReturnsNonNullFixedCaps() {

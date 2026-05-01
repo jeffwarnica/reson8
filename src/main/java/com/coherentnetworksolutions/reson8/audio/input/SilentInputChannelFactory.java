@@ -1,7 +1,7 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -12,7 +12,7 @@ import jakarta.inject.Inject;
 public class SilentInputChannelFactory implements InputChannelFactory {
 
 
-    @Inject public GstToolkit toolkit;
+    @Inject public GsToolkit toolkit;
 
     @Override
     public InputChannel buildChannel(SignalBucket signalEndpoint) {

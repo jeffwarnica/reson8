@@ -15,10 +15,11 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,17 +32,17 @@ import io.quarkus.logging.Log;
 
 class WindGaugeChannelTest {
 
-    @BeforeAll
-    static void ensureGstInitialized() {
-        if (!Gst.isInitialized()) {
-            Gst.init(WindGaugeChannelTest.class.getSimpleName());
-        }
-    }
-
     private MockGstToolkit toolkit;
     private SignalBucket mockBucket;
     private WindGaugeChannel channel;
     private ProceduralConfig mockProc;
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "Toolkit abstraction leak: a production class is calling " +
+                "Caps.fromString() or ElementFactory.make() directly.");
+    }
 
     @BeforeEach
     void setUp() {
@@ -88,12 +89,14 @@ class WindGaugeChannelTest {
 
     @Test
     void testCeilingScaling() {
-        // Test that setting ceiling translates through our VolumeScaler logic
+        // setCeiling() updates a field; the GStreamer volume write happens on the next
+        // modulateWind() scheduler tick (initialDelay=0, period=500ms). Wait for it.
         channel.setCeiling(50.0);
 
-        // Verify the toolkit was called to set volume on the volume element
-        verify(toolkit, atLeastOnce()).setElementProperty(argThat(el -> el.getName().contains("vol")), eq("volume"),
-                anyDouble());
+        await().atMost(2, TimeUnit.SECONDS).untilAsserted(() ->
+            verify(toolkit, atLeastOnce()).setElementProperty(
+                    argThat(el -> el.getName().contains("vol")), eq("volume"), anyDouble())
+        );
     }
 
     @Test

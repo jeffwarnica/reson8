@@ -3,7 +3,6 @@ import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
 import com.coherentnetworksolutions.reson8.audio.input.InputChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.output.from.ClientChannelFactory;
 import com.coherentnetworksolutions.reson8.audio.output.from.MixerOutputToClientManagerChannel;
-import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.k8s.client.K8Client;
 import com.coherentnetworksolutions.reson8.audio.sound.SoundDefinitionRegistry;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
@@ -19,7 +18,7 @@ public class Reson8Orchestrator {
 
     @Inject Reson8Config config;
     @Inject InputChannelFactory channelFactory;
-    @Inject WavCache dropFactory;
+
     @Inject Mixer mixer;
     @Inject ClientChannelFactory outputChannelFactory;
     @Inject SoundDefinitionRegistry soundRegistry;

@@ -38,7 +38,7 @@ class K8sConnectivityCheckTest {
         assertFalse(Gst.isInitialized(),
                 "This test class must not require native GStreamer. " +
                         "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
-                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+                        "that's a toolkit abstraction leak — route it through GsToolkit.");
     }
 
     @Inject

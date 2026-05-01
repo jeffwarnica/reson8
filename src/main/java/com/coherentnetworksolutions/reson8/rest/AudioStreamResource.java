@@ -12,6 +12,10 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.GET;
 
+// @Singleton rather than @ApplicationScoped: this resource is on the hot streaming
+// path and has no instance state; CDI proxying is intentionally bypassed.
+// Do NOT add interceptor annotations (@RolesAllowed, @Transactional, etc.) here —
+// they will have no effect on a @Singleton bean.
 @Singleton
 @Path("/audio")
 public class AudioStreamResource {

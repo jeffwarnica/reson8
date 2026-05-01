@@ -2,13 +2,13 @@ package com.coherentnetworksolutions.reson8.rest;
 
 import java.util.List;
 
-import com.coherentnetworksolutions.reson8.audio.sound.WavCache;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quarkus.logging.Log;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -18,14 +18,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+@ApplicationScoped
 @Path("/audio/drop")
 public class DropResource {
 
     @Inject
     Reson8Config config;
-
-    @Inject
-    WavCache dropFactory;
 
     @Inject
     SignalManager signalManager;
@@ -59,7 +57,18 @@ public class DropResource {
         
         Log.debugf("triggerDrop([%s])", dropRequest.drop);
 
+        if (dropRequest.drop == null || dropRequest.drop.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"drop name is required\"}")
+                    .build();
+        }
+
         SignalBucket endpoint = signalManager.getSignalBucket(dropRequest.drop);
+        if (endpoint == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\":\"Drop not found: " + dropRequest.drop + "\"}")
+                    .build();
+        }
 
         endpoint.trigger();
 

@@ -33,7 +33,7 @@ public class ArchitectureTest {
     //
     // ElementFactory.make() is the primary bypass vector: any class that calls
     // it directly is constructing GStreamer elements without going through
-    // GstToolkit. Only NativeGstToolkit and GstMixer are permitted.
+    // GsToolkit. Only NativeGsToolkit and GstMixer are permitted.
     // -----------------------------------------------------------------------
     @ArchTest
     static final ArchRule gst_element_factory_only_in_providers_and_mixer =
@@ -41,7 +41,7 @@ public class ArchitectureTest {
             .that().resideOutsideOfPackages(PROVIDERS, MIXER)
             .should().accessClassesThat()
                 .haveFullyQualifiedName("org.freedesktop.gstreamer.ElementFactory")
-            .as("ElementFactory.make() must only be called from NativeGstToolkit "
+            .as("ElementFactory.make() must only be called from NativeGsToolkit "
                 + "(audio.providers) or GstMixer (audio.mixer)");
 
     // -----------------------------------------------------------------------

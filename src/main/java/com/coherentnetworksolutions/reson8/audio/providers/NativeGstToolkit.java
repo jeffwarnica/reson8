@@ -19,7 +19,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 @io.quarkus.arc.properties.IfBuildProperty(name = "reson8dev.audiopath", stringValue = "gst")
-public class NativeGstToolkit implements GstToolkit {
+public class NativeGstToolkit implements GsToolkit {
 
     @Override
     public PlayBin createPlayBin(String name) {

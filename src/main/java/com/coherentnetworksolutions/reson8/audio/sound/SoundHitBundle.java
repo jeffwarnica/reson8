@@ -14,7 +14,6 @@ import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 
 import io.quarkus.logging.Log;
-import jakarta.inject.Inject;
 
 public class SoundHitBundle {
     

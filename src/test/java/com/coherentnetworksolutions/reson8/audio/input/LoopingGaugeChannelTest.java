@@ -1,5 +1,6 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import static org.awaitility.Awaitility.await;
 
 import org.freedesktop.gstreamer.Element;
+import org.freedesktop.gstreamer.Gst;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
 import com.coherentnetworksolutions.reson8.audio.providers.MockGstToolkit;
@@ -31,6 +33,13 @@ import io.quarkus.logging.Log;
 public class LoopingGaugeChannelTest {
     private MockGstToolkit toolkit;
     private LoopingGaugeChannel channel;
+
+    @BeforeEach
+    void assertNotNativeGst() {
+        assertFalse(Gst.isInitialized(),
+                "Toolkit abstraction leak: a production class is calling " +
+                "Caps.fromString() or ElementFactory.make() directly.");
+    }
 
     @BeforeEach
     void setUp() {

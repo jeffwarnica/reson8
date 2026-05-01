@@ -1,22 +1,25 @@
 package com.coherentnetworksolutions.reson8;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
 
 import javax.sound.sampled.AudioFormat;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
+import jakarta.inject.Inject;
 
 @QuarkusTest
 @TestProfile(com.coherentnetworksolutions.reson8.GstTestProfile.class)
 public class WavCacheCapsBoundaryIT {
+
+    @Inject
+    GsToolkit toolkit;
 
     @Disabled(
         "CachedWav.create() derives the caps string from AudioFormat parameters, so a custom " +
@@ -28,7 +31,7 @@ public class WavCacheCapsBoundaryIT {
         assertThrows(RuntimeException.class,
                 () -> CachedWav.create(new byte[8],
                         buildFakeFormat("NOT_A_REAL_FORMAT"),
-                        mock(GstToolkit.class)));
+                        toolkit));
     }
 
     // -----------------------------------------------------------------------

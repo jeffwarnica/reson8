@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import org.freedesktop.gstreamer.Gst;
 
 @QuarkusTest
-public class DropChannelTest {
+public class DropChannelIT {
 
 
     @BeforeEach
@@ -22,7 +22,7 @@ public class DropChannelTest {
         assertFalse(Gst.isInitialized(),
                 "This test class must not require native GStreamer. " +
                         "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
-                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+                        "that's a toolkit abstraction leak — route it through GsToolkit.");
     }
 
     @Test
@@ -53,9 +53,8 @@ public class DropChannelTest {
     }
 
     @Test
-    @DisplayName("POST /audio/drop - Error handling for unknown drop")
+    @DisplayName("POST /audio/drop - Unknown drop name returns 404")
     void testTriggerDropNotFound() {
-        // A drop that definitely doesn't exist
         String requestBody = "{\"drop\": \"NonExistentSound\"}";
 
         given()
@@ -63,21 +62,18 @@ public class DropChannelTest {
                 .body(requestBody)
                 .when().post("/audio/drop")
                 .then()
-                // Since the server code doesn't check for null endpoint yet,
-                // it hits endpoint.trigger() and throws NPE -> 500.
-                .statusCode(500);
+                .statusCode(404);
     }
 
     @Test
-    @DisplayName("POST /audio/drop - Malformed JSON")
+    @DisplayName("POST /audio/drop - Missing drop field returns 400")
     void testTriggerDropMalformed() {
-        // Sending a field name the DTO doesn't recognize ("invalidKey")
-        // results in 'drop' being null -> NPE -> 500.
+        // Sending a field name the DTO doesn't recognize results in drop=null -> 400.
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"invalidKey\": \"Pod Startup\"}")
                 .when().post("/audio/drop")
                 .then()
-                .statusCode(500);
+                .statusCode(400);
     }
 }

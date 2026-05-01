@@ -11,8 +11,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.coherentnetworksolutions.reson8.audio.input.GstDropChannel;
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.input.GsDropChannel;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
@@ -28,7 +28,7 @@ import jakarta.inject.Inject;
 class GstDropChannelAudioFlowIT {
 
     @Inject
-    GstToolkit toolkit; // NativeGstToolkit in this profile
+    GsToolkit toolkit; // NativeGsToolkit in this profile
 
     @Disabled("Requires AppSink probe wired into real Mixer pipeline — implement when Mixer exposes a test tap")
     @Test
@@ -51,8 +51,8 @@ class GstDropChannelAudioFlowIT {
         when(wav.sampleRate()).thenReturn(44100.0);
         when(wav.caps()).thenReturn(toolkit.capsFromString("audio/x-raw,format=F32LE,rate=44100,channels=1"));
 
-        GstDropChannel ch = new GstDropChannel(bucket, wav, toolkit);
-        ch.trigger(80.0);
+        GsDropChannel ch = new GsDropChannel(bucket, wav, toolkit);
+        ch.trigger();
 
         // TODO: attach an AppSink or level probe on the real Mixer pipeline
         // to assert samplesReceived > 0 once a test-tap API is available.

@@ -17,8 +17,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.freedesktop.gstreamer.Caps;
 
-import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 
 import io.quarkus.logging.Log;
@@ -29,11 +28,9 @@ import jakarta.inject.Inject;
 public class WavCache {
 
 
-    @Inject GstToolkit toolkit;
+    @Inject GsToolkit toolkit;
 
     private Map<String, CachedWav> cache = new ConcurrentHashMap<>();
-
-    @Inject Mixer mixer;
 
     @Inject Reson8Config config;
 
@@ -84,7 +81,7 @@ public class WavCache {
 
     public record CachedWav(byte[] pcmData, AudioFormat audioFormat, String capsString, Caps caps) {
         
-        public static CachedWav create(byte[] pcmData, AudioFormat audioFormat, GstToolkit toolkit) {
+        public static CachedWav create(byte[] pcmData, AudioFormat audioFormat, GsToolkit toolkit) {
             if (pcmData == null)
                 throw new IllegalArgumentException("pcmData cannot be null");
             if (audioFormat == null)

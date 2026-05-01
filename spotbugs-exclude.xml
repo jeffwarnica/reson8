@@ -12,7 +12,7 @@
 
     <!-- ===================================================================
          EI_EXPOSE_REP / EI_EXPOSE_REP2 — audio layer
-         GstToolkit is the CDI abstraction interface (gstreamer-access.mdc).
+         GsToolkit is the CDI abstraction interface (gstreamer-access.mdc).
          GStreamer native objects (Bin, Caps, Element, Pad, AppSrc) are
          inherently mutable native handles. Defensive copying is impossible.
          WavCache.CachedWav.caps is a GStreamer Caps handle; pcmData is a

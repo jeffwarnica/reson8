@@ -145,15 +145,21 @@ public class SignalManager {
     }
 
     /**
-     * Updates the intensity of a signal based on an external input (e.g., Thanos metric value).
-     * This method will do the translation from external to 1-100% level and then update the appropriate SignalBucket, which will in turn update the associated InputChannel's intensity.
-     * @param signalId
-     * @param promVal
+     * Updates the intensity of a signal based on an external Prometheus metric value.
+     * The raw metric is passed through the bucket's {@link com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap}
+     * to produce a value in the 0–100 intensity scale, which is then applied to the
+     * associated {@link com.coherentnetworksolutions.reson8.signal.SignalBucket} and its {@link com.coherentnetworksolutions.reson8.audio.input.InputChannel}.
+     *
+     * @param signalId the bucket name (must match a registered {@link SignalBucket})
+     * @param promVal  the raw Prometheus metric value (unconstrained; mapped via {@code SignalCurveMap})
      */
     public void updateSignalIntensityFromPromVal(String signalId, double promVal) {
         SignalBucket bucket = buckets.get(signalId);
+        if (bucket == null) {
+            Log.warnf("No bucket found for signal [%s]", signalId);
+            return;
+        }
         double intensity = bucket.getCurve().map(promVal);
-        
         bucket.setIntensity(intensity);
         Log.debugf("Updated intensity for signal [%s] to [%f] from promVal [%f]", signalId, intensity, promVal);
     }

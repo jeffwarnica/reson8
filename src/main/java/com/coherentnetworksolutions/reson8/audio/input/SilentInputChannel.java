@@ -3,7 +3,7 @@ package com.coherentnetworksolutions.reson8.audio.input;
 import org.freedesktop.gstreamer.Caps;
 import org.freedesktop.gstreamer.Element;
 
-import com.coherentnetworksolutions.reson8.audio.providers.GstToolkit;
+import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import jakarta.validation.constraints.Max;
@@ -14,9 +14,9 @@ public class SilentInputChannel implements InputChannel {
     private String channelName;
     private @Min(0) @Max(100) double intensity;
     private @Min(0) @Max(100) double ceiling;
-    private GstToolkit toolkit;
+    private GsToolkit toolkit;
 
-    public SilentInputChannel(SignalBucket signalEndpoint, GstToolkit toolkit) {
+    public SilentInputChannel(SignalBucket signalEndpoint, GsToolkit toolkit) {
         channelName = signalEndpoint.getName();
         this.toolkit = toolkit;
     }

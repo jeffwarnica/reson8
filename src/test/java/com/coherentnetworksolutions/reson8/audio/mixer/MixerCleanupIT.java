@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -23,6 +24,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @QuarkusTest
@@ -33,14 +36,39 @@ class MixerCleanupIT {
     @Inject
     Mixer mixer;
 
+    /**
+     * Snapshot of the pipeline taken after it has fully quiesced in {@link #setup()}.
+     * Used by {@link #testCleanupEfficiency()} as the baseline so that channels added
+     * asynchronously by SignalManager (in response to the "mixer-ready" event emitted
+     * by initGStreamer) are counted as part of the baseline rather than as zombies.
+     */
+    private Set<String> quiescentNames;
+
     @BeforeEach
     void setup() {
         Log.infof("Right now this test case has a mixer of type: [%s]", mixer.getClass());
         mixer.initGStreamer();
         mixer.getPipeline().setState(State.PLAYING);
-        // Small delay to ensure background threads from previous tests 
-        // have actually exited their while loops
-        try { Thread.sleep(500); } catch (InterruptedException e) {}
+
+        // Wait for the pipeline to stabilise: the "mixer-ready" event published inside
+        // initGStreamer() triggers SignalManager.attemptWiring() on the Vert.x event
+        // loop, which asynchronously adds all configured channels. Two consecutive polls
+        // 300 ms apart with the same non-zero element count mean the pipeline is done.
+        AtomicInteger lastCount = new AtomicInteger(-1);
+        await().atMost(5, TimeUnit.SECONDS)
+               .pollDelay(0, TimeUnit.MILLISECONDS)
+               .pollInterval(300, TimeUnit.MILLISECONDS)
+               .until(() -> {
+                   int now = mixer.getPipeline().getElements().size();
+                   if (now > 0 && now == lastCount.get()) return true;
+                   lastCount.set(now);
+                   return false;
+               });
+
+        quiescentNames = mixer.getPipeline().getElements().stream()
+                .map(Element::getName)
+                .collect(Collectors.toSet());
+        Log.infof("Quiescent pipeline (%d elements): %s", quiescentNames.size(), quiescentNames);
     }
     
     @AfterEach
@@ -60,49 +88,42 @@ class MixerCleanupIT {
     @Test
     @DisplayName("Verify Full Cleanup and Identify Zombie Elements")
     void testCleanupEfficiency() {
-        // 1. Snapshot the names before adding anything
-        Set<String> beforeNames = mixer.getPipeline().getElements().stream()
-                .map(Element::getName)
-                .collect(Collectors.toSet());
-        int baseCount = beforeNames.size();
-        Log.infof("Before names: [%s]", beforeNames);
-        // 2. Add a channel
-        String chName = "diag-ch";
-        String expectedPrefix = chName + "::";
+        // Baseline was captured in @BeforeEach after the pipeline fully quiesced.
+        int baseCount = quiescentNames.size();
 
+        // 1. Add a diagnostic channel
+        String chName = "diag-ch";
         InputChannel mockCh = mock(InputChannel.class);
         when(mockCh.getChannelName()).thenReturn(chName);
-        // when(mockCh.supportsGain()).thenReturn(true);
-        // Note: If this source name is static, it's a prime suspect!
-        when(mockCh.getSrcElement()).thenReturn(ElementFactory.make("fakesrc", expectedPrefix + "fakesrc_static_name"));
+        when(mockCh.getSrcElement()).thenReturn(
+                ElementFactory.make("fakesrc", chName + "::fakesrc_static_name"));
 
         mixer.addInputChannel(mockCh);
-        int midCount = mixer.getPipeline().getElements().size();
-        assertTrue(midCount > baseCount, "Pipeline should have grown");
+        assertTrue(mixer.getPipeline().getElements().size() > baseCount,
+                "Pipeline should have grown after addInputChannel");
 
-        // 3. Remove the channel
+        // 2. Remove the channel
         mixer.removeInputChannel(chName);
 
-        // 4. Snapshot after removal
+        // 3. Snapshot after removal
         Set<String> afterNames = mixer.getPipeline().getElements().stream()
                 .map(Element::getName)
                 .collect(Collectors.toSet());
 
-        Log.infof("After names: [%s]", beforeNames);
-        // 5. Identify Zombies
+        Log.infof("After names: [%s]", afterNames);
+
+        // 4. Identify zombies — elements present after removal that were not in baseline
         if (afterNames.size() > baseCount) {
             Set<String> zombies = new HashSet<>(afterNames);
-            zombies.removeAll(beforeNames);
+            zombies.removeAll(quiescentNames);
             Log.errorf("CLEANUP FAILURE! Zombie elements detected: %s", zombies);
-            
-            // This will print exactly which element stayed behind
             fail("Pipeline contains zombie elements: " + zombies);
         }
 
         assertEquals(baseCount, afterNames.size(), "Pipeline element count mismatch!");
     }
 
-    // TODO: This usually never ends. some c level problem?
+    
     @Test
     @DisplayName("Trick Test: Substring Name Collision")
     void testPrefixSafety() {

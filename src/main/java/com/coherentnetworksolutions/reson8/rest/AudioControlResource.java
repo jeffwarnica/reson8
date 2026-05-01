@@ -1,5 +1,6 @@
 package com.coherentnetworksolutions.reson8.rest;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -16,6 +17,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quarkus.logging.Log;
 import io.vertx.mutiny.core.eventbus.EventBus;
 
+@ApplicationScoped
 @Path("/audio/control")
 public class AudioControlResource {
 
@@ -79,14 +81,6 @@ public class AudioControlResource {
         }).toList();
     }
 
-        // return signalManager.getSignalBuckets().stream()
-        //     .map( entry -> 
-        //             new ChannelInfo(entry.getName(),
-        //                 mixer.getInputChannelVolume(entry.getName()), entry.getVolume(),
-        //                 entry.getIntensity(), entry.isDrop(), entry.getInputChannel().getClass().getName())
-        //     )
-        //     .toList();
-    
     @POST
     @Path("/k8s-sync/{active}")
     public void setK8sSync(@PathParam("active") boolean active) {
@@ -135,7 +129,13 @@ public class AudioControlResource {
             mixer.setInputChannelVolume(req.channel, req.mixVol);
         }
         if (req.mixVol >= 0) {
-            mixer.getInputChannel(req.channel).setCeiling(req.chVol);
+            InputChannel ch = mixer.getInputChannel(req.channel);
+            if (ch == null) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity("{\"error\":\"Channel not found: " + req.channel + "\"}")
+                        .build();
+            }
+            ch.setCeiling(req.chVol);
         }
         return Response.ok().build();
     }
@@ -155,6 +155,11 @@ public class AudioControlResource {
         }
         Log.infof("PATCH targetIntensity channel=[%s] targetIntensity=[%s]", name, body.targetIntensity);
         InputChannel channel = mixer.getInputChannel(name);
+        if (channel == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\":\"Channel not found: " + name + "\"}")
+                    .build();
+        }
         channel.setTargetIntensity(body.targetIntensity);
         return Response.ok().build();
     }
@@ -203,31 +208,9 @@ public class AudioControlResource {
         public double chVol;
     }
 
-    @SuppressFBWarnings(value = {"URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", "UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"},
+    @SuppressFBWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
         justification = "Fields are read by Jackson via reflection for JSON serialization")
-    public static class ChannelInfo {
-        public String name;
-        public boolean supportsIntensity;
-        public double mixVol;
-        public double chVol;
-        public double intensity;
-        public boolean isDrop;
-        public String sourceType; // Add this!
-
-        public ChannelInfo(String name, double mixVol, double chVol, double intensity, boolean isDrop, String sourceType) {
-            this.name = name;
-            this.mixVol = mixVol;
-            this.chVol = chVol;
-            this.intensity = intensity;
-            this.isDrop = isDrop;
-            this.sourceType = sourceType;
-
-        }
-    }
-
-    @SuppressFBWarnings(value = {"URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", "EI_EXPOSE_REP2", "SIC_INNER_SHOULD_BE_STATIC"},
-        justification = "Fields serialized by Jackson; outer-class ref is intentional for non-static inner DTO")
-    public class MixerStateDTO {
+    public static class MixerStateDTO {
         public double masterVolume;
         public boolean k8sSyncActive;
         public List<ChannelStateDTO> channels;

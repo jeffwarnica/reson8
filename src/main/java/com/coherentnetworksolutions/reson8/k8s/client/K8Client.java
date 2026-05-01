@@ -25,7 +25,6 @@ import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.Vertx;
 import io.vertx.mutiny.core.eventbus.EventBus;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -61,13 +60,6 @@ public class K8Client {
      * 11 nodes of CPU, but never sometimes 5 nodes of CPUs.
      */
     private final AtomicReference<ClusterCapacity> clusterCapacity = new AtomicReference<>(new ClusterCapacity(1, 1));
-
-    @PostConstruct
-    public void startupValidation() {
-        Log.info("Hello world");
-        Log.info(client.getMasterUrl());
-        Log.info("XXXXXXXXXXXXXXXXXXXXXXXXXXXxxx");
-    }
 
     @ConsumeEvent(value = "signalManager-ready")
     @Blocking
@@ -139,8 +131,10 @@ public class K8Client {
 
         for (Node node : nodes) {
             Map<String, Quantity> allocatable = node.getStatus().getAllocatable();
-            totalCpuCapNano += Quantity.getAmountInBytes(allocatable.get("cpu")).longValue();
-            totalMemCapacityBytes += Quantity.getAmountInBytes(allocatable.get("memory")).longValue();
+            Quantity cpu = allocatable.get("cpu");
+            Quantity mem = allocatable.get("memory");
+            if (cpu != null) totalCpuCapNano += Quantity.getAmountInBytes(cpu).longValue();
+            if (mem != null) totalMemCapacityBytes += Quantity.getAmountInBytes(mem).longValue();
         }
         clusterCapacity.set(new ClusterCapacity(totalCpuCapNano, totalMemCapacityBytes));
         Log.debugf("Mem: [%.2f], CPU:[%.2f]", (float) clusterCapacity.get().memBytes, (float) clusterCapacity.get().cpuNano);
@@ -173,10 +167,11 @@ public class K8Client {
         long currentMemUsageBytes = 0;
 
         for (NodeMetrics node : nodeMetrics.getItems()) {
-            Log.debug(node);
             Map<String, Quantity> usage = node.getUsage();
-            currentCpuUsageNano += Quantity.getAmountInBytes(usage.get("cpu")).longValue();
-            currentMemUsageBytes += Quantity.getAmountInBytes(usage.get("memory")).longValue();
+            Quantity cpu = usage.get("cpu");
+            Quantity mem = usage.get("memory");
+            if (cpu != null) currentCpuUsageNano += Quantity.getAmountInBytes(cpu).longValue();
+            if (mem != null) currentMemUsageBytes += Quantity.getAmountInBytes(mem).longValue();
         }
 
         double cpuPercent = (double) currentCpuUsageNano / currentCapacity.cpuNano * 100;

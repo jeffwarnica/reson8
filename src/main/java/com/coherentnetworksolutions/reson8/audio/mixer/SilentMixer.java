@@ -19,6 +19,7 @@ public class SilentMixer implements Mixer {
     private final Map<String, InputChannel> inputChannels = new HashMap<>(); 
     private final Map<String, MixerOutputToClientManagerChannel> outputChannels = new HashMap<>();     
     private MixerOutputToClientManagerChannel masterOutputChannel;
+    private double volume;
     
     @Override
     public void initGStreamer() {
@@ -66,12 +67,12 @@ public class SilentMixer implements Mixer {
 
     @Override
     public void setInputChannelVolume(String channelName, double uiVolume) {
-        return;
+        volume = Math.max(0.0, Math.min(100.0, uiVolume));
     }
 
     @Override
     public double getInputChannelVolume(String channelName) {
-        return 6.66;
+        return volume;
     }
 
     @Override

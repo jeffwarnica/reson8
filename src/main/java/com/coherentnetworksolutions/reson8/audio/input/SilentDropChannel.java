@@ -6,46 +6,22 @@ import org.freedesktop.gstreamer.Element;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
 import io.quarkus.logging.Log;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 
-public class SilentDropChannel implements DropChannel, InputChannel {
+public class SilentDropChannel extends BaseInputChannel implements DropChannel {
 
-    private String channelName;
-    private double currentIntensity = 0.0;
-    
     public SilentDropChannel(SignalBucket signalEndpoint) {
-        channelName = signalEndpoint.getName();
-    }
-
-
-    // public SilentDropChannel(SignalEndpoint signalEndpoint) {
-    //     channelName = signalEndpoint.getName();
-    // }
-
-    @Override
-    public void start() {
-
+        super(signalEndpoint.getName(), 0.0, 0.0);
     }
 
     @Override
-    public String getChannelName() {
-        return channelName;
-    }
+    public void start() {}
 
     @Override
-    public double getCeiling() {
-        return 6.66;
-    }
-
-    // @Override
-    // public boolean supportsGain() {return true;    }
-    // @Override
-    // public boolean supportsIntensity() { return true;}
+    public void dispose() {}
 
     @Override
-    public void setCeiling(@Min(0) @Max(100) double volume) {
-        return;
+    public void trigger() {
+        Log.debug("BANG");
     }
 
     @Override
@@ -56,34 +32,6 @@ public class SilentDropChannel implements DropChannel, InputChannel {
 
     @Override
     public Caps getCaps() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getCaps'");
     }
-
-
-    @Override
-    public void dispose() {}
-
-    @Override
-    public void setTargetIntensity(@Min(0) @Max(100) double d) {
-        return;
-    }
-
-    @Override
-    public double getTargetIntensity() {
-        return 6.66;
-    }
-
-    @Override
-    public double getCurrentIntensity() {
-        return currentIntensity;
-    }
-
-
-    @Override
-    public void trigger(double volume) {
-        Log.debug("BANG");
-    }
-
-    
 }

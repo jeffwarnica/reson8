@@ -1,12 +1,13 @@
 package com.coherentnetworksolutions.reson8.audio.input;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.freedesktop.gstreamer.Gst;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +25,7 @@ import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundDefi
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config.SoundType;
 import com.coherentnetworksolutions.reson8.signal.SignalBucket;
 
-public class GstChannelFactoryTests {
+public class GstChannelFactoryTest {
     private GstChannelFactory factory;
     private MockGstToolkit toolkit;
     /** Holds the channel built each test so @AfterEach can stop its internal scheduler. */

@@ -26,7 +26,7 @@ class VolumeScalerTest {
         assertFalse(Gst.isInitialized(),
                 "This test class must not require native GStreamer. " +
                         "If a production class calls Caps.fromString() or ElementFactory.make() directly, " +
-                        "that's a toolkit abstraction leak — route it through GstToolkit.");
+                        "that's a toolkit abstraction leak — route it through GsToolkit.");
     }
 
     @ParameterizedTest
@@ -38,7 +38,7 @@ class VolumeScalerTest {
             "150.0, 1.0" // Out of bounds high
     })
     void testHumanToGst(double input, double expected) {
-        assertEquals(expected, VolumeScaler.humanToGstVolume(input), DELTA);
+        assertEquals(expected, VolumeScaler.humanToGsVolume(input), DELTA);
     }
 
     @ParameterizedTest
@@ -51,15 +51,15 @@ class VolumeScalerTest {
             "2.5,    100.0" // Out of bounds high
     })
     void testGstToHuman(double input, double expected) {
-        assertEquals(expected, VolumeScaler.gstToHumanVolume(input), 0.01); // Slightly wider delta for cbrt
+        assertEquals(expected, VolumeScaler.gsToHumanVolume(input), 0.01); // Slightly wider delta for cbrt
     }
 
     @ParameterizedTest
     @DisplayName("Round-trip consistency (Human -> Gst -> Human)")
     @CsvSource({ "10.0", "25.5", "50.0", "75.0", "99.9" })
     void testRoundTrip(double input) {
-        double gst = VolumeScaler.humanToGstVolume(input);
-        double backToHuman = VolumeScaler.gstToHumanVolume(gst);
+        double gst = VolumeScaler.humanToGsVolume(input);
+        double backToHuman = VolumeScaler.gsToHumanVolume(gst);
 
         assertEquals(input, backToHuman, DELTA, "Round trip failed: Value drifted significantly during conversion");
     }

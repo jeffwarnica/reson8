@@ -65,8 +65,6 @@ public class ThanosMetricPoller {
 
         authToken = "Bearer " + k8sClient.getAuthToken(); 
         
-        Log.debugf("my auth token is [%s]", authToken);
-
         if (checkThanosHealth()) {
             signalManager.getSignalBuckets().stream()
                 .peek(bucket -> Log.debugf("My bucket [%s] is of type [%s] and has query [%s]", 
@@ -114,14 +112,14 @@ public class ThanosMetricPoller {
 
     private double parseResponse(ThanosResponse response) {
         if (response.data().result().isEmpty()) return 0.0;
-        // Prometheus returns ["timestamp", "value"] - value is index 1
-        String val = response.data().result().get(0).value().get(1).toString();
-        return Double.parseDouble(val);
+        // Prometheus returns ["timestamp", "value"] — value is at index 1
+        List<Object> value = response.data().result().get(0).value();
+        if (value == null || value.size() < 2) {
+            Log.warnf("Unexpected Thanos value format: %s", value);
+            return 0.0;
+        }
+        return Double.parseDouble(value.get(1).toString());
     }
-    
-    // public void registerQuery(String id, String query) {
-    //     activeQueries.put(id, query);
-    // }
     
     private boolean checkThanosHealth() {
         try {
