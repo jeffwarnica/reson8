@@ -1,32 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.coherentnetworksolutions.reson8</groupId>
-    <artifactId>reson8</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <packaging>quarkus</packaging>
 
-    <properties>
-        <compiler-plugin.version>3.15.0</compiler-plugin.version>
-        <maven.compiler.release>21</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.34.1</quarkus.platform.version>
-        <skipITs>true</skipITs>
-        <surefire-plugin.version>3.5.4</surefire-plugin.version>
-    </properties>
+    <parent>
+        <groupId>com.coherentnetworksolutions.reson8</groupId>
+        <artifactId>reson8-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>reson8</artifactId>
+    <packaging>quarkus</packaging>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>${quarkus.platform.group-id}</groupId>
-                <artifactId>${quarkus.platform.artifact-id}</artifactId>
-                <version>${quarkus.platform.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+            <!-- quarkus-bom is inherited from parent; camel-bom is reson8-specific -->
             <dependency>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-camel-bom</artifactId>
@@ -168,17 +156,14 @@
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${compiler-plugin.version}</version>
                 <configuration>
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${surefire-plugin.version}</version>
                 <configuration>
-                    <!-- JW: limit the entire test suite to 300 seconds,
-                             to deal with possible deep c-level gstreamer fuckups -->
+                    <!-- GStreamer C-level hangs can deadlock the JVM; hard-cap the suite. -->
                     <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
@@ -198,7 +183,6 @@
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${surefire-plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -208,8 +192,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- JW: limit the entire test suite to 300 seconds,
-                             to deal with possible deep c-level gstreamer fuckups -->
+                    <!-- GStreamer C-level hangs can deadlock the JVM; hard-cap the suite. -->
                     <forkedProcessTimeoutInSeconds>300</forkedProcessTimeoutInSeconds>
                     <argLine>@{argLine} -Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
                     <systemPropertyVariables>
