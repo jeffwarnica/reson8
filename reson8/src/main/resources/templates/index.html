@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reson8 | Audio Signal Flow</title>
+    <link rel="stylesheet" href="/reson8-spa.css">
+</head>
+
+<body>
+    {#if showDevToolbar}
+    <div id="reson8-dev-toolbar" data-dev-toolbar class="card dev-toolbar">
+        <strong>Dev tier</strong>
+        <label for="devTierSelect">Simulate</label>
+        <select id="devTierSelect" aria-label="Simulated access tier for development">
+            <option value="">(server default)</option>
+            <option value="admin">admin</option>
+            <option value="viewer">viewer</option>
+            <option value="stream">stream</option>
+            <option value="anonymous">anonymous</option>
+        </select>
+        <span style="margin-left:12px;font-size:0.85em;color:#666;">Applies <code>X-Reson8-Dev-Tier</code> to API requests (sessionStorage).</span>
+    </div>
+    {/if}
+
+    <div class="card" id="loginStubCard" style="display: none;">
+        <button type="button" id="loginBtn" class="btn-play">Log in</button>
+        <span id="loginHint" style="margin-left:12px;color:#666;font-size:0.9em;"></span>
+    </div>
+
+    <div class="card" id="streamControlCard">
+        <h2>Playback</h2>
+        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <div>
+                <button type="button" id="startBtn" class="btn-play">▶ Start Stream</button>
+                <button type="button" id="stopBtn" class="btn-stop" disabled>■ Stop</button>
+            </div>
+            <audio id="audioPlayer"></audio>
+            <div id="connectionStatus">Status: Disconnected</div>
+        </div>
+        <div class="slider-row" style="background: #f1f8e9; padding: 10px; border-radius: 8px; margin-top: 14px;">
+            <label>LOCAL (Browser)</label>
+            <input type="range" id="localVol" min="0" max="100" step="0.01" value="20">
+            <span id="localVolVal">20.00</span>
+            <small>0–100%</small>
+        </div>
+    </div>
+
+    <div class="card" id="operatorControlsCard">
+        <h2>Global Control</h2>
+        <p id="viewerReadonlyHint" class="readonly-strip-hint" style="display: none;">View-only mode: server controls are read-only.</p>
+        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <div class="k8s-toggle">
+                <strong>K8s Signal Sync:</strong>
+                <input type="checkbox" id="k8sActive" checked>
+                <span id="k8sStatusText" style="color:var(--k8s)">ACTIVE</span>
+            </div>
+        </div>
+        <div class="slider-row" style="background: #fff3e0; padding: 10px; border-radius: 8px;">
+            <label>OUTPUT (Server)</label>
+            <input type="range" id="serverMasterVol" min="0" max="100" step="0.01">
+            <span id="serverMasterVolVal">0.00</span>
+            <small>Global for all users</small>
+        </div>
+    </div>
+
+    <div class="signal-chain" id="channelsOuter">
+        <div id="channelsContainer">
+            <div class="card">
+                <h2>Mixer Channels</h2>
+                <div id="chList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/reson8-spa.js" defer></script>
+</body>
+
+</html>

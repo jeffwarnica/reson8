@@ -1,0 +1,381 @@
+:root {
+            --primary: #0056b3;
+            --k8s: #326ce5;
+            --accent: #ff5722;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #eceff1;
+            color: #333;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        /* Flow Layout */
+        .signal-chain {
+            display: block;
+        }
+
+        /* Pipeline flow */
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin: 10px 0 12px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 14px 2px 4px;
+        }
+
+        .pipe-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 7px;
+            border-radius: 6px;
+            border: 1.5px solid #b0bec5;
+            background: #f5f5f5;
+            min-width: 52px;
+            font-size: 0.68em;
+            color: #546e7a;
+            white-space: nowrap;
+            transition: background 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s;
+        }
+
+        .pipe-node .node-label {
+            font-weight: bold;
+            font-size: 0.9em;
+            letter-spacing: 0.02em;
+        }
+
+        .pipe-node .node-value {
+            font-family: monospace;
+            font-size: 1em;
+            margin-top: 2px;
+            color: #37474f;
+        }
+
+        .pipe-arrow {
+            flex-shrink: 0;
+            color: #b0bec5;
+            font-size: 1.1em;
+            padding: 0 2px;
+            transition: color 0.3s;
+        }
+
+        /* Active k8s source path */
+        .pipe-node.active-k8s {
+            background: #e3f2fd;
+            border-color: var(--k8s);
+            color: var(--k8s);
+        }
+        .pipe-node.active-k8s .node-value { color: #0d47a1; }
+        .pipe-arrow.active-k8s { color: var(--k8s); }
+
+        /* Active neutral path (after merge point) */
+        .pipe-node.active-flow {
+            background: #e8f5e9;
+            border-color: #388e3c;
+            color: #1b5e20;
+        }
+        .pipe-node.active-flow .node-value { color: #1b5e20; }
+        .pipe-arrow.active-flow { color: #388e3c; }
+
+
+        /* Channel body: sliders + curve side-by-side */
+        .channel-body {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .channel-sliders {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        /* Signal Curves — inline per-channel */
+        .curve-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 14px;
+            flex-shrink: 0;
+        }
+
+        .curve-panel h4 {
+            margin: 0 0 8px;
+            font-size: 0.85em;
+            color: #455a64;
+        }
+
+        .curve-svg {
+            display: block;
+        }
+
+
+        /* VolumeScaler x³ transform node */
+        .pipe-node-xform {
+            border-style: dashed;
+            font-style: italic;
+            min-width: 40px;
+        }
+
+        /* Input channel group box in pipeline diagram */
+        .pipeline-input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            position: relative;
+            border: 1.5px solid #b0bec5;
+            border-radius: 8px;
+            padding: 10px 6px 4px;
+            background: #fafafa;
+            flex-shrink: 0;
+        }
+
+        .pipeline-input-group-label {
+            position: absolute;
+            top: -8px;
+            left: 8px;
+            background: white;
+            padding: 0 4px;
+            font-size: 0.7em;
+            color: #78909c;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* Drop channel — Simulate Event button inside the pipeline node */
+        .pipe-node-drop {
+            border-color: #7e57c2;
+            background: #ede7f6;
+            color: #4527a0;
+        }
+
+        .btn-simulate-event {
+            margin-top: 4px;
+            padding: 3px 8px;
+            font-size: 0.8em;
+            font-weight: bold;
+            background: #673ab7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            white-space: nowrap;
+        }
+        .btn-simulate-event:hover   { background: #512da8; }
+        .btn-simulate-event:active  { background: #311b92; }
+        .btn-simulate-event:disabled { opacity: 0.5; cursor: default; }
+
+        /* Metric simulation input inside the K8s Metric pipeline node */
+        .metric-sim-input {
+            margin-top: 4px;
+            width: 72px;
+            padding: 2px 4px;
+            font-size: 0.85em;
+            font-family: monospace;
+            border: 1.5px solid var(--accent);
+            border-radius: 4px;
+            background: #fff8f5;
+            color: #bf360c;
+            text-align: center;
+            outline: none;
+        }
+        .metric-sim-input:focus { background: #fff3e0; border-color: #e64a19; }
+
+        .channel-strip {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .channel-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .map-type {
+            margin-left: 8px;
+        }
+
+        .status-tag {
+            background: #e3f2fd;
+            color: var(--k8s);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .slider-row label {
+            min-width: 158px;
+            width: 158px;
+            flex-shrink: 0;
+            font-size: 0.85em;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .slider-row input[type=range]:not(.intensity-slider) {
+            flex-grow: 1;
+        }
+
+        .info-hint {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 15px;
+            height: 15px;
+            margin-left: 4px;
+            border-radius: 50%;
+            border: 1px solid #90a4ae;
+            color: #455a64;
+            font-size: 9px;
+            font-weight: bold;
+            font-style: normal;
+            cursor: help;
+            vertical-align: middle;
+            line-height: 1;
+            text-decoration: none;
+        }
+
+        .intensity-slider-wrap {
+            position: relative;
+            flex-grow: 1;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            padding-right: 62px;
+        }
+
+        .intensity-slider-wrap .intensity-slider {
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .current-intensity-badge {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.72em;
+            font-family: monospace;
+            color: #37474f;
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid #b0bec5;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: help;
+            z-index: 2;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            text-decoration: none;
+        }
+
+        .slider-row span {
+            min-width: 35px;
+            font-family: monospace;
+            font-size: 0.9em;
+            background: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* Status Colors */
+        .intensity-bar-container {
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .intensity-bar-fill {
+            height: 100%;
+            background: var(--k8s);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .k8s-toggle {
+            background: #e3f2fd;
+            border: 1px solid var(--k8s);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+
+        button {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-play {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-stop {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .dev-toolbar {
+            background: #fff8e1;
+            border: 1px dashed #f9a825;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+        }
+
+        .dev-toolbar select {
+            margin-left: 6px;
+            padding: 4px 8px;
+        }
+
+        .readonly-strip-hint {
+            font-size: 0.9em;
+            color: #6d4c41;
+            margin-bottom: 8px;
+        }
