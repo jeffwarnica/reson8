@@ -28,11 +28,13 @@ class Reson8ConfigSecurityMappingTest {
     }
 
     @Test
-    @DisplayName("security ConfigMapping: empty lists and default sentinel")
+    @DisplayName("security ConfigMapping: empty lists, default sentinel, login and dev-header flags")
     void security_defaults() {
         assertTrue(config.security().adminGroups().orElse(List.of()).isEmpty());
         assertTrue(config.security().viewerGroups().orElse(List.of()).isEmpty());
         assertTrue(config.security().streamGroups().orElse(List.of()).isEmpty());
         assertEquals("__anonymous__", config.security().anonymousStreamSentinel());
+        assertFalse(config.security().loginAvailable());
+        assertTrue(config.security().devTierHeaderEnabled());
     }
 }

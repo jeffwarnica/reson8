@@ -98,6 +98,16 @@ class SecurityConfigValidatorTest {
             public String anonymousStreamSentinel() {
                 return sentinel;
             }
+
+            @Override
+            public boolean loginAvailable() {
+                return false;
+            }
+
+            @Override
+            public boolean devTierHeaderEnabled() {
+                return false;
+            }
         };
     }
 }

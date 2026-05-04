@@ -53,6 +53,20 @@ public interface Reson8Config {
         @WithDefault("__anonymous__")
         @WithName("anonymous-stream-sentinel")
         String anonymousStreamSentinel();
+
+        /**
+         * When {@code true}, SPA may show an OIDC login entry point (set when {@code quarkus-oidc} is enabled in prod).
+         */
+        @WithDefault("false")
+        @WithName("login-available")
+        boolean loginAvailable();
+
+        /**
+         * Enables {@code X-Reson8-Dev-Tier} for tier simulation in local dev and tests; must stay {@code false} in prod.
+         */
+        @WithDefault("false")
+        @WithName("dev-tier-header-enabled")
+        boolean devTierHeaderEnabled();
     }
 
     interface K8sConfig {
