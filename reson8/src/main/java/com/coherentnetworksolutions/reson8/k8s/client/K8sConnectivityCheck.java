@@ -5,6 +5,7 @@ import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Readiness;
 
+import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -19,11 +20,19 @@ public class K8sConnectivityCheck implements HealthCheck {
     @Override
     public HealthCheckResponse call() {
         try {
-            client.nodes().list(); // Simple ping
-            return HealthCheckResponse.up("Kubernetes Connectivity");
+            NodeList nodeList = client.nodes().list();
+            int count = nodeList.getItems() != null ? nodeList.getItems().size() : 0;
+            return HealthCheckResponse.builder()
+                    .name("Kubernetes API")
+                    .up()
+                    .withData("nodesListed", Integer.toString(count))
+                    .build();
         } catch (Exception e) {
             Log.error("Kubernetes connectivity health check failed.", e);
-            return HealthCheckResponse.down("Kubernetes Connectivity");
+            return HealthCheckResponse.builder()
+                    .name("Kubernetes API")
+                    .down()
+                    .build();
         }
     }
 }

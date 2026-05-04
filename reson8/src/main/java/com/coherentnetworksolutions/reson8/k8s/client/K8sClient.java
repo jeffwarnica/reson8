@@ -46,8 +46,6 @@ public class K8sClient {
     EventBus eventBus;
     @Inject
     K8sSyncState k8sSyncState;
-    @Inject
-    K8sAuthTokenProvider authTokenProvider;
 
     private final AtomicBoolean isFlowing = new AtomicBoolean(false);
     private Watch k8sEventWatch;
@@ -234,12 +232,6 @@ public class K8sClient {
             bucket -> signalManager.updateSignalIntensity(bucket.getName(), rawValue),
             () -> Log.tracef("No bucket configured for ClusterMetric [%s], skipping", metric)
         );
-    }
-
-    /** @deprecated Inject {@link K8sAuthTokenProvider} directly instead. */
-    @Deprecated
-    public String getAuthToken() {
-        return authTokenProvider.getToken();
     }
 
     @PreDestroy

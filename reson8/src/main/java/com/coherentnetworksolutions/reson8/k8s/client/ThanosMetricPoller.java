@@ -1,6 +1,5 @@
 package com.coherentnetworksolutions.reson8.k8s.client;
 
-import java.io.File;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -57,14 +56,7 @@ public class ThanosMetricPoller {
     }
 
     private void initializePoller() {
-        if (new File("/var/run/secrets/kubernetes.io").exists()) {
-            thanosUrl = config.k8s().thanos().inClusterUrl();
-        } else {
-            thanosUrl = config.k8s().thanos().baseUrl();
-            if (!thanosUrl.endsWith("/api/v1")) {
-                thanosUrl = thanosUrl.endsWith("/") ? thanosUrl + "api/v1" : thanosUrl + "/api/v1";
-            }
-        }
+        thanosUrl = ThanosApiBaseUri.resolve(config);
 
         this.restClient = QuarkusRestClientBuilder.newBuilder()
             .baseUri(URI.create(thanosUrl))

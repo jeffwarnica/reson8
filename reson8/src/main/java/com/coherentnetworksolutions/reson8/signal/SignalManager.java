@@ -131,12 +131,6 @@ public class SignalManager {
         attemptWiring();
     }
 
-    /** @deprecated Sync state is now managed centrally by {@link K8sSyncState}. */
-    @Deprecated
-    public void setK8sSyncEnabled(boolean state) {
-        k8sSyncState.onSyncToggle(state);
-    }
-
     public SignalBucket getSignalBucket(String bucket) {
         return buckets.get(bucket);
     }
@@ -149,12 +143,6 @@ public class SignalManager {
         return buckets.values().stream()
             .filter(b -> b.getMetric() == metric)
             .findFirst();
-    }
-
-    /** @deprecated Use {@link #updateSignalIntensity(String, double)} instead. */
-    @Deprecated
-    public void updateSignalIntensityFromRaw(String signalId, double rawValue) {
-        updateSignalIntensity(signalId, rawValue);
     }
 
     public void processEvent(io.fabric8.kubernetes.api.model.events.v1.Event event) {
@@ -200,12 +188,6 @@ public class SignalManager {
         double intensity = bucket.getCurve().map(rawValue);
         bucket.setIntensity(intensity);
         Log.debugf("Updated intensity for signal [%s] to [%f] from rawValue [%f]", signalId, intensity, rawValue);
-    }
-
-    /** @deprecated Use {@link #updateSignalIntensity(String, double)} instead. */
-    @Deprecated
-    public void updateSignalIntensityFromPromVal(String signalId, double promVal) {
-        updateSignalIntensity(signalId, promVal);
     }
 
     private void attemptWiring() {

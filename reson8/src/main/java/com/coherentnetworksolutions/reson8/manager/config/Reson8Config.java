@@ -48,6 +48,15 @@ public interface Reson8Config {
 
         @WithDefault("false")
         boolean ignoreCerts();
+
+        /**
+         * When {@code true}, {@link com.coherentnetworksolutions.reson8.k8s.client.ThanosConnectivityCheck}
+         * enforces that the Thanos querier {@code /api/v1/labels} endpoint returns success. Disable in
+         * tests ({@code %test}) that have no querier.
+         */
+        @WithDefault("true")
+        @WithName("readiness-check")
+        boolean readinessCheck();
     }
 
     /**

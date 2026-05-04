@@ -7,7 +7,13 @@ of their cluster without action.
 This idea is directly inspired by the USNIX paper [Peep (The Network Auralizer): Monitoring Your Network With Sound
 ](https://www.usenix.org/legacy/publications/library/proceedings/lisa2000/full_papers/gilfix/gilfix_html/index.html)
 
-This may or may not be useful in practice. But it will look, or rather, *sound* cool in a keynote. 
+This may or may not be useful in practice. But it will look, or rather, *sound* cool in a keynote.
+
+## Documentation
+
+- **POC install (happy path):** [docs/poc/install.md](../docs/poc/install.md)
+- **POC troubleshooting:** [docs/poc/troubleshooting.md](../docs/poc/troubleshooting.md)
+- **OpenShift deploy (full detail):** [DEPLOY.md](../DEPLOY.md)
 
 ## Soundscape
 

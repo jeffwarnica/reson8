@@ -129,14 +129,14 @@
     </Match>
 
     <!-- ===================================================================
-         DMI_HARDCODED_ABSOLUTE_FILENAME — ThanosMetricPoller
+         DMI_HARDCODED_ABSOLUTE_FILENAME — ThanosApiBaseUri
          /var/run/secrets/kubernetes.io is the standard Kubernetes service
          account token mount path defined by the Kubernetes spec. Checking
          its existence is the canonical way to detect in-cluster runtime.
          =================================================================== -->
     <Match>
         <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
-        <Source name="ThanosMetricPoller.java"/>
+        <Source name="ThanosApiBaseUri.java"/>
     </Match>
 
 </FindBugsFilter>

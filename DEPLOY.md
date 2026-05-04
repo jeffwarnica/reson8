@@ -149,13 +149,20 @@ This single command:
 
 ### Readiness gate
 
-The pod's readiness probe hits `/q/health/ready`, which includes `K8sConnectivityCheck`.
-That check calls `client.nodes().list()` against the API server. The pod will remain
-`NotReady` until:
-- The `reson8` `ServiceAccount` exists (created by step 5 above), and
-- The `ClusterRoleBinding` from step 1c is in place.
+The pod's readiness probe hits `/q/health/ready`, which aggregates MicroProfile readiness checks:
 
-This is intentional — traffic is not routed until the app can actually reach the cluster.
+- **Kubernetes API** — lists cluster nodes via the Kubernetes client; response includes `nodesListed` (count). The pod stays **DOWN** until this succeeds (same as before: RBAC and `ServiceAccount` must be in place—see below).
+- **Thanos querier** — `GET /api/v1/labels` against the configured Thanos/Prometheus API with the same bearer token used for metric queries; confirms monitoring ingress from the app's perspective.
+
+Disable the Thanos check only when necessary (e.g. unit tests): `reson8.k8s.thanos.readiness-check=false` (`%test` sets this by default in `application.properties`).
+
+Until readiness is **UP**:
+
+- The `reson8` `ServiceAccount` exists (created by the deploy step), and
+- The `ClusterRoleBinding` from step 1c is in place, and
+- (When the Thanos check is enabled) Thanos is reachable with `cluster-monitoring-view` rights.
+
+This is intentional — traffic is not routed until the app can reach the cluster and (in production-like profiles) monitoring.
 
 ### Checking the deployment
 
