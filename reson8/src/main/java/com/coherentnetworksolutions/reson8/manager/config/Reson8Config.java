@@ -15,11 +15,45 @@ public interface Reson8Config {
     @WithDefault("${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}")
     String audioPath();
 
+    /**
+     * SPA access tiers: JWT {@code groups} (and optional anonymous sentinel) mapped to admin / viewer / stream-only.
+     * Tier resolution precedence when evaluating a subject is {@code admin > viewer > stream}.
+     */
+    SecurityConfig security();
+
     K8sConfig k8s();
 
     SignalMap signalMap();
 
     List<Soundscape> soundscapes();
+
+    /**
+     * Group lists for SPA security tiers. Empty lists mean no subject qualifies for that tier via group membership.
+     * The same group must not appear in more than one list — startup validation fails if any overlap exists.
+     */
+    interface SecurityConfig {
+        /** IdP groups granting admin tier (full control). */
+        @WithName("admin-groups")
+        Optional<List<String>> adminGroups();
+
+        /** IdP groups granting viewer tier (read + stream; mutations disabled in UI). */
+        @WithName("viewer-groups")
+        Optional<List<String>> viewerGroups();
+
+        /**
+         * Stream-only tier groups plus optional {@link #anonymousStreamSentinel()} token for unauthenticated stream access.
+         */
+        @WithName("stream-groups")
+        Optional<List<String>> streamGroups();
+
+        /**
+         * When this exact string appears in {@link #streamGroups()}, unauthenticated callers may resolve to stream-only
+         * tier (see deployment docs). Operators may change the token; keep it out of real IdP group namespaces.
+         */
+        @WithDefault("__anonymous__")
+        @WithName("anonymous-stream-sentinel")
+        String anonymousStreamSentinel();
+    }
 
     interface K8sConfig {
         String cluster();

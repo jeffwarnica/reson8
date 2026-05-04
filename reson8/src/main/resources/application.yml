@@ -1,6 +1,9 @@
 ---
 reson8:
   audio-path: ${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}
+  security: {}
+  # Tier group lists (optional): reson8.security.admin-groups, viewer-groups, stream-groups
+  # Defaults: empty lists; reson8.security.anonymous-stream-sentinel defaults to __anonymous__
   k8s:
     cluster: self # uses standard kube env vars 
     namespaces:

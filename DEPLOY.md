@@ -217,6 +217,19 @@ under the `# --- OpenShift deployment ---` block. Key values:
 | `quarkus.openshift.config-map-volumes.app-config.config-map-name` | `reson8-config` | ConfigMap mounted at `/deployments/config/` |
 | `quarkus.openshift.mounts.app-config.path` | `/deployments/config` | Quarkus reads `application.yaml` here at higher priority than the bundled JAR copy |
 
+### SPA security (`reson8.security`)
+
+Tune these keys in the mounted `application.yml` (or equivalent properties) when OIDC / tiered UI is enabled:
+
+| Key | Purpose |
+|-----|---------|
+| `reson8.security.admin-groups` | IdP group names for full operator control |
+| `reson8.security.viewer-groups` | Read + stream; no mutations |
+| `reson8.security.stream-groups` | Stream-only tier; may include the anonymous sentinel |
+| `reson8.security.anonymous-stream-sentinel` | Defaults to `__anonymous__`; when this exact string appears in `stream-groups`, unauthenticated users may match stream-only (see product security doc for OAuth sidecar / ingress caveats) |
+
+Lists may be empty. The **same group must not appear in more than one** of the three lists — the application fails fast at startup if they overlap. When resolving a subject, tier precedence is **admin > viewer > stream**.
+
 ---
 
 ## Troubleshooting
