@@ -160,13 +160,11 @@ public interface Reson8Config {
     }
 
     /**
-     * Namespace filtering configuration.
+     * Legacy namespace scope placeholder.
      * <p>
-     * Currently only the {@link #all()} flag is wired to {@code K8sClient} (via
-     * {@code inAnyNamespace()} when {@code true}). The {@code include} and {@code
-     * exclude} lists that appeared in earlier revisions have been removed — they were
-     * never evaluated. Implement per-namespace filtering in {@code K8sClient.startK8sWatchers()}
-     * when a scoped watch is needed.
+     * Runtime collection is currently cluster-wide in {@code K8sClient} for events, pending pods,
+     * and deployment health. This mapping remains only for backwards compatibility with older
+     * overlays and should not be interpreted as an active namespace filter.
      */
     interface NamespaceConfig {
         boolean all();

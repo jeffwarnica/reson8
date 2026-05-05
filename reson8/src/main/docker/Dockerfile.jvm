@@ -95,40 +95,13 @@ COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
 # (src/main/resources/sounds/ → app/*.jar). Extract them to the filesystem
 # path WavCache expects. The base image is a full JDK so `jar` is available.
 USER root
+COPY src/main/docker/run-with-ca-update.sh /usr/local/bin/run-with-ca-update.sh
 RUN mkdir -p /opt/reson8 \
  && cd /opt/reson8 \
  && jar xf $(ls /deployments/app/*.jar | head -1) sounds \
  && chown -R 185:185 /opt/reson8/sounds \
  && chmod -R g+w /etc/pki/ca-trust/ /etc/pki/tls/ \
  && chgrp -R root /etc/pki/ca-trust/ /etc/pki/tls/ \
- && { \
-      echo '#!/bin/bash'; \
-      echo 'set -uo pipefail'; \
-      echo 'ANCHORS_DIR="/etc/pki/ca-trust/source/anchors"'; \
-      echo 'if [[ ! -s "${ANCHORS_DIR}/service-ca.crt" ]]; then'; \
-      echo '  echo "FATAL: OpenShift service CA not available at ${ANCHORS_DIR}/service-ca.crt" >&2'; \
-      echo '  echo "FATAL: ConfigMap openshift-service-ca.crt must exist in this namespace." >&2'; \
-      echo '  exit 1'; \
-      echo 'fi'; \
-      echo 'if [[ ! -s "${ANCHORS_DIR}/ingress-ca.crt" ]]; then'; \
-      echo '  echo "FATAL: Ingress/router CA not available at ${ANCHORS_DIR}/ingress-ca.crt" >&2'; \
-      echo '  echo "FATAL: A cluster administrator must run the one-time cluster trust setup." >&2'; \
-      echo '  echo "FATAL: See DEPLOY.md section Cluster CA Setup (one-time, cluster-admin)." >&2'; \
-      echo '  exit 1'; \
-      echo 'fi'; \
-      echo 'set +e'; \
-      echo 'update-ca-trust extract 2>&1'; \
-      echo 'UPDATE_CA_EXIT=$?'; \
-      echo 'set -e'; \
-      echo 'if [[ $UPDATE_CA_EXIT -ne 0 ]]; then'; \
-      echo '  if [[ ! -s "/etc/pki/ca-trust/extracted/java/cacerts" ]]; then'; \
-      echo '    echo "FATAL: update-ca-trust extract failed and java/cacerts is missing or empty" >&2'; \
-      echo '    exit 1'; \
-      echo '  fi'; \
-      echo '  echo "WARN: update-ca-trust extract had non-fatal warnings; java/cacerts is present, continuing." >&2'; \
-      echo 'fi'; \
-      echo 'exec /opt/jboss/container/java/run/run-java.sh'; \
-    } > /usr/local/bin/run-with-ca-update.sh \
  && chmod +x /usr/local/bin/run-with-ca-update.sh
 
 EXPOSE 8090

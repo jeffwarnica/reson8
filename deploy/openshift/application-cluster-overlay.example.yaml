@@ -4,11 +4,10 @@
 # Quarkus reads /deployments/config/application.yaml at higher priority than the
 # JAR. Merge these keys into your real ConfigMap (see DEPLOY.md §1e).
 #
-# OIDC: bundled application.properties sets quarkus.oidc.enabled=false (offline builds).
-# This mounted file overrides at higher priority — enable OIDC with unqualified keys below.
+# OIDC: the bundled application.properties leaves quarkus.oidc.enabled unset (Quarkus default=true)
+# but %dev/%test set it false. In-cluster config should still set it explicitly for operator clarity.
 #
-# Replace viewer-groups with JWT group names YOUR IdP puts on tokens (claims path
-# stays reson8.oidc.roles-claim-path, default groups).
+# Replace viewer-groups with JWT group names YOUR IdP puts on tokens.
 # ------------------------------------------------------------------------------
 
 quarkus:

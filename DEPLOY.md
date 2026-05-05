@@ -135,13 +135,13 @@ oc exec -n reson8 deploy/reson8 -- env | grep OIDC_CLIENT
 
 `application.yml` is mounted into every pod at `/deployments/config/application.yaml`.
 Quarkus reads that path automatically as a higher-priority config source than the
-copy bundled in the JAR, so you can tune signal maps, soundscapes, namespace filters,
-and Thanos queries without rebuilding the image.
+copy bundled in the JAR, so you can tune signal maps, soundscapes, and Thanos queries
+without rebuilding the image.
 
 #### Cluster overlay (required for OIDC and tier configuration)
 
-The bundled `application.yml` intentionally does **not** set `quarkus.oidc.enabled` (it defaults to `false`
-so local dev and offline `mvn package` work without an IdP). To enable OIDC and configure security groups
+The bundled `application.yml` intentionally does **not** set `quarkus.oidc.enabled`.
+Profile keys in `application.properties` disable OIDC in `%dev`/`%test`; cluster overlay should set `quarkus.oidc.enabled: true`
 in the cluster, use a **cluster overlay file**:
 
 ```bash
@@ -197,19 +197,19 @@ Three deliberately different setups:
 
 | Situation | OIDC | Tier simulation | Typical tier enforcement |
 |-----------|------|-----------------|---------------------------|
-| **`quarkus:dev`** (`%dev`) | Off — JAR **`quarkus.oidc.enabled=false`** (unprefixed) | **`X-Reson8-Dev-Tier`** header + **`?reson8-dev-tier=`** on `/audio/stream` when the dev toolbar is on | Defaults stay **on**; use simulation headers/query or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
-| **`mvn package` / image build** (`%prod` bundle) | Same unprefixed **`false`** — offline augmentation | N/A | Bootstrap resolves issuer **at runtime** in-cluster once pods set **`quarkus.oidc.enabled=true`** (see OIDC subsection). |
+| **`quarkus:dev`** (`%dev`) | Off — `%dev.quarkus.oidc.enabled=false` | **`X-Reson8-Dev-Tier`** header + **`?reson8-dev-tier=`** on `/audio/stream` when the dev toolbar is on | Defaults stay **on**; use simulation headers/query or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
+| **`mvn package` / image build** (`%prod` bundle) | Unqualified key unset (Quarkus default true) | N/A | Bootstrap resolves issuer **at runtime** in-cluster once pods set **`quarkus.oidc.enabled=true`** (see OIDC subsection). |
 | **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-header-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml). |
 
 **Reasonable defaults for many clusters** (adjust group names to match your IdP’s claims):
 
 - **`cluster-admins`** → **admin** tier (full control + debug).
 - A dedicated **`viewer-groups`** entry (example file uses **`reson8-viewers`**) → authenticated **read-only** UI (**viewer** tier: sees control state, cannot mutate).
-- **`stream-groups`** includes **`__anonymous__`** → unauthenticated callers can match **stream-only** (listen) when **`authentication.optional=false`** still allows anonymous HTTP to reach the app (see OIDC subsection below).
+- **`stream-groups`** includes **`__anonymous__`** → unauthenticated callers can match **stream-only** (listen) when ingress does not force authentication on `/audio/stream`.
 
-**Anonymous “read-only” vs listen-only:** **viewer** tier requires JWT **groups**; purely anonymous callers never become viewers unless you change OIDC posture (e.g. **`authentication.optional=true`**) and accept anonymous identities elsewhere. Anonymous users only reach **stream-only** via the **`__anonymous__`** sentinel (**listen**, **`canViewControlState`** false). Operators who want anonymous browsing of controls without login need an explicit product/security decision (ingress exemptions or OIDC optional mode), not another tier shortcut.
+**Anonymous “read-only” vs listen-only:** **viewer** tier requires JWT **groups**; purely anonymous callers never become viewers. Anonymous users only reach **stream-only** via the **`__anonymous__`** sentinel (**listen**, **`canViewControlState`** false) when ingress allows tokenless traffic for that path.
 
-Example overlay (see step 1d for the full workflow):
+Example overlay (see step 1e for the full workflow):
 
 [`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml)
 
@@ -219,7 +219,7 @@ Copy to `deploy/openshift/application-cluster-overlay.yaml` (gitignored), fill i
 
 ## Step 2 — Deploy (developer, every release)
 
-Ensure the ConfigMap is current first (step 1d). **`./mvnw package -pl reson8 -Dquarkus.openshift.deploy=true`** (from the repo root) applies the **merged** manifest under **`reson8/target/kubernetes/openshift.yml`**: generated resources (**`Deployment`**, **`Service`**, **`Route`**, **`BuildConfig`**, **`ImageStream`**, **`RoleBinding`** **`reson8-view`**, **`ServiceMonitor`**, etc.) **`plus`** fragments from **`reson8/src/main/kubernetes/openshift.yml`** (currently **`ServiceAccount`** **`reson8`** and **`reson8-trusted-ca-bundle`**). Maven deploy does **not** apply **`deploy/rbac.yml`** (cluster RBAC from step 1c) or create **`reson8-config`** from **`application.yml`** — those must exist separately before pods mount config or pass readiness.
+Ensure the ConfigMap is current first (step 1e). **`./mvnw package -pl reson8 -Dquarkus.openshift.deploy=true`** (from the repo root) applies the **merged** manifest under **`reson8/target/kubernetes/openshift.yml`**. This includes Quarkus-generated runtime resources (`Deployment`, `Service`, `Route`, image/build objects) plus fragments from **`reson8/src/main/kubernetes/openshift.yml`** (currently `ServiceAccount`, OAuth token `Secret`, trusted CA `ConfigMap`, and Deployment patch). Maven deploy does **not** apply **`deploy/rbac.yml`** (cluster RBAC from step 1c) or create **`reson8-config`** from **`application.yml`** — those must exist separately before pods mount config or pass readiness.
 
 Optional wrapper (syncs **`reson8-config`**, optionally reapplies cluster RBAC, then Maven):
 
@@ -250,7 +250,7 @@ This Maven-driven deploy:
    at `image-registry.openshift-image-registry.svc:5000/reson8/reson8:latest`.
 5. Applies the merged OpenShift manifests (`Deployment`, `Service`, `Route`, image/build
    objects, fragment resources above). The `Deployment` includes a `volumeMount` for
-   **`reson8-config`** at `/deployments/config/` (from **`quarkus.openshift.config-map-volumes`**); that **`ConfigMap`** is **not** created by this step — refresh it via step 1d or the wrapper.
+   **`reson8-config`** at `/deployments/config/` (from **`quarkus.openshift.config-map-volumes`**); that **`ConfigMap`** is **not** created by this step — refresh it via step 1e or the wrapper.
 
 ### Readiness gate
 
@@ -280,7 +280,7 @@ At pod startup the entrypoint script (`run-with-ca-update.sh`) projects three au
 | `ingress-ca.crt` | `reson8-trusted-ca-bundle` key `ca-bundle.crt` | Via label `config.openshift.io/inject-trusted-cabundle: "true"` — populated after the one-time cluster-admin setup below | Router/ingress CA for `*.apps.*` (OIDC endpoint) |
 | `kube-ca.crt` | `kube-root-ca.crt` | Yes — OpenShift creates in every namespace | Kubernetes API server certificate |
 
-**If either `service-ca.crt` or `ingress-ca.crt` is missing or empty, the pod exits immediately with a FATAL message and does not start the JVM. No configuration override exists.**
+**If `service-ca.crt`, `ingress-ca.crt`, or `kube-ca.crt` is missing or empty, the pod exits immediately with a FATAL message and does not start the JVM. No configuration override exists.**
 
 #### Cluster CA Setup (one-time, cluster-admin)
 
@@ -323,7 +323,7 @@ oc get route reson8 -n reson8
 
 The audio stream is available at:
 ```
-http://<route-host>/audio/stream
+https://<route-host>/audio/stream
 ```
 
 ---
@@ -381,15 +381,15 @@ Local **`quarkus:dev`** files that contain cluster Routes or secrets must **not*
 
 ### OIDC bootstrap (`Reson8OidcBootstrapConfigSourceFactory`)
 
-Application defaults live on **`Reson8Config.Reson8OidcConfig`** and **`Reson8Config.OpenshiftOauthConfig`**. **`application.properties`** supplies profile posture (`%dev` / `%test` / `%prod`) only — authoritative defaults remain on **`Reson8Config`** and factories (Thanos **`base-url`** default is on **`Reson8Config.ThanosConfig`**). A **`ConfigSourceFactory`** (**`Reson8OidcBootstrapConfigSourceFactory`**, ordinal **450**) materializes **`quarkus.oidc.*`** when OIDC is effectively enabled:
+Application defaults for OIDC bootstrap live on `reson8.oidc.*` and `reson8.openshift-oauth.*` keys consumed by **`Reson8OidcBootstrapConfigSourceFactory`** (plus `Reson8Config.OpenshiftOauthConfig` mapping for documented defaults). `application.properties` supplies profile posture (`%dev` / `%test`) only — authoritative defaults remain on config mappings and factories (Thanos `base-url` default is on `Reson8Config.ThanosConfig`). A **`ConfigSourceFactory`** (**`Reson8OidcBootstrapConfigSourceFactory`**, ordinal **450**) materializes **`quarkus.oidc.*`** when OIDC is effectively enabled:
 
-- The bundled **`application.properties`** sets **`quarkus.oidc.enabled=false`** (**unprefixed**) so **`mvn package`** runs **without** cluster issuer discovery during augmentation. Production pods enable OIDC by setting **`quarkus.oidc.enabled: true`** in mounted **`application.yaml`** — **ordinal** overrides the JAR value (**do not** rely on **`%prod.quarkus.oidc.enabled`** in the JAR; it would beat unprefixed ConfigMap keys when **`prod`** is active).
+- The bundled **`application.properties`** leaves unqualified `quarkus.oidc.enabled` unset (Quarkus default is `true`) and sets `%dev/%test` to `false`. Production pods still set **`quarkus.oidc.enabled: true`** in mounted **`application.yaml`** for explicit operator intent and easier troubleshooting.
 - If **`quarkus.oidc.enabled`** is set explicitly (including **`false`** from the bundled default above), the factory **does not override it** — local `quarkus:dev` and CI stay off OIDC without cluster IdP until you raise **`quarkus.oidc.enabled`** via env or higher-ordinal config.
 - If **`quarkus.oidc.enabled`** is **unset** at runtime (e.g. stripped from overlay config), **`reson8.oidc.enabled`** (default **`true`**) decides. When **`false`**, the factory emits only **`quarkus.oidc.enabled=false`**.
 
-When enabled, it sets Quarkus OIDC application type (default **`hybrid`**: Bearer-token APIs keep working while browsers can hit **`GET /login`** to run the authorization-code flow), authentication optional flag, **`groups`** role claim path, and client id/secret (env bridges **`OIDC_CLIENT_ID`** / **`OIDC_CLIENT_SECRET`** via **`reson8.oidc.*`** defaults). TLS uses the JVM default trust store; no per-OIDC-client cert configuration is emitted.
+When enabled, it sets Quarkus OIDC application type (default **`hybrid`**: Bearer-token APIs keep working while browsers can hit **`GET /login`** to run the authorization-code flow), redirect HTTPS scheme, OpenShift OAuth endpoints, and client id/secret (env bridges **`OIDC_CLIENT_ID`** / **`OIDC_CLIENT_SECRET`** via **`reson8.oidc.*`** defaults). TLS uses the JVM default trust store; no per-OIDC-client cert configuration is emitted.
 
-**OAuth redirect URIs:** Register callbacks on your **`OAuthClient`** that match Quarkus OIDC for your Quarkus minor version (typically **`https://<route-host>/q/oidc/*`** paths — check OIDC startup logs or Quarkus OIDC docs if login loops or **`invalid_redirect_uri`** errors appear). The SPA **`Login`** button navigates to **`/login`** ( **`OidcLoginGatewayResource`** ); after IdP success it redirects back to **`/`**. The bundled JAR sets **`quarkus.http.proxy.proxy-address-forwarding=true`** and (when OIDC is on) **`quarkus.oidc.authentication.force-redirect-https-scheme`** from **`reson8.oidc.force-redirect-https-scheme`** (default **`true`**) so redirects use the public **`https`** host OpenShift presents, not the pod’s internal **`http`** view — if you still see **`http://…`** or router **“Application is not available”** after login, verify the Route sends standard **`Forwarded` / `X-Forwarded-*`** headers and that the OAuth client allows the **`https`** callback URLs.
+**OAuth redirect URIs:** Register callbacks for the ServiceAccount OAuth client (via the SA annotation/OAuthRedirectReference flow) that match Quarkus OIDC for your Quarkus minor version (typically **`https://<route-host>/q/oidc/*`** paths — check OIDC startup logs or Quarkus OIDC docs if login loops or **`invalid_redirect_uri`** errors appear). The SPA **`Login`** button navigates to **`/login`** ( **`OidcLoginGatewayResource`** ); after IdP success it redirects back to **`/`**. The bundled JAR sets **`quarkus.http.proxy.proxy-address-forwarding=true`** and (when OIDC is on) **`quarkus.oidc.authentication.force-redirect-https-scheme`** from **`reson8.oidc.force-redirect-https-scheme`** (default **`true`**) so redirects use the public **`https`** host OpenShift presents, not the pod’s internal **`http`** view — if you still see **`http://…`** or router **“Application is not available”** after login, verify the Route sends standard **`Forwarded` / `X-Forwarded-*`** headers and that the OAuth client allows the **`https`** callback URLs.
 
 **`403 Forbidden` on `GET /login`:** With **`application-type=hybrid`**, Quarkus OIDC treats *any* present **`Authorization`** request header as “Bearer/API mode” and skips the browser authorization-code path; proxies occasionally inject an empty or junk header. **`OidcHybridLoginAuthorizationSanitizer`** removes **`Authorization`** on **`GET /login`** before authentication runs so login can redirect to the IdP. **Also:** if OIDC is effectively **off** (**`quarkus.oidc.enabled`** still **`false`** — missing ConfigMap merge / wrong priority / env unset), **`@Authenticated`** on **`/login`** yields **`403`** — ensure mounted **`application.yaml`** sets **`quarkus.oidc.enabled: true`** (§1e).
 
@@ -412,7 +412,7 @@ JWT **`groups`** → roles align with **`AccessTierResolver`**. Fine-tune via **
 
 | Key | Purpose |
 |-----|---------|
-| `reson8.oidc.*` | Mirrors **`quarkus.oidc.*`** defaults (enabled, application type, optional auth, roles claim, client id/secret) |
+| `reson8.oidc.*` | Mirrors **`quarkus.oidc.*`** defaults (enabled, application type, redirect-HTTPS, client id/secret) |
 | `reson8.openshift-oauth.discovery-enabled` | **`true`** by default — query OAuth authorization server metadata for `issuer` |
 | `reson8.openshift-oauth.metadata-url` | Override full metadata URL when not using the in-cluster API server default |
 | `reson8.openshift-oauth.auth-server-url` | Explicit issuer; skips discovery when set |
@@ -420,7 +420,7 @@ JWT **`groups`** → roles align with **`AccessTierResolver`**. Fine-tune via **
 | `OIDC_AUTH_SERVER_URL` | Fallback env bridge |
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | OAuth client (mirrors **`reson8.oidc.client-id` / `client-secret`** defaults) |
 
-**Anonymous stream-only tier (`__anonymous__` sentinel)** needs tokenless HTTP if you rely on tier logic alone. With **`authentication.optional=false`**, OIDC may reject anonymous requests before tiers run — override **`quarkus.oidc.authentication.optional=true`** in ConfigMap if required, or exempt `/audio/stream` at ingress.
+**Anonymous stream-only tier (`__anonymous__` sentinel)** needs tokenless HTTP if you rely on tier logic alone. If ingress forces authentication on every path, anonymous listeners never reach the app; exempt `/audio/stream` at ingress/proxy.
 
 If an ingress OAuth sidecar forces authentication on **all** paths, anonymous stream-only users never reach the app. Allow unauthenticated paths for `/audio/stream` (and static SPA assets) at the proxy, use path exemptions, or document SSO accordingly.
 

@@ -23,6 +23,7 @@
 # Failure policy (no configuration overrides):
 #   - service-ca.crt missing/empty → FATAL, namespace is broken (should never happen on OpenShift).
 #   - ingress-ca.crt missing/empty → FATAL, cluster-admin setup has not been done (see DEPLOY.md).
+#   - kube-ca.crt missing/empty → FATAL, namespace is broken (should never happen on OpenShift).
 set -uo pipefail
 
 ANCHORS_DIR="/etc/pki/ca-trust/source/anchors"
@@ -39,6 +40,14 @@ if [[ ! -s "${ANCHORS_DIR}/ingress-ca.crt" ]]; then
     echo "FATAL: Ingress/router CA not available at ${ANCHORS_DIR}/ingress-ca.crt" >&2
     echo "FATAL: A cluster administrator must run the one-time cluster trust setup." >&2
     echo "FATAL: See DEPLOY.md section 'Cluster CA Setup (one-time, cluster-admin)'." >&2
+    exit 1
+fi
+
+if [[ ! -s "${ANCHORS_DIR}/kube-ca.crt" ]]; then
+    echo "FATAL: Kubernetes API CA not available at ${ANCHORS_DIR}/kube-ca.crt" >&2
+    echo "FATAL: ConfigMap kube-root-ca.crt must exist in this namespace." >&2
+    echo "FATAL: This ConfigMap is auto-created by OpenShift in every namespace; its absence" >&2
+    echo "FATAL: indicates a cluster or namespace setup problem." >&2
     exit 1
 fi
 

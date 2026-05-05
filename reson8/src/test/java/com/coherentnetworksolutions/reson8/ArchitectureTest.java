@@ -10,10 +10,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
 /**
  * Automated enforcement of the architectural policies documented in .cursor/rules/.
  *
- * Each rule below corresponds to a specific clause in either
- * gstreamer-access.mdc or volume-intensity-ranges.mdc. If one of these tests
- * fails it means production code has drifted from the policy; the fix is to
- * correct the production code, not to weaken the rule.
+ * Each rule below corresponds to clauses in gstreamer-access.mdc,
+ * volume-intensity-ranges.mdc, and ca-trust-os-level.mdc. If one of these tests
+ * fails it means production code has drifted from policy; the fix is to
+ * correct production code, not to weaken the rule.
  *
  * Scope: production classes only (tests excluded via DoNotIncludeTests).
  */
@@ -176,4 +176,20 @@ public class ArchitectureTest {
                 .haveFullyQualifiedName("org.freedesktop.gstreamer.Element")
             .as("org.freedesktop.gstreamer.Element must only be used within the audio layer "
                 + "— domain interfaces (InputChannel, Mixer) must not expose GStreamer types");
+
+    @ArchTest
+    static final ArchRule gst_vendor_types_must_not_escape_audio_layer =
+        noClasses()
+            .that().resideOutsideOfPackages("com.coherentnetworksolutions.reson8.audio..")
+            .should().accessClassesThat()
+                .resideInAnyPackage("org.freedesktop.gstreamer..")
+            .as("org.freedesktop.gstreamer vendor types must not escape the audio layer");
+
+    @ArchTest
+    static final ArchRule ssl_context_customization_forbidden =
+        noClasses()
+            .that().resideInAPackage("com.coherentnetworksolutions.reson8..")
+            .should().accessClassesThat()
+                .haveFullyQualifiedName("javax.net.ssl.SSLContext")
+            .as("TLS trust must remain OS-level only; do not construct or wire custom SSLContext");
 }

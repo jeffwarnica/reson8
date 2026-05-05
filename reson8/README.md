@@ -81,19 +81,15 @@ The core sound engine and signal pipeline are feature-complete for a proof-of-co
 * Proper histogram metric handling: map histogram bucket rates to stochastic channel frequency / rhythm
 * Horizontal scalability: the GStreamer pipeline is inherently single-replica; document or address this constraint before any production deployment
 
-## Security Posture (POC — intentionally open)
+## Security Posture
 
-All REST endpoints are currently **unauthenticated**. This is intentional for the POC phase to simplify local development and cluster deployment. The following mutation endpoints are the highest-priority surfaces to gate before any production or multi-tenant deployment:
+Security posture is environment-dependent:
 
-| Endpoint | Method | Risk |
-|---|---|---|
-| `POST /audio/control/fader` | Mutation | Sets per-channel fader / ceiling |
-| `POST /audio/control/k8s-sync/{active}` | Mutation | Enables/disables k8s metric ingestion |
-| `POST /audio/control/simulate-metric` | Mutation | Injects arbitrary signal values |
-| `POST /audio/drop` | Mutation | Triggers one-shot audio drops |
-| `PUT /audio/control/master-volume` | Mutation | Changes master volume |
+- **Local dev / `%dev` and `%test`**: OIDC is disabled by profile for fast local iteration and deterministic test runs.
+- **OpenShift deployment**: OIDC can be enabled via mounted `application.yaml` overlay (`quarkus.oidc.enabled: true`), and endpoint tier authorization is enforced through `AccessTierResolver` + `TierEndpointAuthorizationFilter`.
+- **Anonymous listeners**: stream-only access can be allowed via the `__anonymous__` sentinel in `reson8.security.stream-groups`, but only when ingress/proxy allows tokenless requests to `/audio/stream`.
 
-**Before production:** add JWT (`quarkus-smallrye-jwt`) or OIDC (`quarkus-oidc`) protection to these endpoints, or place the service behind an OpenShift Route with OAuth proxy sidecar.
+Use [`DEPLOY.md`](../DEPLOY.md) as the source of truth for production OIDC and tier configuration.
 
 ### Wishlist
 * Consider k8s influenced channels configured by name
@@ -112,7 +108,7 @@ You can run your application in dev mode that enables live coding using:
 ./mvnw quarkus:dev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8090/q/dev/>.
 
 ## Packaging and running the application
 

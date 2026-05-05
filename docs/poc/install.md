@@ -42,10 +42,10 @@ After the route exists:
 oc get route reson8 -n reson8
 ```
 
-Open an HTTP audio client (many browsers can play the stream directly) at:
+Open an HTTPS audio client (many browsers can play the stream directly) at:
 
 ```text
-http://<route-host>/audio/stream
+https://<route-host>/audio/stream
 ```
 
 More detail: [DEPLOY.md — Checking the deployment](../../DEPLOY.md#checking-the-deployment).

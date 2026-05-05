@@ -57,7 +57,7 @@ class GsDropChannelAudioFlowIT {
         // TODO: attach an AppSink or level probe on the real Mixer pipeline
         // to assert samplesReceived > 0 once a test-tap API is available.
         await().atMost(3, TimeUnit.SECONDS)
-               .until(() -> samplesReceived.get() > 0);
+                .until(() -> samplesReceived.get() > 0);
         assertTrue(samplesReceived.get() > 0, "Drop trigger produced no audio");
 
         ch.dispose();
