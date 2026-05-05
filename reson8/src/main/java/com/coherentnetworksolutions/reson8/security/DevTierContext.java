@@ -6,7 +6,7 @@ import jakarta.enterprise.context.RequestScoped;
 
 /**
  * Optional dev-tier override for the current request, populated when
- * {@code reson8.security.dev-tier-header-enabled} is true and {@code X-Reson8-Dev-Tier} is set.
+ * {@code reson8.security.dev-tier-header-enabled} is true and {@code X-Reson8-Dev-Tier} or {@code ?reson8-dev-tier=} is set.
  */
 @RequestScoped
 public class DevTierContext {

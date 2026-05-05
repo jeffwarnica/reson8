@@ -1,0 +1,44 @@
+---
+description: Confidence and documentation standards for all advice and code changes
+alwaysApply: true
+---
+
+# Advice Confidence & Documentation Standards
+
+## Confidence thresholds
+
+- **≥ 90% confident**: Proceed and give advice or make changes.
+- **70–89% confident**: Proceed, but explicitly state the confidence level and what is uncertain.
+- **< 70% confident**: Stop and ask clarifying questions before proceeding. Do not guess.
+
+## Documentation backing
+
+- **Always prefer** advice grounded in official docs, published extension behaviour, documented config keys, and stable public APIs.
+- **Explicitly label** any advice or code change that is not directly supported by documentation or established best practice:
+
+  > ⚠️ *Not directly documented — based on [reasoning/inference]. Verify before relying on this in production.*
+
+- Do **not** infer behaviour from bytecode, decompilation, or raw GitHub source as the primary basis for a design decision (see `published-deps-design.mdc`).
+
+## Scope
+
+Applies to **all** proposals without exception: architecture decisions, shell commands, Kubernetes manifests, Java code, configuration keys, deployment procedures, security guidance, dependency choices, and documentation. There is no category of advice exempt from these standards.
+
+## Anti-patterns
+
+```
+❌ Presenting an uncertain conclusion as fact
+❌ Silently making any change based on < 70% confidence
+❌ Omitting the basis for a claim when correctness depends on it
+❌ Assuming a behaviour is correct because it seems plausible
+```
+
+## Correct pattern
+
+```
+✅ "This is documented in [source] — confident."
+✅ "~80% confident: the approach is consistent with documented behaviour but
+   I have not found an explicit reference for this specific case — treat as provisional."
+✅ "I don't have enough information to be confident here.
+   Can you share [specific information needed]?"
+```

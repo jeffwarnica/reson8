@@ -1,0 +1,26 @@
+---
+description: Always — design from published Maven deps & docs; bytecode inspection is a smell
+alwaysApply: true
+---
+
+# Published dependencies and design evidence
+
+## Prefer stable, repo-published artifacts
+
+- Use **released coordinates** resolved through **standard Maven repositories** (project BOM / Central / configured repos). Align versions with the Quarkus platform BOM unless you have an explicit exception.
+- Reason about integration using **published surfaces**: documented extension behavior, configuration keys, public APIs, and compile-time usage — not unpublished or ambiguous internals.
+
+## Bytecode analysis is not part of normal design work
+
+- Do **not** rely on **`javap`**, ad hoc bytecode inspection, or decompilation as the primary way to decide architecture or integration shape for dependencies you declare in `pom.xml`.
+- Normal tooling suffices: **official docs**, **`-sources.jar`** / IDE-attached sources (still Maven-resolved), compiler errors, and application-level tests.
+
+## If bytecode inspection feels “required”
+
+That usually indicates a **design or knowledge gap** (unclear requirement, missing docs context, wrong abstraction, or unsupported usage). **Stop and ask the user for advice** rather than escalating into bytecode archaeology.
+
+---
+
+## Related rule
+
+- `.cursor/rules/maven-sources-investigation.mdc` — fetch and read third-party code only through Maven artifacts and documented config, not raw GitHub or ad-hoc HTTP.

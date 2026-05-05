@@ -1,0 +1,40 @@
+---
+description: Working app from code defaults + minimal config files; new keys behave correctly without YAML/profile boilerplate
+alwaysApply: true
+---
+
+# Configuration defaults & profiles
+
+## Minimal configuration — outcome first
+
+When this rule applies to changes you make:
+
+- **Goal:** Anyone checking out the repo or deploying with **minimal** tracked YAML/properties gets an application that **actually runs and behaves coherently** (dev server, **`mvn package`**, and cluster layouts described in **`DEPLOY.md`**). Sparse config must not imply features are on when defaults leave them effectively off (or vice versa) without clear docs or **`@WithDefault`** alignment.
+- **Adding or extending keys:** Prefer **complete, safe defaults in code** (`Reson8Config` **`@WithDefault`**, **`Reson8OidcBootstrapConfigSourceFactory`**, other factories). Files (**`application.properties`**, **`application.yml`**, mounted **`application.yaml`**) should hold **deployment-specific** content only — namespaces, signal-map, security group lists, flipping **`quarkus.oidc.enabled`** where ordinal overrides the JAR, env-backed secrets — **not** duplicated defaults already expressed in mappings. Operators should need **fewest possible** entries for each new knob to “just work.”
+- **Avoid gratuitous profile prefixes** in shipped props or cluster templates when an **unqualified** key plus config-source **ordinal** expresses the override (**e.g.** OIDC enablement); reserve **`%dev`** / **`%test`** / **`%prod`** for **meaningful** posture splits only.
+
+## Where defaults belong
+
+- **Application semantics** (what the app assumes when an operator does not set a key): define defaults **in code** — `@ConfigMapping` / `@WithDefault` on **`Reson8Config`** (and nested interfaces), plus factories such as **`Reson8OidcBootstrapConfigSourceFactory`** when values must map into **`quarkus.*`** or runtime-derived props.
+- **Do not** introduce authoritative defaults only in **`application.properties`** or comments there unless they mirror the same **`@WithDefault`** (avoid drift).
+- **Dev vs prod default behaviour** that differs by *meaning* (not just profile toggles): encode separate **`@WithDefault`** paths only when SmallRye supports it cleanly; otherwise use **profile prefixes** (`%dev`, `%test`, `%prod`) in **`application.properties`** to flip posture (see below).
+
+## `application.properties` role
+
+Keep **`reson8/src/main/resources/application.properties`** focused on:
+
+1. **Reasonable local dev (`%dev`)** — e.g. dev-tier simulation on, OIDC off so `quarkus:dev` works without an IdP, verbose logging for `com.coherentnetworksolutions`, dev-facing Thanos URL/TLS posture where applicable.
+2. **Reasonable CI / unit tests (`%test`)** — deterministic stubs (silent audio path, OIDC off, relaxed readiness checks), flags that prevent tests from requiring cluster OAuth.
+3. **Reasonable OpenShift-oriented baseline (unprefixed / `%prod` where needed)** — registry/route/OpenShift extensions under `# --- OpenShift deployment ---`. Ship **`quarkus.oidc.enabled=false`** **without** a **`%prod`** prefix so **`mvn package`** stays offline-safe **and** cluster **`application.yaml`** can flip OIDC with the same **unqualified** key (**ordinal** decides — mounted config wins). **Avoid **`%prod.quarkus.oidc.enabled=false`** in the JAR**: when **`prod`** is active it overrides unprefixed **`quarkus.oidc.enabled`** from ConfigMap and forces redundant **`"%prod"`** blocks cluster-side. Keys such as **`reson8.k8s.thanos.base-url`** belong on **`Reson8Config`** (`@WithDefault`); **`application.properties`** only adjusts **`ignore-certs`**, readiness toggles, etc., per profile — never embed cluster-specific Routes or secrets (use **`RESON8_K8S_THANOS_BASE_URL`** or **`application-local.properties`** from **`application-local-DIST.properties`**).
+
+Structural / heavy YAML (signal-map, soundscapes, **`quarkus.openshift` volumes**) stays in **`application.yml`** when it is the bundled carrier for that shape; simple keyed defaults still belong on **`Reson8Config`** unless the YAML is intentionally the single source (document that exception in code or DEPLOY).
+
+## Secrets in tracked config
+
+Never commit credentials or secret-shaped values in **`application.properties`**, **`application.yml`**, overlays, or examples. Use env vars, Kubernetes/OpenShift Secrets, or **`${…}`** indirection only. If a **file on disk** must hold secrets for local/dev workflows, follow **`secrets-no-git.mdc`**: committed **`NAME-DIST.ext`** template + real **`NAME.ext`** gitignored.
+
+## Anti-patterns
+
+- Duplicating the same default string in **`application.properties`** and **`Reson8Config`** without tying them together — prefer **one** source (`@WithDefault`) and properties only for overrides / profiles.
+- Shipping prod-only secrets or cluster-specific URLs as unprefixed defaults when they break **`quarkus:dev`** — move those under **`%dev`** overrides or cluster-mounted config **without embedding secrets** (see **`secrets-no-git.mdc`**).
+- New configuration that **requires** large boilerplate in cluster YAML or mirrored profile blocks for basic correctness — push defaults/fallbacks into code so minimal overlays stay minimal.

@@ -58,6 +58,21 @@ class SignalMapConfigValidatorTest {
         return new Reson8Config() {
             @Override public String audioPath() { return ""; }
             @Override public SecurityConfig security() { throw new UnsupportedOperationException(); }
+            @Override public Reson8Config.OpenshiftOauthConfig openshiftOauth() {
+                return new Reson8Config.OpenshiftOauthConfig() {
+                    @Override public boolean discoveryEnabled() {
+                        return false;
+                    }
+
+                    @Override public Optional<String> metadataUrl() {
+                        return Optional.empty();
+                    }
+
+                    @Override public Optional<String> authServerUrl() {
+                        return Optional.empty();
+                    }
+                };
+            }
             @Override public K8sConfig k8s() { throw new UnsupportedOperationException(); }
             @Override public Reson8Config.SignalMap signalMap() { return signalMap; }
             @Override public List<Soundscape> soundscapes() { throw new UnsupportedOperationException(); }

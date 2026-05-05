@@ -32,6 +32,7 @@ public class K8sConnectivityCheck implements HealthCheck {
             return HealthCheckResponse.builder()
                     .name("Kubernetes API")
                     .down()
+                    .withData("error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName())
                     .build();
         }
     }

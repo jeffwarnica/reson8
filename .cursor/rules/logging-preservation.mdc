@@ -1,0 +1,39 @@
+---
+description: Do not strip log calls casually; preserve or revise them when code changes
+alwaysApply: true
+---
+
+# Logging preservation
+
+Logging is intentional observability. Treat log statements as **part of the change contract**, not optional noise to delete during unrelated edits.
+
+## Do not remove
+
+- **Unless** the surrounding logic makes a log **entirely invalid** — e.g. the branch or operation no longer exists, the message would be misleading, or the logged values are undefined after the refactor.
+- **Never** remove log calls when your diff does **not** touch that area’s behavior or structure (no “cleanup” of logs that are unrelated to the task).
+
+## Allowed changes
+
+When the truth of the code changes, logs should **stay accurate**:
+
+- Update level, message, MDC/context, or parameters to reflect the new reality.
+- **Consolidate** redundant logs into one clearer statement when multiple lines would duplicate the same event.
+- **Expand** logging when failure paths, retries, or new branches need visibility — without turning every method into a wall of logs; match existing project style.
+
+## Anti-patterns
+
+```java
+// ❌ Deleted logf()/logger.* because "the method was noisy" while only renaming a variable elsewhere
+```
+
+```java
+// ✅ Removed log only because the guarded operation and its error path were removed with it
+```
+
+```java
+// ✅ Refactor changed retry behavior — updated message and structured fields accordingly
+```
+
+## Review mindset
+
+If you would not also remove **tests** covering the same behavior without cause, apply the same bar to **logs**: keep them unless they are **wrong**, **orphaned**, or **duplicated** in a fixable way.

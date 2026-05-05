@@ -1,0 +1,80 @@
+---
+description: CA certificate trust must use OS-level update-ca-trust; no application-level cert configuration is permitted.
+globs:
+alwaysApply: true
+---
+
+# CA Certificate Trust — OS Level Only
+
+## Policy
+
+CA certificate trust for all cluster connections (Thanos, OIDC, Kubernetes API) is handled
+**exclusively at the OS level** via `update-ca-trust`. No application code may load, bundle,
+override, or configure CA certificates.
+
+## What is permitted
+
+- The pod entrypoint script (`run-with-ca-update.sh`) calls `update-ca-trust extract` before the
+  JVM starts. This is the one and only place where CA trust is configured.
+- The Deployment projected volume in `openshift.yml` mounts three ConfigMaps into
+  `/etc/pki/ca-trust/source/anchors/`.
+- The `Dockerfile.jvm` grants group-write permission to `/etc/pki/ca-trust/` so the non-root
+  process can run `update-ca-trust extract`.
+
+## What is forbidden
+
+- **No** `TlsVerificationSupport` class or equivalent — it has been deleted.
+- **No** `quarkus.tls.*` or `quarkus.oidc.tls.*` configuration properties emitted from any
+  config source factory.
+- **No** `quarkus-tls-registry` dependency in `pom.xml`.
+- **No** `SSLContext` construction from PEM files in application code.
+- **No** `ignoreCerts`, `clusterCaBundlePath`, `tlsVerificationEnabled` config properties in
+  `Reson8Config` or any other config mapping.
+- **No** per-client trust store overrides of any kind in application properties, YAML, or
+  ConfigMaps.
+- **No** configuration overrides that allow bypassing the CA trust requirement.
+
+## Required CA sources
+
+Three ConfigMaps are projected into the anchors directory. Their availability is enforced in
+`run-with-ca-update.sh` with hard failures and no override path:
+
+| Anchors file | Source ConfigMap | Availability |
+|---|---|---|
+| `service-ca.crt` | `openshift-service-ca.crt` | Auto-created by OpenShift in every namespace — 100% available; if absent, the pod must fail. |
+| `ingress-ca.crt` | `reson8-trusted-ca-bundle` key `ca-bundle.crt` | Injected by `cluster-network-operator` after the one-time cluster-admin setup in `DEPLOY.md`. The application assumes this has been done; it fails hard if the file is missing. |
+| `kube-ca.crt` | `kube-root-ca.crt` | Auto-created by OpenShift in every namespace. |
+
+## Ingress/router CA — one-time cluster-admin operation (assumed done)
+
+The router CA for `*.apps.*` (required for OIDC) does not inject automatically. A cluster admin
+must run the three-step setup documented in `DEPLOY.md § Cluster CA Setup`. The application
+**assumes this has been done** and fails on startup if `ingress-ca.crt` is absent.
+
+Do **not** suggest workarounds (disabling TLS, mounting the cert manually, adding config
+overrides) if the ingress CA is missing. Fail hard and direct the operator to `DEPLOY.md`.
+
+## Anti-patterns
+
+```java
+// ❌ Application-level PEM loading — deleted, never reintroduce
+TlsVerificationSupport.sslContext(true, Optional.empty());
+
+// ❌ Per-client custom SSLContext
+SSLContext ssl = TlsVerificationSupport.sslContext(false, config.k8s().thanos().clusterCaBundlePath());
+HttpClient.newBuilder().sslContext(ssl).build();
+
+// ❌ Quarkus TLS registry cert configuration
+props.put("quarkus.tls.reson8-oidc.trust-store.pem.certs", "/etc/reson8/ca/ca-bundle.crt");
+```
+
+```java
+// ✅ JVM default trust — correct after update-ca-trust ran in entrypoint
+HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+```
+
+## If a new connection type needs HTTPS
+
+Use `HttpClient.newBuilder().build()` (JVM default trust). All cluster CAs are already in the
+trust store. Do not add cert configuration — if a connection fails due to TLS, the fix is in the
+entrypoint/projected-volume/cluster-admin setup, not in application code.

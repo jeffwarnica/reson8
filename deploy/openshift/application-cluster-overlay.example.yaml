@@ -1,0 +1,31 @@
+# ------------------------------------------------------------------------------
+# Example overlay for mounted ConfigMap application.yaml (production-like cluster).
+#
+# Quarkus reads /deployments/config/application.yaml at higher priority than the
+# JAR. Merge these keys into your real ConfigMap (see DEPLOY.md §1e).
+#
+# OIDC: bundled application.properties sets quarkus.oidc.enabled=false (offline builds).
+# This mounted file overrides at higher priority — enable OIDC with unqualified keys below.
+#
+# Replace viewer-groups with JWT group names YOUR IdP puts on tokens (claims path
+# stays reson8.oidc.roles-claim-path, default groups).
+# ------------------------------------------------------------------------------
+
+quarkus:
+  oidc:
+    enabled: true
+
+reson8:
+  security:
+    login-available: true
+    endpoint-authorization-enabled: true
+    dev-tier-header-enabled: false
+    # Typical OpenShift OAuth: cluster admins (verify claim names from your IdP).
+    admin-groups:
+      - cluster-admins
+    # Authenticated read-only UI + GET control/drop (no mutations).
+    viewer-groups:
+      - reson8-viewers
+    # Tokenless listeners: sentinel token enables STREAM tier when listed here.
+    stream-groups:
+      - __anonymous__

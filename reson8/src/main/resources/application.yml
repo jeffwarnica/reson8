@@ -1,9 +1,11 @@
 ---
 reson8:
   audio-path: ${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}
-  security: {}
-  # Tier group lists (optional): reson8.security.admin-groups, viewer-groups, stream-groups
-  # Defaults: empty lists; reson8.security.anonymous-stream-sentinel defaults to __anonymous__
+  security:
+    # Tokenless listeners: must list the anonymous sentinel (same value as reson8.security.anonymous-stream-sentinel).
+    stream-groups:
+      - __anonymous__
+  # Optional: reson8.security.admin-groups, viewer-groups (see deploy/openshift/application-cluster-overlay.example.yaml).
   k8s:
     cluster: self # uses standard kube env vars 
     namespaces:
@@ -104,3 +106,12 @@ reson8:
           procedural:
             generator: WIND
             output-scale: 1.0
+
+# quarkus.oidc.enabled is NOT set here: application.properties defaults to false (offline/dev safe).
+# The cluster ConfigMap mounted at /deployments/config/ enables OIDC via application-cluster-overlay.yaml.
+# Volume mounts (cluster CA bundle, app-config) are defined in application.properties.
+quarkus:
+  log:
+    category:
+      "com.coherentnetworksolutions":
+        level: DEBUG

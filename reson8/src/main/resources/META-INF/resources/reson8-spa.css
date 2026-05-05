@@ -361,6 +361,29 @@
             color: white;
         }
 
+        .btn-logout {
+            background: #546e7a;
+            color: white;
+            font-size: 0.85em;
+            padding: 6px 14px;
+        }
+
+        .session-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            margin-bottom: 20px;
+        }
+
+        .session-tier-badge {
+            font-size: 0.8em;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+            color: #546e7a;
+            text-transform: uppercase;
+        }
+
         .dev-toolbar {
             background: #fff8e1;
             border: 1px dashed #f9a825;

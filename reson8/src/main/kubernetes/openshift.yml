@@ -3,21 +3,78 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: reson8
+  annotations:
+    # Register reson8 as a namespace-scoped OAuth client using the Route as the redirect URI.
+    # Requires no cluster-admin; OAuthRedirectReference resolves dynamically from the Route hostname.
+    # client_id  = system:serviceaccount:reson8:reson8  (see OIDC_CLIENT_ID env var)
+    # client_secret = token field of reson8-oauth-client-secret Secret (see OIDC_CLIENT_SECRET env var)
+    serviceaccounts.openshift.io/oauth-redirectreference.primary: >-
+      {"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"reson8"}}
 ---
-# ServiceMonitor for Prometheus / Thanos to scrape reson8 metrics.
-# Requires the Prometheus Operator CRD to be installed.
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+# Long-lived service account token used as the OAuth client secret.
+# The token controller populates .data.token automatically once the SA exists.
+# Mounted into the Deployment as OIDC_CLIENT_SECRET (see application.properties).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reson8-oauth-client-secret
+  annotations:
+    kubernetes.io/service-account.name: reson8
+type: kubernetes.io/service-account-token
+---
+# The cluster-network-operator injects ca-bundle.crt (the cluster proxy trust bundle) into this
+# ConfigMap because of the label below. After the one-time cluster-admin setup documented in
+# DEPLOY.md, ca-bundle.crt contains the router/ingress CA. The service CA (for *.svc.cluster.local)
+# comes from the auto-created ConfigMap openshift-service-ca.crt — no annotation needed here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reson8-trusted-ca-bundle
+  labels:
+    config.openshift.io/inject-trusted-cabundle: "true"
+data: {}
+---
+# Deployment patch: project three auto-created OpenShift ConfigMaps into
+# /etc/pki/ca-trust/source/anchors/ so that run-with-ca-update.sh can call
+# update-ca-trust before the JVM starts. The JVM then trusts all cluster CAs
+# with zero application-level configuration.
+#
+# Sources:
+#   openshift-service-ca.crt  — auto-created by OpenShift in every namespace;
+#                               signs *.svc.cluster.local certs (Thanos, k8s API).
+#   reson8-trusted-ca-bundle  — injected by cluster-network-operator (see ConfigMap above);
+#                               carries the router/ingress CA after cluster-admin setup.
+#   kube-root-ca.crt          — auto-created by OpenShift in every namespace;
+#                               signs the Kubernetes API server certificate.
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: reson8
-  labels:
-    app: reson8
 spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: reson8
-  endpoints:
-    - port: http
-      path: /q/metrics
-      interval: 15s
-      scheme: http
+  template:
+    spec:
+      volumes:
+        - name: ca-trust-anchors
+          projected:
+            sources:
+              - configMap:
+                  name: openshift-service-ca.crt
+                  items:
+                    - key: service-ca.crt
+                      path: service-ca.crt
+              - configMap:
+                  name: reson8-trusted-ca-bundle
+                  items:
+                    - key: ca-bundle.crt
+                      path: ingress-ca.crt
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: kube-ca.crt
+      containers:
+        - name: reson8
+          volumeMounts:
+            - name: ca-trust-anchors
+              mountPath: /etc/pki/ca-trust/source/anchors
+              readOnly: true

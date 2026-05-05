@@ -28,13 +28,28 @@ class Reson8ConfigSecurityMappingTest {
     }
 
     @Test
-    @DisplayName("security ConfigMapping: empty lists, default sentinel, login and dev-header flags")
+    @DisplayName("security ConfigMapping: bundled stream sentinel, openshift OAuth TLS defaults")
     void security_defaults() {
         assertTrue(config.security().adminGroups().orElse(List.of()).isEmpty());
         assertTrue(config.security().viewerGroups().orElse(List.of()).isEmpty());
-        assertTrue(config.security().streamGroups().orElse(List.of()).isEmpty());
+        assertEquals(List.of("__anonymous__"), config.security().streamGroups().orElse(List.of()));
         assertEquals("__anonymous__", config.security().anonymousStreamSentinel());
         assertFalse(config.security().loginAvailable());
         assertTrue(config.security().devTierHeaderEnabled());
+        assertFalse(config.security().endpointAuthorizationEnabled());
+        assertTrue(config.openshiftOauth().discoveryEnabled());
+        assertTrue(config.openshiftOauth().metadataUrl().isEmpty());
+        assertTrue(config.openshiftOauth().authServerUrl().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Thanos ConfigMapping: pod-off defaults use openshift-monitoring service DNS")
+    void thanos_defaults() {
+        assertEquals(
+                "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/",
+                config.k8s().thanos().baseUrl());
+        assertEquals(
+                "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/api/v1",
+                config.k8s().thanos().inClusterUrl());
     }
 }

@@ -127,6 +127,11 @@ class AccessTierResolverTest {
             public boolean devTierHeaderEnabled() {
                 return false;
             }
+
+            @Override
+            public boolean endpointAuthorizationEnabled() {
+                return false;
+            }
         };
     }
 }

@@ -30,7 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class ThanosMetricPollerTest {
 
     @Mock
-    ThanosRestClient restClient;
+    ThanosPrometheusApi thanosApi;
 
     @Mock
     SignalManager signalManager;
@@ -51,12 +51,11 @@ class ThanosMetricPollerTest {
     }
 
     @BeforeEach
-    void injectRestClient() throws Exception {
-        // ThanosMetricPoller builds restClient lazily in thanosStartup(); bypass that
-        // for unit tests by injecting a mock directly via reflection.
-        Field f = ThanosMetricPoller.class.getDeclaredField("restClient");
+    void injectThanosApi() throws Exception {
+        // Poller builds thanosApi lazily in thanosStartup(); bypass that for unit tests.
+        Field f = ThanosMetricPoller.class.getDeclaredField("thanosApi");
         f.setAccessible(true);
-        f.set(poller, restClient);
+        f.set(poller, thanosApi);
 
         // Mark as initialized so pollMetrics() proceeds
         Field init = ThanosMetricPoller.class.getDeclaredField("initialized");
@@ -134,7 +133,7 @@ class ThanosMetricPollerTest {
 
         poller.pollMetrics();
 
-        verify(restClient, never()).query(anyString(), anyString());
+        verify(thanosApi, never()).fetchQuery(anyString(), anyString());
     }
 
     @Test
@@ -144,7 +143,7 @@ class ThanosMetricPollerTest {
 
         poller.pollMetrics();
 
-        verify(restClient, never()).query(anyString(), anyString());
+        verify(thanosApi, never()).fetchQuery(anyString(), anyString());
     }
 
     @Test
@@ -154,7 +153,7 @@ class ThanosMetricPollerTest {
 
         ThanosResult r = new ThanosResult(java.util.Map.of(), List.of("1700000000", "77.3"));
         ThanosResponse response = new ThanosResponse("success", new ThanosData("vector", List.of(r)));
-        when(restClient.query(eq("rate(cpu_usage[1m])"), anyString())).thenReturn(response);
+        when(thanosApi.fetchQuery(eq("rate(cpu_usage[1m])"), anyString())).thenReturn(response);
 
         // Inject auth token
         Field authField = ThanosMetricPoller.class.getDeclaredField("authToken");

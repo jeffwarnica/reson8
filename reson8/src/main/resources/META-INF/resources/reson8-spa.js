@@ -1,5 +1,7 @@
         const DEV_TIER_STORAGE_KEY = 'reson8-dev-tier';
         const DEV_TIER_HEADER = 'X-Reson8-Dev-Tier';
+        /** Mirrors DevTierRequestFilter.QUERY_RESON8_DEV_TIER — HTML audio.src cannot send custom headers. */
+        const DEV_TIER_QUERY = 'reson8-dev-tier';
 
         function apiFetch(url, options) {
             const opts = options || {};
@@ -25,6 +27,17 @@
 
         // --- STREAM LOGIC ---
 
+        function audioStreamUrl() {
+            let url = '/audio/stream?t=' + Date.now();
+            if (document.getElementById('reson8-dev-toolbar')) {
+                const tier = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
+                if (tier) {
+                    url += '&' + DEV_TIER_QUERY + '=' + encodeURIComponent(tier);
+                }
+            }
+            return url;
+        }
+
         startBtn.onclick = () => {
             if (window.__reson8Cap && !window.__reson8Cap.canStream) {
                 return;
@@ -32,7 +45,7 @@
             status.innerText = "Status: Connecting...";
             audio.src = '';
             audio.load();
-            audio.src = '/audio/stream?t=' + Date.now();
+            audio.src = audioStreamUrl();
             audio.play().then(() => {
                 isStreaming = true;
                 startBtn.disabled = true;
@@ -683,6 +696,7 @@
 
         function applyCapabilities(cap) {
             window.__reson8Cap = cap;
+            applySessionBar(cap);
             applyOperatorVisibility(cap);
             applyStreamControls(cap);
             applyLoginCard(cap);
@@ -719,13 +733,40 @@
                 return;
             }
             btn.addEventListener('click', () => {
-                window.alert('OIDC login will redirect to your identity provider when enabled in this deployment.');
+                // Same-origin path only — avoids malformed URLs when base/context or caching breaks relative resolution.
+                window.location.assign(new URL('/login', window.location.href).href);
             });
+        }
+
+        function setupLogoutButton() {
+            const btn = document.getElementById('logoutBtn');
+            if (!btn) {
+                return;
+            }
+            btn.addEventListener('click', () => {
+                // q_session is HttpOnly — cannot be deleted from JS. The server-side /logout handler
+                // clears the cookie and redirects to / (configured via quarkus.oidc.logout.*).
+                window.location.assign(new URL('/logout', window.location.href).href);
+            });
+        }
+
+        function applySessionBar(cap) {
+            const bar = document.getElementById('sessionBar');
+            const badge = document.getElementById('sessionTierBadge');
+            if (!bar) {
+                return;
+            }
+            const authenticated = cap.tier === 'ADMIN' || cap.tier === 'VIEWER';
+            bar.style.display = authenticated ? '' : 'none';
+            if (badge) {
+                badge.textContent = authenticated ? cap.tier.charAt(0) + cap.tier.slice(1).toLowerCase() + ' access' : '';
+            }
         }
 
         async function bootstrap() {
             setupDevToolbar();
             setupLoginStub();
+            setupLogoutButton();
             const cap = await loadCapabilities();
             applyCapabilities(cap);
             if (syncTimer) {

@@ -1,6 +1,5 @@
 package com.coherentnetworksolutions.reson8.k8s.client;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,7 +11,6 @@ import com.coherentnetworksolutions.reson8.signal.K8sSyncState;
 import com.coherentnetworksolutions.reson8.signal.SignalManager;
 
 import io.quarkus.logging.Log;
-import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 import io.quarkus.scheduler.Scheduled;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.common.annotation.Blocking;
@@ -38,7 +36,7 @@ public class ThanosMetricPoller {
     @Inject
     K8sSyncState k8sSyncState;
 
-    ThanosRestClient restClient;
+    ThanosPrometheusApi thanosApi;
 
     private String authToken;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -57,11 +55,8 @@ public class ThanosMetricPoller {
 
     private void initializePoller() {
         thanosUrl = ThanosApiBaseUri.resolve(config);
-
-        this.restClient = QuarkusRestClientBuilder.newBuilder()
-            .baseUri(URI.create(thanosUrl))
-            .trustAll(config.k8s().thanos().ignoreCerts()) // Map your config here
-            .build(ThanosRestClient.class);
+        Log.debugf("Thanos URL: [%s]", thanosUrl);
+        this.thanosApi = ThanosPrometheusHttpClient.create(config);
 
         refreshAuthToken();
         
@@ -101,7 +96,7 @@ public class ThanosMetricPoller {
         Log.debugf("Polling Thanos for metrics...");
         activeQueries.forEach((signalId, promql) -> {
             try {
-                ThanosResponse response = restClient.query(promql, authToken);
+                ThanosResponse response = thanosApi.fetchQuery(promql, authToken);
                 double value = parseResponse(response);
                 Log.debugf("Thanos response for signal [%s]: %f", signalId, value);
                 signalManager.updateSignalIntensity(signalId, value);
@@ -116,7 +111,9 @@ public class ThanosMetricPoller {
     }
 
     private double parseResponse(ThanosResponse response) {
-        if (response.data().result().isEmpty()) return 0.0;
+        if (response.data() == null || response.data().result() == null || response.data().result().isEmpty()) {
+            return 0.0;
+        }
         // Prometheus returns ["timestamp", "value"] — value is at index 1
         List<Object> value = response.data().result().get(0).value();
         if (value == null || value.size() < 2) {
@@ -128,7 +125,7 @@ public class ThanosMetricPoller {
     
     private boolean checkThanosHealth() {
         try {
-            ThanosLabelResponse response = restClient.checkHealth(authToken);
+            ThanosLabelResponse response = thanosApi.fetchLabels(authToken);
             return "success".equals(response.status());
         } catch (Exception e) {
             Log.error("Thanos health check failed.", e);

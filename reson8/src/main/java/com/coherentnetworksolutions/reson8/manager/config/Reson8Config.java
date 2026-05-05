@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.coherentnetworksolutions.reson8.audio.utils.map.SignalCurveMap.Point;
+import com.coherentnetworksolutions.reson8.k8s.client.ThanosApiBaseUri;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -20,6 +21,13 @@ public interface Reson8Config {
      * Tier resolution precedence when evaluating a subject is {@code admin > viewer > stream}.
      */
     SecurityConfig security();
+
+    /**
+     * When {@code quarkus.oidc.enabled=true}, drives how {@code quarkus.oidc.auth-server-url} is set: query the cluster
+     * OAuth authorization server metadata for a public {@code issuer}, or use an explicit URL.
+     */
+    @WithName("openshift-oauth")
+    OpenshiftOauthConfig openshiftOauth();
 
     K8sConfig k8s();
 
@@ -55,9 +63,9 @@ public interface Reson8Config {
         String anonymousStreamSentinel();
 
         /**
-         * When {@code true}, SPA may show an OIDC login entry point (set when {@code quarkus-oidc} is enabled in prod).
+         * When {@code true}, SPA may show an OIDC login entry point when OIDC is enabled for the deployment.
          */
-        @WithDefault("false")
+        @WithDefault("true")
         @WithName("login-available")
         boolean loginAvailable();
 
@@ -67,6 +75,44 @@ public interface Reson8Config {
         @WithDefault("false")
         @WithName("dev-tier-header-enabled")
         boolean devTierHeaderEnabled();
+
+        /**
+         * When {@code true}, tier checks reject callers without capability on audio control/drop/debug/stream routes.
+         */
+        @WithDefault("true")
+        @WithName("endpoint-authorization-enabled")
+        boolean endpointAuthorizationEnabled();
+    }
+
+    /**
+     * OpenShift / Kubernetes OAuth discovery for the default Quarkus OIDC tenant.
+     */
+    interface OpenshiftOauthConfig {
+
+        /**
+         * When {@code true} (default), GET {@link #metadataUrl()} or the in-cluster API server metadata document and use
+         * its {@code issuer} as {@code quarkus.oidc.auth-server-url}. When {@code false}, set {@link #authServerUrl()} or
+         * issuer env vars ({@code OPENSHIFT_AUTH_ISSUER_URL}, {@code OIDC_AUTH_SERVER_URL}) — see bootstrap factory.
+         */
+        @WithDefault("true")
+        @WithName("discovery-enabled")
+        boolean discoveryEnabled();
+
+        /**
+         * Full URL for {@code /.well-known/oauth-authorization-server} on the API server; when absent, built from
+         * {@code KUBERNETES_SERVICE_HOST} / {@code KUBERNETES_SERVICE_PORT} when running in a pod.
+         */
+        @WithName("metadata-url")
+        Optional<String> metadataUrl();
+
+        /**
+         * Explicit issuer / auth-server URL; when present and non-blank, discovery is skipped. Operators typically set this in
+         * mounted YAML using env expansion (e.g. {@code "${OPENSHIFT_AUTH_ISSUER_URL}"}); {@link com.coherentnetworksolutions.reson8.manager.config.oidc.Reson8OidcBootstrapConfigSourceFactory}
+         * also falls back to {@code OPENSHIFT_AUTH_ISSUER_URL} / {@code OIDC_AUTH_SERVER_URL} when this property is unset.
+         */
+        @WithName("auth-server-url")
+        Optional<String> authServerUrl();
+
     }
 
     interface K8sConfig {
@@ -80,6 +126,15 @@ public interface Reson8Config {
     }
 
     interface ThanosConfig {
+        /**
+         * Prometheus/Thanos HTTP API host prefix used when not running inside a pod (no service-account secrets dir).
+         * {@link ThanosApiBaseUri} appends {@code /api/v1} when needed.
+         * <p>
+         * Outside-cluster {@code quarkus:dev}: set env {@code RESON8_K8S_THANOS_BASE_URL} to your cluster Route (see
+         * {@code application-local-DIST.properties} / {@code DEPLOY.md}); do not commit that URL.
+         */
+        @WithDefault("https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/")
+        @WithName("base-url")
         String baseUrl();
 
         /**
@@ -93,9 +148,6 @@ public interface Reson8Config {
         @WithDefault("https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/api/v1")
         @WithName("in-cluster-url")
         String inClusterUrl();
-
-        @WithDefault("false")
-        boolean ignoreCerts();
 
         /**
          * When {@code true}, {@link com.coherentnetworksolutions.reson8.k8s.client.ThanosConnectivityCheck}

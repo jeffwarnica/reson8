@@ -81,6 +81,22 @@
     </Match>
 
     <!-- ===================================================================
+         EI_EXPOSE_REP2 — security filter CDI beans
+         DevTierContext is @RequestScoped. When injected into @ApplicationScoped
+         filters, CDI provides a client proxy — not the actual instance. The
+         proxy dispatches all calls to the real per-request bean. Defensive
+         copying of a CDI bean reference is neither possible nor appropriate.
+         =================================================================== -->
+    <Match>
+        <Bug code="EI2"/>
+        <Source name="DevTierRequestFilter.java"/>
+    </Match>
+    <Match>
+        <Bug code="EI2"/>
+        <Source name="TierEndpointAuthorizationFilter.java"/>
+    </Match>
+
+    <!-- ===================================================================
          CT_CONSTRUCTOR_THROW — Quarkus CDI beans / value types
          Classes that do not extend Object in a way that enables finalizer
          attacks, and Quarkus CDI does not use finalizers. Applies to:

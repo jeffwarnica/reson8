@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Reson8 | Audio Signal Flow</title>
-    <link rel="stylesheet" href="/reson8-spa.css">
+    <link rel="stylesheet" href="/reson8-spa.css{spaAssetQuery}">
 </head>
 
 <body>
@@ -19,9 +19,14 @@
             <option value="stream">stream</option>
             <option value="anonymous">anonymous</option>
         </select>
-        <span style="margin-left:12px;font-size:0.85em;color:#666;">Applies <code>X-Reson8-Dev-Tier</code> to API requests (sessionStorage).</span>
+        <span style="margin-left:12px;font-size:0.85em;color:#666;">Tier simulation via <code>X-Reson8-Dev-Tier</code> on API calls and <code>?reson8-dev-tier=</code> on the audio stream URL (sessionStorage).</span>
     </div>
     {/if}
+
+    <div class="card session-bar" id="sessionBar" style="display: none;">
+        <span id="sessionTierBadge" class="session-tier-badge"></span>
+        <button type="button" id="logoutBtn" class="btn-logout">Sign out</button>
+    </div>
 
     <div class="card" id="loginStubCard" style="display: none;">
         <button type="button" id="loginBtn" class="btn-play">Log in</button>
@@ -73,7 +78,7 @@
         </div>
     </div>
 
-    <script src="/reson8-spa.js" defer></script>
+    <script src="/reson8-spa.js{spaAssetQuery}" defer></script>
 </body>
 
 </html>

@@ -1,1 +1,10 @@
 .vscode
+
+# Secret-bearing local config — commit templates only as *-DIST.* (see .cursor/rules/secrets-no-git.mdc)
+**/application-local.properties
+**/application-local.yaml
+**/application-local.yml
+
+# Cluster-specific ConfigMap overlay (copy from deploy/openshift/application-cluster-overlay.example.yaml).
+# Contains quarkus.oidc.enabled, security groups, and other deployment-specific values — never commit.
+**/application-cluster-overlay.yaml

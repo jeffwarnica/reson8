@@ -1,5 +1,8 @@
 package com.coherentnetworksolutions.reson8.rest;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,6 +11,8 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.quarkus.qute.Template;
 
@@ -24,9 +29,16 @@ public class HomeResource {
     @Inject
     Reson8Config config;
 
+    @Inject
+    @ConfigProperty(name = "quarkus.application.version", defaultValue = "dev")
+    String applicationVersion;
+
     @GET
     @Produces(MediaType.TEXT_HTML)
     public String home() {
-        return index.data("showDevToolbar", config.security().devTierHeaderEnabled()).render();
+        String spaAssetQuery = "?v=" + URLEncoder.encode(applicationVersion, StandardCharsets.UTF_8);
+        return index.data("showDevToolbar", config.security().devTierHeaderEnabled())
+                .data("spaAssetQuery", spaAssetQuery)
+                .render();
     }
 }

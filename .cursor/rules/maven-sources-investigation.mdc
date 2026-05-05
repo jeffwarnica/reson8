@@ -1,0 +1,27 @@
+---
+description: Always — use Maven artifacts for deps/source investigation; never fetch raw GitHub
+alwaysApply: true
+---
+
+# Investigation and third-party source
+
+Do **not** use deep, web-based source spelunking (e.g. pulling individual Java files from GitHub) as the default way to understand Quarkus, dependencies, or SPIs.
+
+## Forbidden
+
+- Fetching **raw GitHub content** (`raw.githubusercontent.com`, raw file URLs, or equivalent) to read framework or library sources.
+- Using HTTP **fetch tools** primarily to browse upstream repos when the same information should come from **declared Maven artifacts**.
+
+## Required approach
+
+1. **Dependencies**: add or inspect them **only through Maven** (`pom.xml`, BOM, `./mvnw dependency:tree`, `./mvnw dependency:get`). Do not suggest or use ad-hoc `curl`/`wget` of JARs from random URLs.
+2. **Reading third-party source**: prefer **`-sources.jar`** from the local repository (`./mvnw dependency:sources`), the IDE “Download sources” flow, or opening classes already on the classpath from a **resolved** dependency.
+3. **Unclear ownership** (which artifact contains a type, or how a Quarkus extension behaves): **stop and ask the user** for clarity, or narrow the question using Maven/IDE tooling—do not default to GitHub raw fetches.
+
+## Rationale
+
+Maven Central (and configured repos) are the canonical delivery path; raw Git paths are brittle, wrong-tag risks are high, and this project standardizes on Maven for all binary and source bundles that are published that way.
+
+## Related rule
+
+- `.cursor/rules/published-deps-design.mdc` — stable BOM-aligned dependencies; design from published APIs and docs; no bytecode-driven architecture; ask the user when stuck.

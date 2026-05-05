@@ -24,7 +24,7 @@ class CapabilitiesResourceTest {
     }
 
     @Test
-    @DisplayName("GET /api/capabilities: default anonymous tier NONE with test security config")
+    @DisplayName("GET /api/capabilities: bundled stream sentinel gives anonymous STREAM (login still off in %test)")
     void capabilities_defaults() {
         given()
                 .when()
@@ -32,8 +32,8 @@ class CapabilitiesResourceTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .body("tier", is("NONE"))
-                .body("canStream", is(false))
+                .body("tier", is("STREAM"))
+                .body("canStream", is(true))
                 .body("showDevRoleSelector", is(true))
                 .body("devUi", is(true))
                 .body("loginAvailable", is(false));
@@ -43,7 +43,7 @@ class CapabilitiesResourceTest {
     @DisplayName("GET /api/capabilities: dev header selects admin tier")
     void capabilities_devHeaderAdmin() {
         given()
-                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
+                .queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "admin")
                 .when()
                 .get("/api/capabilities")
                 .then()
@@ -54,15 +54,16 @@ class CapabilitiesResourceTest {
     }
 
     @Test
-    @DisplayName("GET /api/capabilities: dev header anonymous -> NONE without sentinel in stream-groups")
-    void capabilities_devHeaderAnonymous_noSentinelInConfig() {
+    @DisplayName("GET /api/capabilities: dev header anonymous -> STREAM when sentinel listed")
+    void capabilities_devHeaderAnonymous_streamTier() {
         given()
-                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "anonymous")
+                .queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "anonymous")
                 .when()
                 .get("/api/capabilities")
                 .then()
                 .statusCode(200)
-                .body("tier", is("NONE"))
-                .body("canStream", is(false));
+                .body("tier", is("STREAM"))
+                .body("canStream", is(true))
+                .body("canViewControlState", is(false));
     }
 }
