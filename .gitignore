@@ -8,3 +8,6 @@
 # Cluster-specific ConfigMap overlay (copy from deploy/openshift/application-cluster-overlay.example.yaml).
 # Contains quarkus.oidc.enabled, security groups, and other deployment-specific values — never commit.
 **/application-cluster-overlay.yaml
+
+# Quarkus extension metadata file does not belong in application repos.
+META-INF/quarkus-extension.properties
