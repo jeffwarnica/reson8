@@ -5,22 +5,22 @@
 #
 # ./mvnw package
 #
-# Then, build the image with:
+# Then, build the image with Podman (use `docker` instead if that is your CLI):
 #
-# docker build -f src/main/docker/Dockerfile.jvm -t quarkus/reson8-jvm .
+# podman build -f src/main/docker/Dockerfile.jvm -t quarkus/reson8-jvm .
 #
 # Then run the container using:
 #
-# docker run -i --rm -p 8090:8090 quarkus/reson8-jvm
+# podman run -i --rm -p 8090:8090 quarkus/reson8-jvm
 #
-# If you want to include the debug port into your docker image
+# If you want to include the debug port into your container image
 # you will have to expose the debug port (default 5005 being the default) like this :  EXPOSE 8090 5005.
 # Additionally you will have to set -e JAVA_DEBUG=true and -e JAVA_DEBUG_PORT=*:5005
 # when running the container
 #
 # Then run the container using :
 #
-# docker run -i --rm -p 8090:8090 quarkus/reson8-jvm
+# podman run -i --rm -p 8090:8090 quarkus/reson8-jvm
 #
 # This image uses the `run-java.sh` script to run the application.
 # This scripts computes the command line to execute your Java application, and

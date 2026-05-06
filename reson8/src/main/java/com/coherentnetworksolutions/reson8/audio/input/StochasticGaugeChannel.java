@@ -125,6 +125,7 @@ public class StochasticGaugeChannel extends BaseInputChannel implements GaugeCha
     private void intensityTick() {
         stepSmoothTowardTarget(smoothingRate, SMOOTHING_EPSILON);
 
+        // Linear 0–1 from human intensity for synthesis math (Poisson rate), not GStreamer fader scaling — that uses VolumeScaler at play time.
         double norm = getCurrentIntensity() / 100.0;
         double lambda = maxSimultaneous * norm * norm;           // chirps/second
         double mu = lambda * (TICK_MS / 1000.0);                // expected events this tick

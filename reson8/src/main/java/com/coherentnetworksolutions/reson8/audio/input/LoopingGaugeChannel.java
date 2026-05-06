@@ -97,6 +97,7 @@ public class LoopingGaugeChannel extends BaseInputChannel implements GaugeChanne
 
     /** Maps smoothed intensity (0–100) to filter and linear volume. */
     private void applyLoopPhysics(double levelPercent) {
+        // Linear 0–1 for filter/VCA shaping in human space; GStreamer element gain uses VolumeScaler via ceiling below.
         double norm = levelPercent / 100.0;
         double curve = Math.pow(norm, 2);
 

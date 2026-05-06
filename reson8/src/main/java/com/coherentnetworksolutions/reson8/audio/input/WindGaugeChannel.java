@@ -74,6 +74,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
         stepSmoothTowardTarget(smoothingRate, 0.1);
         double currentIntensity = getCurrentIntensity();
         double gustFrequency = 0.04;
+        // Linear fraction of human 0–100 for procedural phase speed (not perceptual mixer gain).
         double speed = 0.05 + ((currentIntensity / 100.0) * gustFrequency);
         phase += speed;
 
@@ -83,6 +84,7 @@ public class WindGaugeChannel extends BaseInputChannel implements GaugeChannel {
         double finalDrive = currentIntensity + oscillation;
         finalDrive = Math.max(0.0, Math.min(100.0, finalDrive));
 
+        // Still human-domain 0–100 above; here map to 0–1 for filter shaping before GStreamer volume (VolumeScaler for ceiling).
         double driveNormalized = finalDrive / 100.0;
         double curve = Math.pow(driveNormalized, 2);
 

@@ -26,7 +26,10 @@ override, or configure CA certificates.
 - **No** `TlsVerificationSupport` class or equivalent — it has been deleted.
 - **No** `quarkus.tls.*` or `quarkus.oidc.tls.*` configuration properties emitted from any
   config source factory.
-- **No** `quarkus-tls-registry` dependency in `pom.xml`.
+- **No** declared **`quarkus-tls-registry` artifact** in this project’s `pom.xml` (do not add it
+  just to configure trust stores). The Quarkus platform may still pull that extension **transitively**
+  unused — that is acceptable. What matters is **no PEM/trust-store TLS configuration** in app
+  code or config (`quarkus.tls.*`, custom `SSLContext`).
 - **No** `SSLContext` construction from PEM files in application code.
 - **No** `ignoreCerts`, `clusterCaBundlePath`, `tlsVerificationEnabled` config properties in
   `Reson8Config` or any other config mapping.

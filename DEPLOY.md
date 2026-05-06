@@ -118,7 +118,7 @@ the SA exists; no post-deploy step is required.
 
 ```bash
 # Confirm the annotation is on the SA
-oc get sa reson8 -n reson8 -o jsonpath='{.metadata.annotations}' | python3 -m json.tool
+oc get sa reson8 -n reson8 -o jsonpath='{.metadata.annotations}' | jq
 
 # Confirm the secret has been populated with a token
 oc get secret reson8-oauth-client-secret -n reson8 \
@@ -241,10 +241,10 @@ cd reson8
 This Maven-driven deploy:
 
 1. Compiles and packages the application JAR (`target/quarkus-app/`).
-2. Creates or updates a `BuildConfig` in OpenShift with Docker strategy, pointing at
+2. Creates or updates a `BuildConfig` in OpenShift with **Dockerfile build strategy** (`spec.strategy.type: Docker` in the API — not your laptop's Docker CLI). OpenShift runs the build in-cluster (often Buildah/Podman). Points at
    `src/main/docker/Dockerfile.jvm`.
 3. Sends `target/quarkus-app/` as the in-cluster build context. Sound assets are
-   extracted from the bundled application JAR inside the Dockerfile (`jar xf`), so
+   extracted from the bundled application JAR inside the container recipe (`jar xf`), so
    no extra files need to be present in the build context.
 4. Waits for the image build to complete and pushes the result to the internal registry
    at `image-registry.openshift-image-registry.svc:5000/reson8/reson8:latest`.
@@ -353,7 +353,8 @@ under the `# --- OpenShift deployment ---` block. Key values:
 |----------|-------|-------|
 | `quarkus.container-image.registry` | `image-registry.openshift-image-registry.svc:5000` | Internal registry in-cluster address |
 | `quarkus.container-image.group` | `reson8` | Must match the namespace |
-| `quarkus.openshift.build-strategy` | `docker` | Uses `Dockerfile.jvm`; required for GStreamer base + sounds COPY |
+| `quarkus.openshift.build-strategy` | `docker` | OpenShift **Dockerfile** strategy (fixed API value `docker`). Uses `Dockerfile.jvm`; required for GStreamer base + sounds. Cluster performs the build |
+| `quarkus.container-image.builder` | `openshift` | With `quarkus-container-image-podman` also on the classpath, keeps **in-cluster** deploy as the default. For **local** image builds with Podman, use `-Dquarkus.container-image.builder=podman -Dquarkus.container-image.build=true` |
 | `quarkus.openshift.service-account` | `reson8` | SA that holds the ClusterRoleBinding |
 | `quarkus.openshift.replicas` | `1` | Not horizontally scalable (GStreamer pipeline + audio stream) |
 | `quarkus.openshift.route.expose` | `true` | Creates an OpenShift Route |
@@ -484,7 +485,7 @@ Check the pod logs for the signal name that returned 401 to identify which names
 The base image may be stale. Rebuild and re-push it (see Step 1b), then redeploy.
 
 **`WavCache` file-not-found at startup**
-The Docker build context did not include `src/main/resources/sounds/`. Confirm the
+The OpenShift **container build** did not place sounds under `/opt/reson8/sounds/`. Confirm the
 sounds were copied by inspecting the image:
 ```bash
 oc debug deployment/reson8 -n reson8 -- ls /opt/reson8/sounds/
