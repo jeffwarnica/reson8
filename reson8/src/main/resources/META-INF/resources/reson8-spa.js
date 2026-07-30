@@ -1,13 +1,40 @@
         const DEV_TIER_STORAGE_KEY = 'reson8-dev-tier';
         const DEV_TIER_HEADER = 'X-Reson8-Dev-Tier';
-        /** Mirrors DevTierRequestFilter.QUERY_RESON8_DEV_TIER — HTML audio.src cannot send custom headers. */
-        const DEV_TIER_QUERY = 'reson8-dev-tier';
+        const DEV_TIER_COOKIE = 'reson8-dev-tier';
+
+        function readCookie(name) {
+            const needle = name + '=';
+            const parts = document.cookie ? document.cookie.split(';') : [];
+            for (const part of parts) {
+                const p = part.trim();
+                if (p.startsWith(needle)) {
+                    return decodeURIComponent(p.slice(needle.length));
+                }
+            }
+            return '';
+        }
+
+        function setDevTierCookie(tier) {
+            if (tier) {
+                document.cookie = `${DEV_TIER_COOKIE}=${encodeURIComponent(tier)}; Path=/; SameSite=Lax`;
+            } else {
+                document.cookie = `${DEV_TIER_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+            }
+        }
+
+        function getDevTierSelection() {
+            const fromSession = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
+            if (fromSession) {
+                return fromSession;
+            }
+            return readCookie(DEV_TIER_COOKIE);
+        }
 
         function apiFetch(url, options) {
             const opts = options || {};
             const headers = new Headers(opts.headers || {});
             if (document.getElementById('reson8-dev-toolbar')) {
-                const tier = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
+                const tier = getDevTierSelection();
                 if (tier) {
                     headers.set(DEV_TIER_HEADER, tier);
                 }
@@ -28,14 +55,7 @@
         // --- STREAM LOGIC ---
 
         function audioStreamUrl() {
-            let url = '/audio/stream?t=' + Date.now();
-            if (document.getElementById('reson8-dev-toolbar')) {
-                const tier = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
-                if (tier) {
-                    url += '&' + DEV_TIER_QUERY + '=' + encodeURIComponent(tier);
-                }
-            }
-            return url;
+            return '/audio/stream?t=' + Date.now();
         }
 
         startBtn.onclick = () => {
@@ -712,9 +732,10 @@
             if (!toolbar || !sel) {
                 return;
             }
-            const saved = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
+            const saved = getDevTierSelection();
             if (saved) {
                 sel.value = saved;
+                setDevTierCookie(saved);
             }
             sel.addEventListener('change', () => {
                 const v = sel.value;
@@ -723,6 +744,7 @@
                 } else {
                     sessionStorage.removeItem(DEV_TIER_STORAGE_KEY);
                 }
+                setDevTierCookie(v);
                 window.location.reload();
             });
         }

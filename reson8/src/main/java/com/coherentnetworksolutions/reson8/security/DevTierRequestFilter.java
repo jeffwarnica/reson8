@@ -7,15 +7,19 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
+import jakarta.ws.rs.core.Cookie;
 import jakarta.ws.rs.ext.Provider;
 
 import io.quarkus.arc.Unremovable;
 
 /**
  * When {@link Reson8Config.SecurityConfig#devTierHeaderEnabled()} is true (dev / test), parses
- * {@value DevTierRequestFilter#X_RESON8_DEV_TIER} or query {@value DevTierRequestFilter#QUERY_RESON8_DEV_TIER}
- * (same values) and stores the selection in {@link DevTierContext}. The query fallback exists because
- * {@code GET /audio/stream} from an HTML {@code audio} element cannot send custom headers.
+ * {@value DevTierRequestFilter#X_RESON8_DEV_TIER} first, then falls back to cookie
+ * {@value DevTierRequestFilter#DEV_TIER_COOKIE}.
+ * <p>
+ * Header takes precedence so API requests can override an existing browser cookie in dev/test.
+ * Cookie fallback exists because {@code GET /audio/stream} from an HTML {@code audio} element
+ * cannot send custom headers.
  * No-op in production when the flag is false.
  */
 @Provider
@@ -24,8 +28,10 @@ import io.quarkus.arc.Unremovable;
 @jakarta.annotation.Priority(Priorities.AUTHENTICATION - 200)
 public class DevTierRequestFilter implements ContainerRequestFilter {
 
-    /** Same semantics as {@link #X_RESON8_DEV_TIER}; honored only when dev-tier simulation is enabled. */
-    public static final String QUERY_RESON8_DEV_TIER = "reson8-dev-tier";
+    /** Header used by SPA/API fetch requests in dev/test. */
+    public static final String X_RESON8_DEV_TIER = "X-Reson8-Dev-Tier";
+    /** Cookie used by browser media requests (e.g. {@code /audio/stream}) in dev/test. */
+    public static final String DEV_TIER_COOKIE = "reson8-dev-tier";
 
     private final Reson8Config config;
     private final DevTierContext devTierContext;
@@ -41,7 +47,11 @@ public class DevTierRequestFilter implements ContainerRequestFilter {
         if (!config.security().devTierHeaderEnabled()) {
             return;
         }
-        String raw = requestContext.getUriInfo().getQueryParameters().getFirst(QUERY_RESON8_DEV_TIER);
+        String raw = requestContext.getHeaderString(X_RESON8_DEV_TIER);
+        if (raw == null || raw.isBlank()) {
+            Cookie cookie = requestContext.getCookies().get(DEV_TIER_COOKIE);
+            raw = cookie != null ? cookie.getValue() : null;
+        }
         DevTierSelection.parse(raw).ifPresent(devTierContext::setSelection);
     }
 }

@@ -43,7 +43,7 @@ class CapabilitiesResourceTest {
     @DisplayName("GET /api/capabilities: dev header selects admin tier")
     void capabilities_devHeaderAdmin() {
         given()
-                .queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "admin")
+                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
                 .when()
                 .get("/api/capabilities")
                 .then()
@@ -57,7 +57,7 @@ class CapabilitiesResourceTest {
     @DisplayName("GET /api/capabilities: dev header anonymous -> STREAM when sentinel listed")
     void capabilities_devHeaderAnonymous_streamTier() {
         given()
-                .queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "anonymous")
+                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "anonymous")
                 .when()
                 .get("/api/capabilities")
                 .then()

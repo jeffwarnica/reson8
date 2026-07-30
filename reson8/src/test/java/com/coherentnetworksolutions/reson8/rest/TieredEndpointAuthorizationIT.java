@@ -27,6 +27,7 @@ import jakarta.inject.Inject;
 @QuarkusTest
 @TestProfile(TieredEndpointAuthorizationIT.Profile.class)
 class TieredEndpointAuthorizationIT {
+    private static final String COOKIE_HEADER = "Cookie";
 
     public static final class Profile implements QuarkusTestProfile {
         @Override
@@ -51,7 +52,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("admin: GET control/state allowed")
     void admin_canReadControlState() {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "admin")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
                 .when()
                 .get("/audio/control/state")
                 .then()
@@ -61,13 +62,13 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("viewer: GET control/state allowed; POST mutation forbidden")
     void viewer_readOnlyControl() {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "viewer")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
                 .when()
                 .get("/audio/control/state")
                 .then()
                 .statusCode(200);
 
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "viewer")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
                 .when()
                 .post("/audio/control/k8s-sync/false")
                 .then()
@@ -77,7 +78,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("stream: control forbidden; stream opens when tier allows")
     void stream_onlyStreamPath() throws Exception {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "stream")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "stream")
                 .when()
                 .get("/audio/control/state")
                 .then()
@@ -85,22 +86,25 @@ class TieredEndpointAuthorizationIT {
 
         StreamTestSupport.consumeOpeningChunk(
                 audioStreamUrl,
-                Map.of(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "stream"),
+                Map.of(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=stream"),
                 sessionManager);
     }
 
     @Test
-    @DisplayName("stream: dev tier via query param when header absent (<audio/> parity)")
-    void stream_devTierQueryParam() throws Exception {
+    @DisplayName("stream: dev tier via cookie when header absent (<audio/> parity)")
+    void stream_devTierCookie() throws Exception {
         URI base = audioStreamUrl.toURI();
         URL url = new URI(
                         base.getScheme(),
                         base.getAuthority(),
                         base.getPath(),
-                        DevTierRequestFilter.QUERY_RESON8_DEV_TIER + "=admin&t=1",
+                        "t=1",
                         null)
                 .toURL();
-        StreamTestSupport.consumeOpeningChunk(url, Map.of(), sessionManager);
+        StreamTestSupport.consumeOpeningChunk(
+                url,
+                Map.of(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=admin"),
+                sessionManager);
     }
 
     @Test
@@ -108,26 +112,26 @@ class TieredEndpointAuthorizationIT {
     void anonymous_streamWhenSentinel() throws Exception {
         StreamTestSupport.consumeOpeningChunk(
                 audioStreamUrl,
-                Map.of(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "anonymous"),
+                Map.of(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=anonymous"),
                 sessionManager);
     }
 
     @Test
-    @DisplayName("anonymous + sentinel: stream opens without dev tier query param (<audio/> parity)")
-    void anonymous_streamWithoutDevTierQueryParam() throws Exception {
+    @DisplayName("anonymous + sentinel: stream opens without dev tier cookie")
+    void anonymous_streamWithoutDevTierCookie() throws Exception {
         StreamTestSupport.consumeOpeningChunk(audioStreamUrl, Map.of(), sessionManager);
     }
 
     @Test
     @DisplayName("viewer: GET drops allowed; POST forbidden")
     void viewer_dropSplit() {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "viewer")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
                 .when()
                 .get("/audio/drop")
                 .then()
                 .statusCode(200);
 
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "viewer")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
                 .contentType("application/json")
                 .body("{\"drop\":\"x\"}")
                 .when()
@@ -139,7 +143,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("viewer: debug forbidden")
     void viewer_debugForbidden() {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "viewer")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
                 .when()
                 .get("/api/debug/mixer-dump")
                 .then()
@@ -149,7 +153,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("admin: debug allowed")
     void admin_debugAllowed() {
-        given().queryParam(DevTierRequestFilter.QUERY_RESON8_DEV_TIER, "admin")
+        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
                 .when()
                 .get("/api/debug/mixer-dump")
                 .then()
