@@ -1,17 +1,55 @@
-Quicker than quick start:
+Ludicrous speed start
+=====================
 
-https://github.com/jeffwarnica/reson8
+Repo:
+[https://github.com/jeffwarnica/reson8](https://github.com/jeffwarnica/reson8)
 
-The docs may be confusing. Quickly:
+Use this as a command cheat-sheet. Full detail lives in `CONTRIBUTING.md` and `DEPLOY.md`.
 
-You need a custom ubi9 with gstreamer installed. 
-So you need to build that from a system with a subscription.
-main/DEPLOY.md has the details.
+Quick paths
+-----------
 
-Edit deploy/openshift/application-cluster-overlay.yaml and add your group names.
+1) Local only (no cluster writes)
 
-Besides that, I hope:
+```bash
+./mvnw -pl reson8 quarkus:dev
+```
 
-./deploy/openshift/deploy-reson8.sh -Dquarkus.openshift.deploy=true
+1) Local HTTP event generator (disson8)
 
-does everything else.
+```bash
+./mvnw -pl disson8 quarkus:dev
+```
+
+1) Refresh base image in-cluster (builder access)
+
+```bash
+oc start-build reson8-base -n reson8-build --wait
+```
+
+1) Full app deploy loop (runtime namespace)
+
+```bash
+# One-time: copy and edit cluster overlay with your group names
+cp deploy/openshift/runtime_config/application-cluster-overlay.example.yaml \
+   deploy/openshift/runtime_config/application-cluster-overlay.yaml
+
+# Deploy (sync ConfigMap + build/deploy app)
+./deploy/openshift/deploy-reson8.sh
+```
+
+1) Local from-scratch base fallback (RHSM/Satellite workstation)
+
+```bash
+podman build --pull=always --no-cache \
+  -f reson8/src/main/docker/Containerfile.gstreamer-base \
+  -t localhost/reson8-base-devtest \
+  reson8
+```
+
+Notes
+-----
+
+- Base image is UBI 10 + GStreamer (`Containerfile.gstreamer-base`).
+- Runtime image consumes `reson8-build/reson8-base:latest`.
+- If in doubt: start at `CONTRIBUTING.md`, then use `DEPLOY.md` for cluster setup.

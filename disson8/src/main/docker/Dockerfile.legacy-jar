@@ -7,11 +7,11 @@
 #
 # Then, build the image with Podman (use `docker` instead if that is your CLI):
 #
-# podman build -f src/main/docker/Dockerfile.legacy-jar -t quarkus/helloweb-legacy-jar .
+# podman build -f src/main/docker/Dockerfile.legacy-jar -t quarkus/disson8-legacy-jar .
 #
 # Then run the container using:
 #
-# podman run -i --rm -p 8080:8080 quarkus/helloweb-legacy-jar
+# podman run -i --rm -p 8080:8080 quarkus/disson8-legacy-jar
 #
 # If you want to include the debug port into your container image
 # you will have to expose the debug port (default 5005 being the default) like this :  EXPOSE 8080 5005.
@@ -20,7 +20,7 @@
 #
 # Then run the container using :
 #
-# podman run -i --rm -p 8080:8080 quarkus/helloweb-legacy-jar
+# podman run -i --rm -p 8080:8080 quarkus/disson8-legacy-jar
 #
 # This image uses the `run-java.sh` script to run the application.
 # This scripts computes the command line to execute your Java application, and

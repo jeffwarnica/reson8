@@ -1,4 +1,4 @@
-package com.coherentnetworksolutions.helloweb;
+package com.coherentnetworksolutions.disson8;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;

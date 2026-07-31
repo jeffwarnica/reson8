@@ -1,4 +1,4 @@
-package com.coherentnetworksolutions.helloweb;
+package com.coherentnetworksolutions.disson8;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -8,7 +8,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
 import io.micrometer.core.instrument.MeterRegistry;
-
 
 @Path("/api/test")
 public class DummyEndpoints {

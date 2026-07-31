@@ -14,6 +14,7 @@ This may or may not be useful in practice. But it will look, or rather, *sound* 
 - **POC install (happy path):** [docs/poc/install.md](../docs/poc/install.md)
 - **POC troubleshooting:** [docs/poc/troubleshooting.md](../docs/poc/troubleshooting.md)
 - **OpenShift deploy (full detail):** [DEPLOY.md](../DEPLOY.md)
+- **HTTP event generator module:** [disson8/README.md](../disson8/README.md)
 
 ## Soundscape
 
@@ -52,7 +53,7 @@ K8s / Thanos / Prometheus
 
 This is a Quarkus project and heavily leverages its CDI, REST, and testing framework features. The `@IfBuildProperty(name="reson8dev.audiopath")` mechanism selects between the real GStreamer stack (`gs`) and a fully silent stub (`silent`) used in unit tests.
 
-The Git repository root is a Maven parent (`reson8-parent`) that also lists a separate `helloweb` module: a generic Quarkus/OpenShift scaffold with no dependency on this audio engine.
+The Git repository root is a Maven parent (`reson8-parent`) that also lists a separate `disson8` module: a quick-and-dirty HTTP event generator and observability harness with no dependency on this audio engine.
 
 ## Status
 

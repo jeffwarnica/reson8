@@ -1,4 +1,4 @@
-package com.coherentnetworksolutions.helloweb;
+package com.coherentnetworksolutions.disson8;
 
 import org.eclipse.microprofile.health.HealthCheck;
 import org.eclipse.microprofile.health.HealthCheckResponse;
