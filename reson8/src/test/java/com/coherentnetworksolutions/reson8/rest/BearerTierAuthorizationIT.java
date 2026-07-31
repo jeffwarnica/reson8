@@ -25,7 +25,7 @@ import io.quarkus.test.security.oidc.OidcSecurity;
 import jakarta.inject.Inject;
 
 /**
- * JWT-style tier checks with endpoint authorization enabled and dev-tier header disabled.
+ * JWT-style tier checks with endpoint authorization enabled and dev-tier simulation disabled.
  * <p>
  * Production OIDC defaults require authentication ({@code quarkus.oidc.authentication.optional=false}) and use the
  * OpenShift OAuth discovery URL unless overridden; {@code %test} disables OIDC for this suite.
@@ -42,7 +42,7 @@ class BearerTierAuthorizationIT {
         public Map<String, String> getConfigOverrides() {
             return Map.ofEntries(
                     Map.entry("reson8.security.endpoint-authorization-enabled", "true"),
-                    Map.entry("reson8.security.dev-tier-header-enabled", "false"),
+                    Map.entry("reson8.security.dev-tier-cookie-enabled", "false"),
                     Map.entry("reson8.security.admin-groups[0]", "reson8-admins"),
                     Map.entry("reson8.security.viewer-groups[0]", "reson8-viewers"),
                     Map.entry("reson8.security.stream-groups[0]", "reson8-streamers"),

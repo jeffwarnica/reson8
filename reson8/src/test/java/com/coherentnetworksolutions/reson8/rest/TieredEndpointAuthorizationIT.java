@@ -52,7 +52,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("admin: GET control/state allowed")
     void admin_canReadControlState() {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=admin")
                 .when()
                 .get("/audio/control/state")
                 .then()
@@ -62,13 +62,13 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("viewer: GET control/state allowed; POST mutation forbidden")
     void viewer_readOnlyControl() {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=viewer")
                 .when()
                 .get("/audio/control/state")
                 .then()
                 .statusCode(200);
 
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=viewer")
                 .when()
                 .post("/audio/control/k8s-sync/false")
                 .then()
@@ -78,7 +78,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("stream: control forbidden; stream opens when tier allows")
     void stream_onlyStreamPath() throws Exception {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "stream")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=stream")
                 .when()
                 .get("/audio/control/state")
                 .then()
@@ -91,7 +91,7 @@ class TieredEndpointAuthorizationIT {
     }
 
     @Test
-    @DisplayName("stream: dev tier via cookie when header absent (<audio/> parity)")
+    @DisplayName("stream: dev tier via cookie (<audio/> parity)")
     void stream_devTierCookie() throws Exception {
         URI base = audioStreamUrl.toURI();
         URL url = new URI(
@@ -125,13 +125,13 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("viewer: GET drops allowed; POST forbidden")
     void viewer_dropSplit() {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=viewer")
                 .when()
                 .get("/audio/drop")
                 .then()
                 .statusCode(200);
 
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=viewer")
                 .contentType("application/json")
                 .body("{\"drop\":\"x\"}")
                 .when()
@@ -143,7 +143,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("viewer: debug forbidden")
     void viewer_debugForbidden() {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "viewer")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=viewer")
                 .when()
                 .get("/api/debug/mixer-dump")
                 .then()
@@ -153,7 +153,7 @@ class TieredEndpointAuthorizationIT {
     @Test
     @DisplayName("admin: debug allowed")
     void admin_debugAllowed() {
-        given().header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
+        given().header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=admin")
                 .when()
                 .get("/api/debug/mixer-dump")
                 .then()

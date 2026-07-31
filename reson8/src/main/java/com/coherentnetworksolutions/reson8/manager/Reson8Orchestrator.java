@@ -47,14 +47,14 @@ public class Reson8Orchestrator {
     }
 
     private void logSecuritySummary() {
-        Log.infof("Security: OIDC=%s, endpoint-authorization=%s, login-available=%s, dev-tier-header=%s",
+        Log.infof("Security: OIDC=%s, endpoint-authorization=%s, login-available=%s, dev-tier-cookie=%s",
                 quarkusOidcEnabled,
                 config.security().endpointAuthorizationEnabled(),
                 config.security().loginAvailable(),
-                config.security().devTierHeaderEnabled());
+                config.security().devTierCookieEnabled());
 
-        int adminCount = config.security().adminGroups().map(java.util.List::size).orElse(0);
-        int viewerCount = config.security().viewerGroups().map(java.util.List::size).orElse(0);
+        int adminCount = config.security().adminGroups().map(groups -> groups != null ? groups.size() : 0).orElse(0);
+        int viewerCount = config.security().viewerGroups().map(groups -> groups != null ? groups.size() : 0).orElse(0);
         java.util.List<String> streamGroups = config.security().streamGroups().orElse(java.util.List.of());
         String sentinel = config.security().anonymousStreamSentinel();
         boolean anonStream = streamGroups.contains(sentinel);

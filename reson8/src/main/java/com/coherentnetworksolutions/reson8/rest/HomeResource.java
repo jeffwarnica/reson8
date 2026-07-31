@@ -17,7 +17,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import io.quarkus.qute.Template;
 
 /**
- * Serves the SPA shell from Qute so dev-only UI (tier selector) is omitted at render time when disabled.
+ * Serves the SPA shell from Qute so dev-only UI (tier selector) is omitted at
+ * render time when disabled.
  */
 @ApplicationScoped
 @Path("/")
@@ -37,7 +38,7 @@ public class HomeResource {
     @Produces(MediaType.TEXT_HTML)
     public String home() {
         String spaAssetQuery = "?v=" + URLEncoder.encode(applicationVersion, StandardCharsets.UTF_8);
-        return index.data("showDevToolbar", config.security().devTierHeaderEnabled())
+        return index.data("showDevToolbar", config.security().devTierCookieEnabled())
                 .data("spaAssetQuery", spaAssetQuery)
                 .render();
     }

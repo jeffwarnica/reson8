@@ -70,11 +70,11 @@ public interface Reson8Config {
         boolean loginAvailable();
 
         /**
-         * Enables {@code X-Reson8-Dev-Tier} for tier simulation in local dev and tests; must stay {@code false} in prod.
+         * Enables dev-tier cookie simulation for local dev and tests; must stay {@code false} in prod.
          */
         @WithDefault("false")
-        @WithName("dev-tier-header-enabled")
-        boolean devTierHeaderEnabled();
+        @WithName("dev-tier-cookie-enabled")
+        boolean devTierCookieEnabled();
 
         /**
          * When {@code true}, tier checks reject callers without capability on audio control/drop/debug/stream routes.
@@ -118,7 +118,7 @@ public interface Reson8Config {
     interface K8sConfig {
         String cluster();
 
-        NamespaceConfig namespaces();
+        // NamespaceConfig namespaces();
 
         String map();
 
@@ -166,9 +166,9 @@ public interface Reson8Config {
      * and deployment health. This mapping remains only for backwards compatibility with older
      * overlays and should not be interpreted as an active namespace filter.
      */
-    interface NamespaceConfig {
-        boolean all();
-    }
+    // interface NamespaceConfig {
+    //     boolean all();
+    // }
 
     interface SignalMap {
         String name();

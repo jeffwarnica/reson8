@@ -124,7 +124,7 @@ class AccessTierResolverTest {
             }
 
             @Override
-            public boolean devTierHeaderEnabled() {
+            public boolean devTierCookieEnabled() {
                 return false;
             }
 

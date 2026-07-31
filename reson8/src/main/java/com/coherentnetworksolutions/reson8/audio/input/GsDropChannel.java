@@ -121,7 +121,11 @@ public class GsDropChannel extends BaseInputChannel implements DropChannel {
     public void dispose() {
         synchronized (binLock) {
             if (channelBin != null) {
-                toolkit.setElementState(channelBin, State.NULL);
+                try {
+                    toolkit.setElementState(channelBin, State.NULL);
+                } catch (IllegalStateException alreadyDisposed) {
+                    Log.debugf("DropChannel [%s] bin was already disposed during teardown.", getChannelName());
+                }
                 channelBin = null;
             }
             channelMixer = null;

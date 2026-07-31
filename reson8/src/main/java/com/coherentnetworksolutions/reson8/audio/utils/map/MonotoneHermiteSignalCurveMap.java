@@ -36,7 +36,7 @@ public class MonotoneHermiteSignalCurveMap implements SignalCurveMap {
         }
 
         List<Point> sorted = points.stream()
-                .sorted(Comparator.comparingDouble(Point::input))
+                .sorted(Comparator.comparingDouble(p -> p.input()))
                 .toList();
 
         int n = sorted.size();

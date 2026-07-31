@@ -1,6 +1,10 @@
 package com.coherentnetworksolutions.reson8.audio.utils;
 
-import io.quarkus.test.junit.QuarkusTest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.freedesktop.gstreamer.Gst;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -8,11 +12,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.coherentnetworksolutions.reson8.audio.utils.map.VolumeScaler;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-
-import org.freedesktop.gstreamer.Gst;
-import org.junit.jupiter.api.BeforeEach;
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 @Timeout(10)
@@ -43,7 +43,7 @@ class VolumeScalerTest {
     @ParameterizedTest
     @DisplayName("GStreamer (0-1) to Human (0-100) Scaling")
     @CsvSource({ "-0.5,   0.0", // Out of bounds low
-            "0.0,    0.0", // Muted
+            "0.0,    0.0", // Muted/*  */
             "0.125,  50.0", // Mid-point (∛0.125 * 100)
             "0.5,    79.37", // Common -6dB point check
             "1.0,    100.0", // Max

@@ -1,6 +1,6 @@
 Quicker than quick start:
 
-https: //github.com/jeffwarnica/reson8
+https://github.com/jeffwarnica/reson8
 
 The docs may be confusing. Quickly:
 

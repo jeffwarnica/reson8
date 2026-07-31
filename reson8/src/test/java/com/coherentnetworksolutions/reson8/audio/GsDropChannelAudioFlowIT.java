@@ -8,10 +8,11 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.coherentnetworksolutions.reson8.audio.input.GsDropChannel;
+import com.coherentnetworksolutions.reson8.audio.mixer.Mixer;
+import com.coherentnetworksolutions.reson8.audio.output.to.BrowserSessionManager;
 import com.coherentnetworksolutions.reson8.audio.providers.GsToolkit;
 import com.coherentnetworksolutions.reson8.audio.sound.WavCache.CachedWav;
 import com.coherentnetworksolutions.reson8.manager.config.Reson8Config;
@@ -22,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
+import io.smallrye.mutiny.subscription.Cancellable;
 
 @QuarkusTest
 @TestProfile(com.coherentnetworksolutions.reson8.GsTestProfile.class)
@@ -30,10 +32,17 @@ class GsDropChannelAudioFlowIT {
     @Inject
     GsToolkit toolkit; // NativeGsToolkit in this profile
 
-    @Disabled("Requires AppSink probe wired into real Mixer pipeline — implement when Mixer exposes a test tap")
+    @Inject
+    Mixer mixer;
+
+    @Inject
+    BrowserSessionManager browserSessionManager;
+
     @Test
     void triggeredDropProducesAudioSamples() throws Exception {
         AtomicInteger samplesReceived = new AtomicInteger(0);
+        Cancellable subscription = browserSessionManager.subscribe()
+                .subscribe().with(bytes -> samplesReceived.addAndGet(bytes.length));
 
         var mockDef = mock(Reson8Config.SoundDefinition.class);
         var mockDropDef = mock(Reson8Config.DropConfig.class);
@@ -52,14 +61,15 @@ class GsDropChannelAudioFlowIT {
         when(wav.caps()).thenReturn(toolkit.capsFromString("audio/x-raw,format=F32LE,rate=44100,channels=1"));
 
         GsDropChannel ch = new GsDropChannel(bucket, wav, toolkit);
-        ch.trigger();
-
-        // TODO: attach an AppSink or level probe on the real Mixer pipeline
-        // to assert samplesReceived > 0 once a test-tap API is available.
-        await().atMost(3, TimeUnit.SECONDS)
-                .until(() -> samplesReceived.get() > 0);
-        assertTrue(samplesReceived.get() > 0, "Drop trigger produced no audio");
-
-        ch.dispose();
+        mixer.addInputChannel(ch);
+        try {
+            ch.trigger();
+            await().atMost(3, TimeUnit.SECONDS)
+                    .until(() -> samplesReceived.get() > 0);
+            assertTrue(samplesReceived.get() > 0, "Drop trigger produced no audio");
+        } finally {
+            subscription.cancel();
+            mixer.removeInputChannel(ch.getChannelName());
+        }
     }
 }

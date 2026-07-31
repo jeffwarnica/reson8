@@ -1,5 +1,3 @@
-        const DEV_TIER_STORAGE_KEY = 'reson8-dev-tier';
-        const DEV_TIER_HEADER = 'X-Reson8-Dev-Tier';
         const DEV_TIER_COOKIE = 'reson8-dev-tier';
 
         function readCookie(name) {
@@ -23,23 +21,7 @@
         }
 
         function getDevTierSelection() {
-            const fromSession = sessionStorage.getItem(DEV_TIER_STORAGE_KEY);
-            if (fromSession) {
-                return fromSession;
-            }
             return readCookie(DEV_TIER_COOKIE);
-        }
-
-        function apiFetch(url, options) {
-            const opts = options || {};
-            const headers = new Headers(opts.headers || {});
-            if (document.getElementById('reson8-dev-toolbar')) {
-                const tier = getDevTierSelection();
-                if (tier) {
-                    headers.set(DEV_TIER_HEADER, tier);
-                }
-            }
-            return fetch(url, { ...opts, headers });
         }
 
         let isStreaming = false;
@@ -97,7 +79,7 @@
 
         async function syncState() {
             try {
-                const res = await apiFetch('/audio/control/state');
+                const res = await fetch('/audio/control/state');
                 const state = await res.json();
 
                 
@@ -176,7 +158,7 @@
             if (!window.__reson8Cap || !window.__reson8Cap.canMutate) {
                 return;
             }
-            await apiFetch(path, {
+            await fetch(path, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -187,7 +169,7 @@
             if (!window.__reson8Cap || !window.__reson8Cap.canMutate) {
                 return;
             }
-            await apiFetch('/audio/control/channels/' + encodeURIComponent(channelName) + '/target-intensity', {
+            await fetch('/audio/control/channels/' + encodeURIComponent(channelName) + '/target-intensity', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ targetIntensity })
@@ -201,7 +183,7 @@
             }
             const active = k8sCheck.checked;
             document.getElementById('k8sStatusText').innerText = active ? "ACTIVE" : "PAUSED";
-            await apiFetch(`/audio/control/k8s-sync/${active}`, { method: 'POST' });
+            await fetch(`/audio/control/k8s-sync/${active}`, { method: 'POST' });
         };
 
         // Local browser volume: slider is 0–100 (percent); HTMLMediaElement.volume is 0.0–1.0
@@ -524,7 +506,7 @@
         // --- INITIALIZATION ---
 
         async function initChannels() {
-            const res = await apiFetch('/audio/control/channels');
+            const res = await fetch('/audio/control/channels');
             if (!res.ok) {
                 console.error('channels load failed', res.status);
                 return;
@@ -633,7 +615,7 @@
                         const raw = parseFloat(simInput.value);
                         if (isNaN(raw)) return;
                         try {
-                            const res = await apiFetch(
+                            const res = await fetch(
                                 '/audio/control/channels/' + encodeURIComponent(ch.name) + '/simulate-metric',
                                 { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rawMetricValue: raw }) }
                             );
@@ -659,7 +641,7 @@
         }
 
         async function loadCapabilities() {
-            const res = await apiFetch('/api/capabilities');
+            const res = await fetch('/api/capabilities');
             if (!res.ok) {
                 throw new Error('capabilities HTTP ' + res.status);
             }
@@ -739,11 +721,6 @@
             }
             sel.addEventListener('change', () => {
                 const v = sel.value;
-                if (v) {
-                    sessionStorage.setItem(DEV_TIER_STORAGE_KEY, v);
-                } else {
-                    sessionStorage.removeItem(DEV_TIER_STORAGE_KEY);
-                }
                 setDevTierCookie(v);
                 window.location.reload();
             });

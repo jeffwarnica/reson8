@@ -80,7 +80,7 @@
 # You can find more information about the UBI base runtime images and their configuration here:
 # https://rh-openjdk.github.io/redhat-openjdk-containers/
 ###
-FROM image-registry.openshift-image-registry.svc:5000/reson8/reson8-base:latest
+FROM image-registry.openshift-image-registry.svc:5000/reson8-build/reson8-base:latest
 
 ENV LANGUAGE='en_US:en'
 ENV RESON8_AUDIO_PATH=/opt/reson8
@@ -95,11 +95,54 @@ COPY --chown=185 target/quarkus-app/quarkus/ /deployments/quarkus/
 # (src/main/resources/sounds/ → app/*.jar). Extract them to the filesystem
 # path WavCache expects. The base image is a full JDK so `jar` is available.
 USER root
-COPY src/main/docker/run-with-ca-update.sh /usr/local/bin/run-with-ca-update.sh
 RUN mkdir -p /opt/reson8 \
  && cd /opt/reson8 \
  && jar xf $(ls /deployments/app/*.jar | head -1) sounds \
- && chown -R 185:185 /opt/reson8/sounds \
+ && cat > /usr/local/bin/run-with-ca-update.sh <<'EOF'
+#!/bin/bash
+set -uo pipefail
+
+ANCHORS_DIR="/etc/pki/ca-trust/source/anchors"
+
+if [[ ! -s "${ANCHORS_DIR}/service-ca.crt" ]]; then
+    echo "FATAL: OpenShift service CA not available at ${ANCHORS_DIR}/service-ca.crt" >&2
+    echo "FATAL: ConfigMap openshift-service-ca.crt must exist in this namespace." >&2
+    echo "FATAL: This ConfigMap is auto-created by OpenShift in every namespace; its absence" >&2
+    echo "FATAL: indicates a cluster or namespace setup problem." >&2
+    exit 1
+fi
+
+if [[ ! -s "${ANCHORS_DIR}/ingress-ca.crt" ]]; then
+    echo "FATAL: Ingress/router CA not available at ${ANCHORS_DIR}/ingress-ca.crt" >&2
+    echo "FATAL: A cluster administrator must run the one-time cluster trust setup." >&2
+    echo "FATAL: See DEPLOY.md section 'Cluster CA Setup (one-time, cluster-admin)'." >&2
+    exit 1
+fi
+
+if [[ ! -s "${ANCHORS_DIR}/kube-ca.crt" ]]; then
+    echo "FATAL: Kubernetes API CA not available at ${ANCHORS_DIR}/kube-ca.crt" >&2
+    echo "FATAL: ConfigMap kube-root-ca.crt must exist in this namespace." >&2
+    echo "FATAL: This ConfigMap is auto-created by OpenShift in every namespace; its absence" >&2
+    echo "FATAL: indicates a cluster or namespace setup problem." >&2
+    exit 1
+fi
+
+set +e
+update-ca-trust extract 2>&1
+UPDATE_CA_EXIT=$?
+set -e
+
+if [[ $UPDATE_CA_EXIT -ne 0 ]]; then
+    if [[ ! -s "/etc/pki/ca-trust/extracted/java/cacerts" ]]; then
+        echo "FATAL: update-ca-trust extract failed and java/cacerts is missing or empty" >&2
+        exit 1
+    fi
+    echo "WARN: update-ca-trust extract had non-fatal warnings; java/cacerts is present, continuing." >&2
+fi
+
+exec /opt/jboss/container/java/run/run-java.sh
+EOF
+RUN chown -R 185:185 /opt/reson8/sounds \
  && chmod -R g+w /etc/pki/ca-trust/ /etc/pki/tls/ \
  && chgrp -R root /etc/pki/ca-trust/ /etc/pki/tls/ \
  && chmod +x /usr/local/bin/run-with-ca-update.sh

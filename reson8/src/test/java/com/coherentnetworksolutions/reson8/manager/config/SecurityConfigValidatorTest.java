@@ -105,7 +105,7 @@ class SecurityConfigValidatorTest {
             }
 
             @Override
-            public boolean devTierHeaderEnabled() {
+            public boolean devTierCookieEnabled() {
                 return false;
             }
 

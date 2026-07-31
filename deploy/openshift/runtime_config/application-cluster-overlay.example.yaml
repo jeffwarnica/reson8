@@ -18,7 +18,7 @@ reson8:
   security:
     login-available: true
     endpoint-authorization-enabled: true
-    dev-tier-header-enabled: false
+    dev-tier-cookie-enabled: false
     # Typical OpenShift OAuth: cluster admins (verify claim names from your IdP).
     admin-groups:
       - cluster-admins

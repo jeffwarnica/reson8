@@ -35,7 +35,7 @@ class Reson8ConfigSecurityMappingTest {
         assertEquals(List.of("__anonymous__"), config.security().streamGroups().orElse(List.of()));
         assertEquals("__anonymous__", config.security().anonymousStreamSentinel());
         assertFalse(config.security().loginAvailable());
-        assertTrue(config.security().devTierHeaderEnabled());
+        assertTrue(config.security().devTierCookieEnabled());
         assertFalse(config.security().endpointAuthorizationEnabled());
         assertTrue(config.openshiftOauth().discoveryEnabled());
         assertTrue(config.openshiftOauth().metadataUrl().isEmpty());

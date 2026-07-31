@@ -178,7 +178,7 @@ public class GsMixer implements Mixer {
         // 2. Sync the GLUE elements to the pipeline state FIRST
         // This paves the road so when the source starts, the road is open
         Stream.of(convert, resample, capsFilter, inputQueue)
-                .forEach(Element::syncStateWithParent);
+                .forEach(e -> e.syncStateWithParent());
 
         // 3. Set the fader
         mixerSinkPad.set("volume", 1.0f);

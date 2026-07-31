@@ -25,13 +25,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 NS="${OPENSHIFT_PROJECT:-reson8}"
-OVERLAY="${ROOT}/deploy/openshift/application-cluster-overlay.yaml"
+OVERLAY="${ROOT}/deploy/openshift/runtime_config/application-cluster-overlay.yaml"
 SOURCE_YML="${ROOT}/reson8/src/main/resources/application.yml"
 CA_WAIT_ATTEMPTS="${CA_WAIT_ATTEMPTS:-30}"
 
 export SOURCE_YML OVERLAY
 
 cd "$ROOT"
+
 oc project "$NS" >/dev/null
 
 if [[ "${APPLY_CLUSTER_RBAC:-0}" == "1" ]]; then

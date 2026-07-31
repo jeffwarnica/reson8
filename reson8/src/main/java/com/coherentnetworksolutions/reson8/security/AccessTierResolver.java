@@ -35,19 +35,20 @@ public class AccessTierResolver {
      */
     public CapabilitiesResponse resolve(SecurityIdentity identity, DevTierContext devTierContext) {
         Reson8Config.SecurityConfig sec = config.security();
-        Optional<DevTierSelection> dev = sec.devTierHeaderEnabled()
+        Optional<DevTierSelection> dev = sec.devTierCookieEnabled()
                 ? devTierContext.selection()
                 : Optional.empty();
         Set<String> roles = extractRoles(identity);
         boolean anonymous = identity == null || identity.isAnonymous();
         AccessTier tier = resolveTier(roles, anonymous, dev, sec);
-        boolean devHeaderOn = sec.devTierHeaderEnabled();
-        return forTier(tier, devHeaderOn, devHeaderOn, sec.loginAvailable());
+        boolean devCookieOn = sec.devTierCookieEnabled();
+        return forTier(tier, devCookieOn, devCookieOn, sec.loginAvailable());
     }
 
     /**
      * Core tier resolution; used by {@link #resolve(SecurityIdentity, DevTierContext)} and unit tests.
      */
+    @SuppressWarnings("null")
     static AccessTier resolveTier(
             Set<String> roles,
             boolean anonymous,

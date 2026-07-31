@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Values for the {@code X-Reson8-Dev-Tier} header (development / test only).
+ * Values for dev-tier simulation cookie {@code reson8-dev-tier} (development / test only).
  */
 public enum DevTierSelection {
     ADMIN,

@@ -1,10 +1,12 @@
 FROM registry.access.redhat.com/ubi10/openjdk-21:latest
 USER root
-# Built on a subscribed RHEL 10 host: Podman mounts /run/secrets/rhsm automatically,
-# giving this build access to the full RHEL 10 repo set (including AppStream).
+# Default path: built by an OpenShift BuildConfig in the builder namespace.
+# Supported fallback path: build locally on a workstation registered to
+# RHSM/Satellite, then push to the cluster registry as reson8-build/reson8-base:latest.
+# Cluster build defaults mount /etc/pki/entitlement from etc-pki-entitlement when present.
 RUN microdnf install -y \
       gstreamer1 \
       gstreamer1-plugins-base \
-      gstreamer1-plugins-good \
+      gstreamer1-plugins-bad-free \
     && microdnf clean all
 USER 185

@@ -13,13 +13,10 @@ import jakarta.ws.rs.ext.Provider;
 import io.quarkus.arc.Unremovable;
 
 /**
- * When {@link Reson8Config.SecurityConfig#devTierHeaderEnabled()} is true (dev / test), parses
- * {@value DevTierRequestFilter#X_RESON8_DEV_TIER} first, then falls back to cookie
- * {@value DevTierRequestFilter#DEV_TIER_COOKIE}.
+ * When {@link Reson8Config.SecurityConfig#devTierCookieEnabled()} is true (dev / test), parses
+ * cookie {@value DevTierRequestFilter#DEV_TIER_COOKIE} for tier simulation.
  * <p>
- * Header takes precedence so API requests can override an existing browser cookie in dev/test.
- * Cookie fallback exists because {@code GET /audio/stream} from an HTML {@code audio} element
- * cannot send custom headers.
+ * Cookie-only behavior keeps API and media requests consistent for the same browser session.
  * No-op in production when the flag is false.
  */
 @Provider
@@ -28,9 +25,7 @@ import io.quarkus.arc.Unremovable;
 @jakarta.annotation.Priority(Priorities.AUTHENTICATION - 200)
 public class DevTierRequestFilter implements ContainerRequestFilter {
 
-    /** Header used by SPA/API fetch requests in dev/test. */
-    public static final String X_RESON8_DEV_TIER = "X-Reson8-Dev-Tier";
-    /** Cookie used by browser media requests (e.g. {@code /audio/stream}) in dev/test. */
+    /** Cookie used by browser requests in dev/test. */
     public static final String DEV_TIER_COOKIE = "reson8-dev-tier";
 
     private final Reson8Config config;
@@ -44,14 +39,11 @@ public class DevTierRequestFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        if (!config.security().devTierHeaderEnabled()) {
+        if (!config.security().devTierCookieEnabled()) {
             return;
         }
-        String raw = requestContext.getHeaderString(X_RESON8_DEV_TIER);
-        if (raw == null || raw.isBlank()) {
-            Cookie cookie = requestContext.getCookies().get(DEV_TIER_COOKIE);
-            raw = cookie != null ? cookie.getValue() : null;
-        }
+        Cookie cookie = requestContext.getCookies().get(DEV_TIER_COOKIE);
+        String raw = cookie != null ? cookie.getValue() : null;
         DevTierSelection.parse(raw).ifPresent(devTierContext::setSelection);
     }
 }

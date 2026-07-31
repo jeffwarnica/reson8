@@ -2,12 +2,13 @@ package com.coherentnetworksolutions.reson8.k8s;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.MixedOperation;
+import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.kubernetes.client.KubernetesServer;
 import io.quarkus.test.kubernetes.client.KubernetesTestServer;
@@ -57,8 +58,8 @@ class K8sConnectivityCheckTest {
     @SuppressWarnings("unchecked")
     void testHealthCheckDown() throws Exception {
         KubernetesClient throwingClient = mock(KubernetesClient.class);
-        MixedOperation<?, ?, ?> nodesOp = mock(MixedOperation.class);
-        when(throwingClient.nodes()).thenReturn((MixedOperation) nodesOp);
+        NonNamespaceOperation<?, NodeList, ?> nodesOp = mock(NonNamespaceOperation.class);
+        doReturn(nodesOp).when(throwingClient).nodes();
         when(nodesOp.list()).thenThrow(new RuntimeException("simulated failure"));
 
         K8sConnectivityCheck check = new K8sConnectivityCheck();

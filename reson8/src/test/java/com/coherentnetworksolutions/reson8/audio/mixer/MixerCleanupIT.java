@@ -5,7 +5,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import jakarta.inject.Inject;
 
-import org.freedesktop.gstreamer.Element;
+// import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.ElementFactory;
 import org.freedesktop.gstreamer.Pipeline;
 import org.freedesktop.gstreamer.State;
@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,7 +78,8 @@ class MixerCleanupIT {
                });
 
         quiescentNames = pipeline().getElements().stream()
-                .map(Element::getName)
+                .map(element -> element != null ? element.getName() : null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Log.infof("Quiescent pipeline (%d elements): %s", quiescentNames.size(), quiescentNames);
     }
@@ -114,7 +116,8 @@ class MixerCleanupIT {
 
         // 3. Snapshot after removal
         Set<String> afterNames = pipeline().getElements().stream()
-                .map(Element::getName)
+                .map(element -> element != null ? element.getName() : null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         Log.infof("After names: [%s]", afterNames);

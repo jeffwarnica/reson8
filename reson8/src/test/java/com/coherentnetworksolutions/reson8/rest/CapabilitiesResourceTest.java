@@ -15,6 +15,7 @@ import io.restassured.http.ContentType;
 
 @QuarkusTest
 class CapabilitiesResourceTest {
+    private static final String COOKIE_HEADER = "Cookie";
 
     @BeforeEach
     void assertNotNativeGst() {
@@ -40,10 +41,10 @@ class CapabilitiesResourceTest {
     }
 
     @Test
-    @DisplayName("GET /api/capabilities: dev header selects admin tier")
-    void capabilities_devHeaderAdmin() {
+    @DisplayName("GET /api/capabilities: dev cookie selects admin tier")
+    void capabilities_devCookieAdmin() {
         given()
-                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "admin")
+                .header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=admin")
                 .when()
                 .get("/api/capabilities")
                 .then()
@@ -54,10 +55,10 @@ class CapabilitiesResourceTest {
     }
 
     @Test
-    @DisplayName("GET /api/capabilities: dev header anonymous -> STREAM when sentinel listed")
-    void capabilities_devHeaderAnonymous_streamTier() {
+    @DisplayName("GET /api/capabilities: dev cookie anonymous -> STREAM when sentinel listed")
+    void capabilities_devCookieAnonymous_streamTier() {
         given()
-                .header(DevTierRequestFilter.X_RESON8_DEV_TIER, "anonymous")
+                .header(COOKIE_HEADER, DevTierRequestFilter.DEV_TIER_COOKIE + "=anonymous")
                 .when()
                 .get("/api/capabilities")
                 .then()

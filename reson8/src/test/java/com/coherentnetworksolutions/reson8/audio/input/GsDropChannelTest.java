@@ -386,6 +386,7 @@ class GsDropChannelTest {
     // -----------------------------------------------------------------------
 
     @Test
+    @SuppressWarnings("null")
     void testConcurrentTriggersBothCleanUp() {
         channel.trigger();
         channel.trigger();

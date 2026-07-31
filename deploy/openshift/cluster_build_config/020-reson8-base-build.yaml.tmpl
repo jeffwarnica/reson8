@@ -1,0 +1,47 @@
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: reson8-base
+  namespace: ${TARGET_NS}
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: reson8-base
+  namespace: ${TARGET_NS}
+spec:
+  runPolicy: SerialLatestOnly
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  source:
+    type: Dockerfile
+    dockerfile: |
+      FROM image-registry.openshift-image-registry.svc:5000/${TARGET_NS}/ubi10-openjdk-21:latest
+      USER root
+      RUN microdnf install -y \
+            gstreamer1 \
+            gstreamer1-plugins-base \
+            gstreamer1-plugins-bad-free \
+          && microdnf clean all
+      USER 185
+  strategy:
+    type: Docker
+    dockerStrategy:
+      from:
+        kind: ImageStreamTag
+        name: ubi10-openjdk-21:latest
+  output:
+    to:
+      kind: ImageStreamTag
+      name: reson8-base:latest
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChange:
+        from:
+          kind: ImageStreamTag
+          name: ubi10-openjdk-21:latest

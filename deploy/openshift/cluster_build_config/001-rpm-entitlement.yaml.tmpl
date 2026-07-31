@@ -1,0 +1,110 @@
+---
+# Service account and RBAC for entitlement sync jobs.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cronjob-secret-syncer
+  namespace: ${SYNC_CRONJOB_NS}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: read-entitlement-secret
+  namespace: ${SYNC_CRONJOB_NS}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["${ENTITLEMENT_SECRET}"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cronjob-secret-syncer-read-entitlement
+  namespace: ${SYNC_CRONJOB_NS}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: read-entitlement-secret
+subjects:
+  - kind: ServiceAccount
+    name: cronjob-secret-syncer
+    namespace: ${SYNC_CRONJOB_NS}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sync-entitlement-into-build-ns
+  namespace: ${TARGET_NS}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["${ENTITLEMENT_SECRET}"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cronjob-secret-syncer-write-build-ns
+  namespace: ${TARGET_NS}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sync-entitlement-into-build-ns
+subjects:
+  - kind: ServiceAccount
+    name: cronjob-secret-syncer
+    namespace: ${SYNC_CRONJOB_NS}
+---
+# Syncs the entitlement secret from openshift-config-managed to the build namespace every hour.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sync-entitlements
+  namespace: ${SYNC_CRONJOB_NS}
+spec:
+  schedule: "0 */1 * * *"  # Syncs every hour
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: cronjob-secret-syncer
+          containers:
+          - name: oc-cli
+            image: registry.redhat.io/openshift4/ose-cli:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              tmpdir="$(mktemp -d)"
+              oc extract secret/${ENTITLEMENT_SECRET} -n ${SYNC_CRONJOB_NS} --to="${tmpdir}" --confirm
+              if oc get secret ${ENTITLEMENT_SECRET} -n ${TARGET_NS} >/dev/null 2>&1; then
+                oc delete secret ${ENTITLEMENT_SECRET} -n ${TARGET_NS}
+              fi
+              oc create secret generic ${ENTITLEMENT_SECRET} -n ${TARGET_NS} \
+                --from-file="${tmpdir}"
+              rm -rf "${tmpdir}"
+          restartPolicy: OnFailure
+...
+---
+# Injects the entitlement secret into the build cluster.
+apiVersion: config.openshift.io/v1
+kind: Build
+metadata:
+  name: cluster
+spec:
+  buildDefaults:
+    resources: {}
+    # Inject entitlement mounts globally for Docker/S2I strategies
+    volumes:
+      - name: etc-pki-entitlement
+        mounts:
+          - destinationPath: /etc/pki/entitlement
+        source:
+          type: Secret
+          secret:
+            secretName: etc-pki-entitlement
+            optional: true # Ensure build succeeds even if secret is missing

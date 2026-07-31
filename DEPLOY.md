@@ -5,6 +5,8 @@ metrics and uses them to drive a GStreamer audio pipeline served as an HTTP stre
 Deployment therefore has two layers of setup that a standard web service does not need:
 a custom GStreamer base image and cluster-scoped RBAC.
 
+For day-to-day contributor code/test/build/deploy loops, see `CONTRIBUTING.md`.
+
 ---
 
 ## Prerequisites
@@ -12,7 +14,7 @@ a custom GStreamer base image and cluster-scoped RBAC.
 | Tool | Why |
 |------|-----|
 | `oc` CLI, logged in | Applies manifests and drives BuildConfigs |
-| Project-admin rights on the `reson8` namespace | Applies the generated Quarkus manifests |
+| Project-admin rights on runtime (`reson8`) and builder (`reson8-build`) namespaces | Applies generated Quarkus manifests and builder resources |
 | Cluster-admin rights (bootstrap only) | Creates `ClusterRole` / `ClusterRoleBinding` |
 | Java 21 + Maven wrapper (`./mvnw`) | Builds the JAR locally before triggering the in-cluster build |
 
@@ -20,9 +22,9 @@ a custom GStreamer base image and cluster-scoped RBAC.
 
 ## Step 1 — Bootstrap (one time, cluster-admin)
 
-These steps create the namespace, build the GStreamer base image inside the cluster,
-and grant the app the RBAC it needs. Run once per cluster. Re-run only if the base
-image or RBAC changes.
+These steps create the runtime namespace, bootstrap a dedicated builder namespace
+for `reson8-base`, and grant the app the RBAC it needs. Run once per cluster.
+Re-run when base-build automation or RBAC changes.
 
 ### 1a. Create the namespace
 
@@ -30,46 +32,78 @@ image or RBAC changes.
 oc new-project reson8
 ```
 
-### 1b. Build the GStreamer base image
+### 1b. Bootstrap the builder namespace (`reson8-base`)
 
-The base image (`ubi10/openjdk-21` + GStreamer) **must be built on a subscribed
-RHEL 10 host**. When Podman runs on a subscribed RHEL system it automatically
-mounts `/run/secrets/rhsm` into the build container, giving `dnf` access to the
-full RHEL 10 repo set (including AppStream where the GStreamer packages live).
-OpenShift's in-cluster build pods do not carry a subscription, which is why this
-step is done locally rather than via a BuildConfig.
-
-**Expose the internal registry route (cluster-admin, once per cluster):**
+Run the builder bootstrap script from repo root:
 
 ```bash
-oc patch configs.imageregistry.operator.openshift.io/cluster \
-  --patch '{"spec":{"defaultRoute":true}}' \
-  --type=merge
+./deploy/openshift/deploy-reson8-builder.sh
 ```
 
-**Build and push (run from the repo root on a subscribed RHEL 10 host):**
+Defaults:
+- Builder namespace: `reson8-build` (`OPENSHIFT_BUILD_PROJECT`)
+- Runtime namespace that pulls base image: `reson8` (`OPENSHIFT_PROJECT`)
+
+The script:
+1. Creates the builder namespace if missing.
+2. Applies `deploy/openshift/cluster_build_config/*.yaml.tmpl` with `envsubst`.
+3. Installs:
+   - a scheduled UBI `ImageStream` import (`ubi10-openjdk-21:latest`)
+   - `reson8-base` `ImageStream`
+   - `reson8-base` `BuildConfig` with `ImageChange` trigger from UBI
+   - cross-namespace image-puller RBAC so runtime namespace ServiceAccounts can pull from builder namespace
+4. Triggers a one-shot entitlement sync job immediately, so the build namespace receives
+   `etc-pki-entitlement` now (without waiting for the hourly cron schedule).
+5. Triggers an initial `reson8-base` build (unless `SKIP_INITIAL_BUILD=1`).
+
+The entitlement sync template (`001-rpm-entitlement.yaml.tmpl`) uses `${TARGET_NS}` and is rendered by the same script.
+
+Resulting base image location:
+`image-registry.openshift-image-registry.svc:5000/reson8-build/reson8-base:latest`
+
+That is the `FROM` address used by `reson8/src/main/docker/Dockerfile.jvm`.
+
+Verify:
 
 ```bash
-# Resolve the external hostname of the internal registry
-REGISTRY=$(oc get route default-route -n openshift-image-registry \
-  -o jsonpath='{.spec.host}')
+oc get is -n reson8-build
+oc get bc -n reson8-build
+oc get builds -n reson8-build --sort-by=.metadata.creationTimestamp | tail -n 5
+```
 
-# Authenticate Podman against the internal registry
-podman login -u $(oc whoami) -p $(oc whoami -t) $REGISTRY
+#### 1b-alt. Local workstation fallback (`Containerfile.gstreamer-base`)
 
-# Build the GStreamer base image (subscription is used automatically via /run/secrets/rhsm)
-podman build \
+If you cannot run the in-cluster base build flow, you can build from a registered RHEL
+workstation (RHSM/Satellite) and push to the same builder namespace image repository.
+
+From repo root:
+
+```bash
+podman build --pull=always --no-cache \
   -f reson8/src/main/docker/Containerfile.gstreamer-base \
-  -t $REGISTRY/reson8/reson8-base:latest
-
-# Push to the internal registry
-podman push $REGISTRY/reson8/reson8-base:latest
+  -t localhost/reson8-base-devtest \
+  reson8
 ```
 
-The resulting image is available in-cluster at:
-`image-registry.openshift-image-registry.svc:5000/reson8/reson8-base:latest`
+Push as `reson8-build/reson8-base:latest`:
 
-This is the `FROM` address in `reson8/src/main/docker/Dockerfile.jvm`.
+```bash
+REGISTRY="$(oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}')"
+podman login -u "$(oc whoami)" -p "$(oc whoami -t)" "$REGISTRY"
+podman tag localhost/reson8-base-devtest:latest "$REGISTRY/reson8-build/reson8-base:latest"
+podman push "$REGISTRY/reson8-build/reson8-base:latest"
+```
+
+Then run the normal app deploy to rebuild runtime image layers against the refreshed base:
+
+```bash
+./deploy/openshift/deploy-reson8.sh
+```
+
+This fallback is useful for developers who can read cluster monitoring streams but do not
+have permissions to run/modify BuildConfigs in the builder namespace.
+For full local-from-scratch run paths (JVM dev mode and local containerized runtime),
+see `CONTRIBUTING.md`.
 
 ### 1c. Apply cluster-scoped RBAC
 
@@ -197,9 +231,9 @@ Three deliberately different setups:
 
 | Situation | OIDC | Tier simulation | Typical tier enforcement |
 |-----------|------|-----------------|---------------------------|
-| **`quarkus:dev`** (`%dev`) | Off — `%dev.quarkus.oidc.enabled=false` | **`X-Reson8-Dev-Tier`** header + **`?reson8-dev-tier=`** on `/audio/stream` when the dev toolbar is on | Defaults stay **on**; use simulation headers/query or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
+| **`quarkus:dev`** (`%dev`) | Off — `%dev.quarkus.oidc.enabled=false` | `reson8-dev-tier` cookie when the dev toolbar is on | Defaults stay **on**; use tier-simulation cookie or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
 | **`mvn package` / image build** (`%prod` bundle) | Unqualified key unset (Quarkus default true) | N/A | Bootstrap resolves issuer **at runtime** in-cluster once pods set **`quarkus.oidc.enabled=true`** (see OIDC subsection). |
-| **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-header-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml). |
+| **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-cookie-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml). |
 
 **Reasonable defaults for many clusters** (adjust group names to match your IdP’s claims):
 
@@ -242,7 +276,7 @@ This Maven-driven deploy:
 
 1. Compiles and packages the application JAR (`target/quarkus-app/`).
 2. Creates or updates a `BuildConfig` in OpenShift with **Dockerfile build strategy** (`spec.strategy.type: Docker` in the API — not your laptop's Docker CLI). OpenShift runs the build in-cluster (often Buildah/Podman). Points at
-   `src/main/docker/Dockerfile.jvm`.
+   `src/main/docker/Dockerfile.jvm`, which `FROM`s `reson8-base` from the builder namespace.
 3. Sends `target/quarkus-app/` as the in-cluster build context. Sound assets are
    extracted from the bundled application JAR inside the container recipe (`jar xf`), so
    no extra files need to be present in the build context.
@@ -331,9 +365,9 @@ https://<route-host>/audio/stream
 ## Image layout
 
 ```
-image-registry.../reson8/reson8-base:latest
+image-registry.../reson8-build/reson8-base:latest
   └── ubi10/openjdk-21:latest
-      └── gstreamer1 + gstreamer1-plugins-base + gstreamer1-plugins-good
+      └── gstreamer1 + gstreamer1-plugins-base + gstreamer1-plugins-bad-free
 
 image-registry.../reson8/reson8:latest
   └── reson8-base:latest
@@ -373,7 +407,7 @@ Tune these keys in the mounted `application.yml` (or equivalent properties) when
 | `reson8.security.stream-groups` | Stream-only tier; may include the anonymous sentinel |
 | `reson8.security.anonymous-stream-sentinel` | Defaults to `__anonymous__`; when this exact string appears in `stream-groups`, unauthenticated users may match stream-only (see product security doc for OAuth sidecar / ingress caveats) |
 | `reson8.security.login-available` | Advertised to the SPA (`GET /api/capabilities`); set `true` in production when OIDC login is wired |
-| `reson8.security.dev-tier-header-enabled` | Enables `X-Reson8-Dev-Tier` simulation — **`false` in production** |
+| `reson8.security.dev-tier-cookie-enabled` | Enables `reson8-dev-tier` cookie simulation — **`false` in production** |
 | `reson8.security.endpoint-authorization-enabled` | Enforces tiers on `/audio/control`, `/audio/drop`, `/api/debug`, and `/audio/stream`; defaults **`true`** on `Reson8Config.SecurityConfig` |
 
 Lists may be empty. The **same group must not appear in more than one** of the three lists — the application fails fast at startup if they overlap. When resolving a subject, tier precedence is **admin > viewer > stream**.
@@ -482,7 +516,8 @@ oc adm policy add-role-to-user view \
 Check the pod logs for the signal name that returned 401 to identify which namespaces are affected.
 
 **GStreamer `WARN` or plugin-not-found errors**
-The base image may be stale. Rebuild and re-push it (see Step 1b), then redeploy.
+The base image may be stale. Re-run `./deploy/openshift/deploy-reson8-builder.sh` (or
+`oc start-build reson8-base -n reson8-build --wait`) and redeploy.
 
 **`WavCache` file-not-found at startup**
 The OpenShift **container build** did not place sounds under `/opt/reson8/sounds/`. Confirm the

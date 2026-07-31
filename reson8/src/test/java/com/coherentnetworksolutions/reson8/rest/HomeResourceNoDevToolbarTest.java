@@ -16,7 +16,7 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
 /**
- * Ensures dev-only markup is not present in HTML when {@code dev-tier-header-enabled} is off.
+ * Ensures dev-only markup is not present in HTML when dev-tier simulation is disabled.
  */
 @QuarkusTest
 @TestProfile(HomeResourceNoDevToolbarTest.Profile.class)
@@ -43,7 +43,7 @@ class HomeResourceNoDevToolbarTest {
     public static class Profile implements QuarkusTestProfile {
         @Override
         public Map<String, String> getConfigOverrides() {
-            return Map.of("reson8.security.dev-tier-header-enabled", "false");
+            return Map.of("reson8.security.dev-tier-cookie-enabled", "false");
         }
     }
 }

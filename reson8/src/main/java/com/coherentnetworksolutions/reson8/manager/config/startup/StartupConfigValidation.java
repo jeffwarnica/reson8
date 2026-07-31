@@ -3,6 +3,7 @@ package com.coherentnetworksolutions.reson8.manager.config.startup;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
@@ -34,9 +35,16 @@ public class StartupConfigValidation {
 
     @PostConstruct
     void runAllContributors() {
+        Comparator<StartupConfigContributor> byOrderThenName = (left, right) -> {
+            StartupConfigContributor l = Objects.requireNonNull(left, "left contributor");
+            StartupConfigContributor r = Objects.requireNonNull(right, "right contributor");
+            int byOrder = Integer.compare(l.order(), r.order());
+            return byOrder != 0 ? byOrder : l.contributorName().compareTo(r.contributorName());
+        };
+
         List<StartupConfigContributor> sorted = contributors.stream()
-                .sorted(Comparator.comparingInt(StartupConfigContributor::order)
-                        .thenComparing(c -> c.contributorName()))
+                .filter(Objects::nonNull)
+                .sorted(byOrderThenName)
                 .toList();
 
         Log.infof("Startup configuration validation starting (%d contributor(s))", sorted.size());
