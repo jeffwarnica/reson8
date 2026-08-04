@@ -87,13 +87,22 @@ public class GsMixer implements Mixer {
         // The "Splitter" - every output channel will connect to this
         this.masterTee = ElementFactory.make("tee", "master_tee");
         
-        // The Level Probe (The Master VU Meter)
-        this.levelProbe = ElementFactory.make("level", "master_level_probe");
-        levelProbe.set("post-messages", true);
-        levelProbe.set("message", true);
-        levelProbe.set("interval", 1000000000L);  //1 second?
-
-        pipeline.addMany(mixerElement, outConv, outRes, mixerCaps, masterTee, levelProbe, outVol);
+        // The Level Probe (Master VU Meter) is optional. Some runtime images may
+        // not include the plugin that provides the "level" element.
+        try {
+            this.levelProbe = ElementFactory.make("level", "master_level_probe");
+        } catch (IllegalArgumentException e) {
+            Log.warnf("GStreamer 'level' plugin unavailable; continuing without VU probe: %s", e.getMessage());
+            this.levelProbe = null;
+        }
+        if (levelProbe != null) {
+            levelProbe.set("post-messages", true);
+            levelProbe.set("message", true);
+            levelProbe.set("interval", 1000000000L);  //1 second
+            pipeline.addMany(mixerElement, outConv, outRes, mixerCaps, masterTee, levelProbe, outVol);
+        } else {
+            pipeline.addMany(mixerElement, outConv, outRes, mixerCaps, masterTee, outVol);
+        }
 
         // Link: Mixer -> Convert -> Resample -> Tee
         mixerElement.link(outConv);
@@ -102,17 +111,19 @@ public class GsMixer implements Mixer {
         mixerCaps.link(outVol);
         outVol.link(masterTee);
         
-        // Attach the level probe to one branch of the Tee permanently
-        // This ensures there is ALWAYS a consumer for the mixer data
-        Pad teeLevelPad = masterTee.getRequestPad("src_%u");
-        teeLevelPad.link(levelProbe.getStaticPad("sink"));
-        
-        // Add a fakeSink after the level probe to "drain" the data
-        Element fakeSink = ElementFactory.make("fakesink", "level_drain");
-        fakeSink.set("sync", false);
-        fakeSink.set("async", false);
-        pipeline.add(fakeSink);
-        levelProbe.link(fakeSink);
+        if (levelProbe != null) {
+            // Attach the level probe to one branch of the tee permanently.
+            // This ensures there is always a consumer for mixer data.
+            Pad teeLevelPad = masterTee.getRequestPad("src_%u");
+            teeLevelPad.link(levelProbe.getStaticPad("sink"));
+
+            // Add a fake sink after the level probe to drain that branch.
+            Element fakeSink = ElementFactory.make("fakesink", "level_drain");
+            fakeSink.set("sync", false);
+            fakeSink.set("async", false);
+            pipeline.add(fakeSink);
+            levelProbe.link(fakeSink);
+        }
 
         // This tells the mixer: "Don't wait for all pads to have data before starting"
         mixerElement.set("start-time-selection", 0);

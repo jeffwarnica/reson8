@@ -45,6 +45,18 @@ When running, open:
 This module is configured for OpenShift image/build flow and emits route + Prometheus
 ServiceMonitor metadata.
 
+Preferred flow (deploys into the same cluster-test namespace as `reson8`):
+
+```bash
+./deploy/run.sh cluster-test
+```
+
+Preview-only reconciliation:
+
+```bash
+./deploy/run.sh cluster-test --dry-run
+```
+
 From repository root:
 
 ```bash

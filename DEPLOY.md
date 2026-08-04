@@ -17,6 +17,7 @@ For day-to-day contributor code/test/build/deploy loops, see `CONTRIBUTING.md`.
 | Project-admin rights on runtime (`reson8`) and builder (`reson8-build`) namespaces | Applies generated Quarkus manifests and builder resources |
 | Cluster-admin rights (bootstrap only) | Creates `ClusterRole` / `ClusterRoleBinding` |
 | Java 21 + Maven wrapper (`./mvnw`) | Builds the JAR locally before triggering the in-cluster build |
+| `podman` on a subscribed RHEL host (recommended) | Builds and pushes `reson8-base` when cluster repos are incomplete |
 
 ---
 
@@ -32,7 +33,7 @@ Re-run when base-build automation or RBAC changes.
 oc new-project reson8
 ```
 
-### 1b. Bootstrap the builder namespace (`reson8-base`)
+### 1b. Bootstrap the builder namespace (`reson8-base`, best-effort)
 
 Run the builder bootstrap script from repo root:
 
@@ -56,6 +57,13 @@ The script:
    `etc-pki-entitlement` now (without waiting for the hourly cron schedule).
 5. Triggers an initial `reson8-base` build (unless `SKIP_INITIAL_BUILD=1`).
 
+> **Important reliability note**
+>
+> This in-cluster build path is **best-effort**. Even with entitlement sync, some clusters do
+> not expose the full set of required GStreamer RPMs to UBI-based BuildConfigs.
+> The BuildConfig now preflights those RPMs and fails early with a clear error when they are
+> unavailable. Treat that failure as a signal to use the local subscribed-host flow below.
+
 The entitlement sync template (`001-rpm-entitlement.yaml.tmpl`) uses `${TARGET_NS}` and is rendered by the same script.
 
 Resulting base image location:
@@ -71,17 +79,18 @@ oc get bc -n reson8-build
 oc get builds -n reson8-build --sort-by=.metadata.creationTimestamp | tail -n 5
 ```
 
-#### 1b-alt. Local workstation fallback (`Containerfile.gstreamer-base`)
+#### 1b-alt. Local subscribed-host build (recommended)
 
-If you cannot run the in-cluster base build flow, you can build from a registered RHEL
-workstation (RHSM/Satellite) and push to the same builder namespace image repository.
+Build `reson8-base` from a registered RHEL workstation (RHSM/Satellite) and push to the same
+builder namespace image repository. This is the **recommended** path because it is the most
+deterministic way to source the required GStreamer RPMs.
 
 From repo root:
 
 ```bash
 podman build --pull=always --no-cache \
   -f reson8/src/main/docker/Containerfile.gstreamer-base \
-  -t localhost/reson8-base-devtest \
+  -t localhost/reson8-base:local \
   reson8
 ```
 
@@ -90,18 +99,19 @@ Push as `reson8-build/reson8-base:latest`:
 ```bash
 REGISTRY="$(oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}')"
 podman login -u "$(oc whoami)" -p "$(oc whoami -t)" "$REGISTRY"
-podman tag localhost/reson8-base-devtest:latest "$REGISTRY/reson8-build/reson8-base:latest"
+podman tag localhost/reson8-base:local "$REGISTRY/reson8-build/reson8-base:latest"
 podman push "$REGISTRY/reson8-build/reson8-base:latest"
 ```
 
 Then run the normal app deploy to rebuild runtime image layers against the refreshed base:
 
 ```bash
-./deploy/openshift/deploy-reson8.sh
+CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 ```
 
-This fallback is useful for developers who can read cluster monitoring streams but do not
-have permissions to run/modify BuildConfigs in the builder namespace.
+This path is useful both when BuildConfig repo access is incomplete and for developers who can
+read cluster monitoring streams but do not have permissions to run/modify BuildConfigs in the
+builder namespace.
 For full local-from-scratch run paths (JVM dev mode and local containerized runtime),
 see `CONTRIBUTING.md`.
 
@@ -180,13 +190,13 @@ in the cluster, use a **cluster overlay file**:
 
 ```bash
 # One-time setup: copy the example and fill in your cluster values
-cp deploy/openshift/application-cluster-overlay.example.yaml \
-   deploy/openshift/application-cluster-overlay.yaml
+cp deploy/openshift/runtime_config/application-cluster-overlay.example.yaml \
+   deploy/openshift/runtime_config/application-cluster-overlay.yaml
 # Edit the file — set quarkus.oidc.enabled, admin-groups, viewer-groups, etc.
 # This file is gitignored; never commit it.
 ```
 
-The deploy script automatically deep-merges `application-cluster-overlay.yaml` over `application.yml`
+The deploy script automatically deep-merges `runtime_config/application-cluster-overlay.yaml` over `application.yml`
 before syncing the ConfigMap. Without the overlay, every deploy would clobber any cluster-specific
 configuration you added manually.
 
@@ -199,7 +209,7 @@ The overlay file is the safe, repeatable way to supply those keys.
 Use the deploy script (preferred — merges overlay automatically):
 
 ```bash
-./deploy/openshift/deploy-reson8.sh
+CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 ```
 
 Or manually (no overlay merge — OIDC and group config from overlay will be lost):
@@ -233,7 +243,7 @@ Three deliberately different setups:
 |-----------|------|-----------------|---------------------------|
 | **`quarkus:dev`** (`%dev`) | Off — `%dev.quarkus.oidc.enabled=false` | `reson8-dev-tier` cookie when the dev toolbar is on | Defaults stay **on**; use tier-simulation cookie or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
 | **`mvn package` / image build** (`%prod` bundle) | Unqualified key unset (Quarkus default true) | N/A | Bootstrap resolves issuer **at runtime** in-cluster once pods set **`quarkus.oidc.enabled=true`** (see OIDC subsection). |
-| **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-cookie-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml). |
+| **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-cookie-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/runtime_config/application-cluster-overlay.example.yaml`](deploy/openshift/runtime_config/application-cluster-overlay.example.yaml). |
 
 **Reasonable defaults for many clusters** (adjust group names to match your IdP’s claims):
 
@@ -245,46 +255,70 @@ Three deliberately different setups:
 
 Example overlay (see step 1e for the full workflow):
 
-[`deploy/openshift/application-cluster-overlay.example.yaml`](deploy/openshift/application-cluster-overlay.example.yaml)
+[`deploy/openshift/runtime_config/application-cluster-overlay.example.yaml`](deploy/openshift/runtime_config/application-cluster-overlay.example.yaml)
 
-Copy to `deploy/openshift/application-cluster-overlay.yaml` (gitignored), fill in your group names, then run the deploy script — it merges the overlay automatically.
+Copy to `deploy/openshift/runtime_config/application-cluster-overlay.yaml` (gitignored), fill in your group names, then run the deploy script — it merges the overlay automatically.
 
 ---
 
 ## Step 2 — Deploy (developer, every release)
 
-Ensure the ConfigMap is current first (step 1e). **`./mvnw package -pl reson8 -Dquarkus.openshift.deploy=true`** (from the repo root) applies the **merged** manifest under **`reson8/target/kubernetes/openshift.yml`**. This includes Quarkus-generated runtime resources (`Deployment`, `Service`, `Route`, image/build objects) plus fragments from **`reson8/src/main/kubernetes/openshift.yml`** (currently `ServiceAccount`, OAuth token `Secret`, trusted CA `ConfigMap`, and Deployment patch). Maven deploy does **not** apply **`deploy/rbac.yml`** (cluster RBAC from step 1c) or create **`reson8-config`** from **`application.yml`** — those must exist separately before pods mount config or pass readiness.
-
-Optional wrapper (syncs **`reson8-config`**, optionally reapplies cluster RBAC, then Maven):
+Use the top-level mode wrapper from repo root:
 
 ```bash
-./deploy/openshift/deploy-reson8.sh
-# Cluster-admin bootstrap on a fresh cluster (idempotent):
-APPLY_CLUSTER_RBAC=1 ./deploy/openshift/deploy-reson8.sh
+# Local developer loop (no cluster apply)
+./deploy/run.sh local-dev
+
+# In-cluster test lane (namespace: reson8-dev-$USER)
+./deploy/run.sh cluster-test
+
+# Preview-only (no cluster mutations; uses oc diff)
+./deploy/run.sh cluster-test --dry-run
 ```
 
-Forward Maven flags through the wrapper (e.g. `-DskipTests`).
+`cluster-test` uses script-driven reconciliation:
 
-Minimal equivalent without the script:
+1. Ensures/switches to the test namespace (`${BASE_NS}-dev-${USER}`).
+2. Reconciles builder resources in the shared builder namespace (default `reson8-build`).
+3. Builds/publishes `reson8-base` according to `BASE_IMAGE_SOURCE`:
+   - `auto` (default): try in-cluster build first; if it fails, fall back to local build+push.
+   - `cluster`: use only in-cluster BuildConfig flow.
+   - `local`: use only local subscribed-host build+push.
+   (`FORCE_BASE_REBUILD=1` still forces an in-cluster rebuild when the cluster path is used.)
+4. Syncs `reson8-config` by merging `application.yml` with
+   `runtime_config/application-cluster-overlay.yaml`.
+5. Runs Maven in **generation-only** mode (no direct deploy/push/build) and writes
+   manifests under the configured output directory (default `.generated/quarkus`, gitignored).
+6. Applies generated OpenShift manifests via `oc apply`.
+7. Waits for rollout/readiness and performs a route health check for `reson8`.
+8. Generates/applies `disson8` in the same namespace and waits for `disson8` rollout/readiness.
+
+Runtime image tags follow the Maven project version (currently `1.0.0-SNAPSHOT`), not `latest`.
+In `cluster-test`, the image group/namespace is `${BASE_NS}-dev-${USER}` for both modules.
+
+Generation-only Maven flags used by the wrapper:
 
 ```bash
-cd reson8
-./mvnw package -Dquarkus.openshift.deploy=true
+-Dquarkus.openshift.deploy=false
+-Dquarkus.container-image.build=false
+-Dquarkus.container-image.push=false
+-Dquarkus.kubernetes.output-directory=.generated/quarkus
 ```
 
-This Maven-driven deploy:
+`deploy/run.sh` is the only supported deploy entrypoint.
 
-1. Compiles and packages the application JAR (`target/quarkus-app/`).
-2. Creates or updates a `BuildConfig` in OpenShift with **Dockerfile build strategy** (`spec.strategy.type: Docker` in the API — not your laptop's Docker CLI). OpenShift runs the build in-cluster (often Buildah/Podman). Points at
-   `src/main/docker/Dockerfile.jvm`, which `FROM`s `reson8-base` from the builder namespace.
-3. Sends `target/quarkus-app/` as the in-cluster build context. Sound assets are
-   extracted from the bundled application JAR inside the container recipe (`jar xf`), so
-   no extra files need to be present in the build context.
-4. Waits for the image build to complete and pushes the result to the internal registry
-   at `image-registry.openshift-image-registry.svc:5000/reson8/reson8:latest`.
-5. Applies the merged OpenShift manifests (`Deployment`, `Service`, `Route`, image/build
-   objects, fragment resources above). The `Deployment` includes a `volumeMount` for
-   **`reson8-config`** at `/deployments/config/` (from **`quarkus.openshift.config-map-volumes`**); that **`ConfigMap`** is **not** created by this step — refresh it via step 1e or the wrapper.
+`cluster-test --dry-run` performs the same generation and reconciliation logic but runs
+`oc diff` instead of `oc apply`, skips base-image rebuild, and skips rollout/readiness checks.
+
+Example base-image source overrides:
+
+```bash
+# Force local subscribed-host base image build+push
+BASE_IMAGE_SOURCE=local ./deploy/run.sh cluster-test
+
+# Force in-cluster only (disable fallback)
+BASE_IMAGE_SOURCE=cluster ALLOW_LOCAL_BASE_FALLBACK=0 ./deploy/run.sh cluster-test
+```
 
 ### Readiness gate
 
@@ -367,13 +401,16 @@ https://<route-host>/audio/stream
 ```
 image-registry.../reson8-build/reson8-base:latest
   └── ubi10/openjdk-21:latest
-      └── gstreamer1 + gstreamer1-plugins-base + gstreamer1-plugins-bad-free
+      └── gstreamer1 + gstreamer1-plugins-base + gstreamer1-plugins-good + gstreamer1-plugins-bad-free
 
-image-registry.../reson8/reson8:latest
+image-registry.../<runtime-namespace>/reson8:1.0.0-SNAPSHOT
   └── reson8-base:latest
       ├── /opt/reson8/sounds/   (WAV assets extracted from app JAR during image build)
       ├── /deployments/config/  (ConfigMap reson8-config mounted here at pod start)
       └── /deployments/         (Quarkus fast-JAR layers)
+
+image-registry.../<runtime-namespace>/disson8:1.0.0-SNAPSHOT
+  └── UBI9 OpenJDK 21 S2I builder chain (does not consume reson8-base)
 ```
 
 ---
@@ -386,7 +423,7 @@ under the `# --- OpenShift deployment ---` block. Key values:
 | Property | Value | Notes |
 |----------|-------|-------|
 | `quarkus.container-image.registry` | `image-registry.openshift-image-registry.svc:5000` | Internal registry in-cluster address |
-| `quarkus.container-image.group` | `reson8` | Must match the namespace |
+| `quarkus.container-image.group` | `reson8` | Wrapper scripts override this to the active target namespace (for `cluster-test`: `${BASE_NS}-dev-${USER}`) |
 | `quarkus.openshift.build-strategy` | `docker` | OpenShift **Dockerfile** strategy (fixed API value `docker`). Uses `Dockerfile.jvm`; required for GStreamer base + sounds. Cluster performs the build |
 | `quarkus.container-image.builder` | `openshift` | With `quarkus-container-image-podman` also on the classpath, keeps **in-cluster** deploy as the default. For **local** image builds with Podman, use `-Dquarkus.container-image.builder=podman -Dquarkus.container-image.build=true` |
 | `quarkus.openshift.service-account` | `reson8` | SA that holds the ClusterRoleBinding |
@@ -500,7 +537,7 @@ oc get clusterrolebinding reson8-monitoring-view
 ```
 If missing, re-apply RBAC:
 ```bash
-APPLY_CLUSTER_RBAC=1 ./deploy/openshift/deploy-reson8.sh
+APPLY_CLUSTER_RBAC=1 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 # or: oc apply -f deploy/rbac.yml
 ```
 
@@ -530,7 +567,7 @@ oc debug deployment/reson8 -n reson8 -- ls /opt/reson8/sounds/
 The pod caches the mounted ConfigMap. Re-sync and roll the deployment:
 ```bash
 # Preferred — merges cluster overlay (OIDC, groups) automatically:
-SKIP_CONFIGMAP=0 ./deploy/openshift/deploy-reson8.sh -DskipTests
+SYNC_CONFIGMAP=1 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod -DskipTests
 
 # Or manually (loses overlay keys — use only if you have no cluster overlay):
 oc create configmap reson8-config \

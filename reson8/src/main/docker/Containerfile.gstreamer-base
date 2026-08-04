@@ -4,9 +4,16 @@ USER root
 # Supported fallback path: build locally on a workstation registered to
 # RHSM/Satellite, then push to the cluster registry as reson8-build/reson8-base:latest.
 # Cluster build defaults mount /etc/pki/entitlement from etc-pki-entitlement when present.
-RUN microdnf install -y \
-      gstreamer1 \
-      gstreamer1-plugins-base \
-      gstreamer1-plugins-bad-free \
+RUN set -eux \
+    && microdnf install -y \
+         gstreamer1 \
+         gstreamer1-plugins-base \
+         gstreamer1-plugins-good \
+         gstreamer1-plugins-bad-free \
+    && if ! gst-inspect-1.0 audiocheblimit >/dev/null 2>&1; then \
+         echo "ERROR: required GStreamer plugin 'audiocheblimit' not found after install." >&2; \
+         echo "ERROR: ensure gstreamer1-plugins-good is available from enabled repositories." >&2; \
+         exit 43; \
+       fi \
     && microdnf clean all
 USER 185

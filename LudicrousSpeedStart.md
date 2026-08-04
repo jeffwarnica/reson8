@@ -35,7 +35,7 @@ cp deploy/openshift/runtime_config/application-cluster-overlay.example.yaml \
    deploy/openshift/runtime_config/application-cluster-overlay.yaml
 
 # Deploy (sync ConfigMap + build/deploy app)
-./deploy/openshift/deploy-reson8.sh
+CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 ```
 
 1) Local from-scratch base fallback (RHSM/Satellite workstation)
@@ -43,7 +43,7 @@ cp deploy/openshift/runtime_config/application-cluster-overlay.example.yaml \
 ```bash
 podman build --pull=always --no-cache \
   -f reson8/src/main/docker/Containerfile.gstreamer-base \
-  -t localhost/reson8-base-devtest \
+  -t localhost/reson8-base:local \
   reson8
 ```
 

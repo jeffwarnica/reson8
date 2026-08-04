@@ -5,7 +5,7 @@ reson8:
     # Tokenless listeners: must list the anonymous sentinel (same value as reson8.security.anonymous-stream-sentinel).
     stream-groups:
       - __anonymous__
-  # Optional: reson8.security.admin-groups, viewer-groups (see deploy/openshift/application-cluster-overlay.example.yaml).
+  # Optional: reson8.security.admin-groups, viewer-groups (see deploy/openshift/runtime_config/application-cluster-overlay.example.yaml).
   k8s:
     cluster: self # uses standard kube env vars 
     map: cool_project_map

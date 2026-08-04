@@ -55,7 +55,7 @@ Use local overrides/env as needed (for example `application-local.properties` co
 ```bash
 podman build --pull=always --no-cache \
   -f reson8/src/main/docker/Containerfile.gstreamer-base \
-  -t localhost/reson8-base-devtest \
+  -t localhost/reson8-base:local \
   reson8
 ```
 
@@ -69,7 +69,7 @@ podman build --pull=always --no-cache \
 
 ```bash
 podman build \
-  --from localhost/reson8-base-devtest \
+  --from localhost/reson8-base:local \
   -f reson8/src/main/docker/Dockerfile.jvm \
   -t localhost/reson8-jvm-local \
   reson8
@@ -118,7 +118,7 @@ Build locally from repo root:
 ```bash
 podman build --pull=always --no-cache \
   -f reson8/src/main/docker/Containerfile.gstreamer-base \
-  -t localhost/reson8-base-devtest \
+  -t localhost/reson8-base:local \
   reson8
 ```
 
@@ -130,24 +130,24 @@ REGISTRY="$(oc get route default-route -n openshift-image-registry -o jsonpath='
 
 # Login and push into builder namespace repository
 podman login -u "$(oc whoami)" -p "$(oc whoami -t)" "$REGISTRY"
-podman tag localhost/reson8-base-devtest:latest "$REGISTRY/reson8-build/reson8-base:latest"
+podman tag localhost/reson8-base:local "$REGISTRY/reson8-build/reson8-base:latest"
 podman push "$REGISTRY/reson8-build/reson8-base:latest"
 ```
 
 Then run app deploy loop so runtime image rebuilds against refreshed base:
 
 ```bash
-./deploy/openshift/deploy-reson8.sh
+CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 ```
 
-## 3) Application deploy loop (Quarkus OpenShift deploy)
+## 3) Application deploy loop (run wrapper + Quarkus OpenShift deploy)
 
 Use this when app code/config/manifests changed.
 
 Preferred wrapper:
 
 ```bash
-./deploy/openshift/deploy-reson8.sh
+CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 ```
 
 What it does:
@@ -183,7 +183,7 @@ Use Quarkus deploy when:
 
 1. Code + local tests (`quarkus:dev`, focused tests)
 2. Package locally (`./mvnw -pl reson8 package`)
-3. Deploy app (`./deploy/openshift/deploy-reson8.sh`)
+3. Deploy app (`CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod`)
 4. If runtime/base issues appear, rebuild base:
    `oc start-build reson8-base -n reson8-build --wait`
 5. Re-run app deploy wrapper

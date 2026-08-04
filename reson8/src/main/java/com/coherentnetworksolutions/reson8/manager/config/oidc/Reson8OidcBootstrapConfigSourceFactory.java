@@ -171,11 +171,9 @@ public final class Reson8OidcBootstrapConfigSourceFactory implements ConfigSourc
         // Quarkus OIDC supports nested claim paths via '.' notation.
         props.put("quarkus.oidc.token.principal-claim", "metadata.name");
 
-        // Logout: clearing the Quarkus q_session cookie (HttpOnly) requires a server-side handler.
-        // OpenShift OAuth does not expose an end-session endpoint, so Quarkus only clears the local
-        // session cookie and redirects back to the app root — no RP-initiated logout round-trip.
-        props.put("quarkus.oidc.logout.path", "/logout");
-        props.put("quarkus.oidc.logout.post-logout-uri", "/");
+        // Do not force RP-initiated logout properties here.
+        // Some OAuth providers (including OpenShift OAuth metadata flow) do not advertise
+        // end_session_endpoint, and forcing logout config can abort startup.
 
         Optional<String> explicitIssuer = resolvedAuthServerUrl(context);
         if (explicitIssuer.isPresent()) {

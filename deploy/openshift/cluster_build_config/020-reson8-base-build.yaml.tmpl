@@ -22,11 +22,28 @@ spec:
     dockerfile: |
       FROM image-registry.openshift-image-registry.svc:5000/${TARGET_NS}/ubi10-openjdk-21:latest
       USER root
-      RUN microdnf install -y \
-            gstreamer1 \
-            gstreamer1-plugins-base \
-            gstreamer1-plugins-bad-free \
-          && microdnf clean all
+      RUN set -eux \
+        && required_pkgs="gstreamer1 gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free" \
+        && missing_pkgs="" \
+        && microdnf repolist \
+        && for pkg in ${required_pkgs}; do \
+             if ! microdnf repoquery "${pkg}" >/dev/null 2>&1; then \
+               missing_pkgs="${missing_pkgs} ${pkg}"; \
+             fi; \
+           done \
+        && if [ -n "${missing_pkgs}" ]; then \
+             echo "ERROR: missing required GStreamer RPMs:${missing_pkgs}" >&2; \
+             echo "ERROR: enabled repos in this cluster build are insufficient for reson8-base." >&2; \
+             echo "ERROR: use subscribed-host local base build + push (DEPLOY.md Step 1b-alt), or fix cluster entitlement/repo access." >&2; \
+             exit 42; \
+           fi \
+        && microdnf install -y ${required_pkgs} \
+        && if ! gst-inspect-1.0 audiocheblimit >/dev/null 2>&1; then \
+             echo "ERROR: required GStreamer plugin 'audiocheblimit' is missing after RPM install." >&2; \
+             echo "ERROR: this is a hard runtime requirement; verify gstreamer1-plugins-good availability/content." >&2; \
+             exit 43; \
+           fi \
+        && microdnf clean all
       USER 185
   strategy:
     type: Docker

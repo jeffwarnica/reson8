@@ -11,7 +11,7 @@ The steps below are the order of operations only; detailed commands and verifica
 ## Prerequisites (summary)
 
 | You need | Detail |
-|----------|--------|
+| ---------- | -------- |
 | `oc` | Logged in to the target cluster |
 | Rights | Project-admin on the `reson8` namespace; cluster-admin for one-time bootstrap |
 | Build tooling | Java 21 and `./mvnw` from this repo for the app image build |
@@ -25,9 +25,13 @@ See [DEPLOY.md — Prerequisites](../../DEPLOY.md#prerequisites) for the full ta
 1. **Bootstrap once (cluster-admin)** — Namespace, build and push the GStreamer **base** image from a subscribed host, apply cluster RBAC, create the `reson8-config` ConfigMap from `application.yml`.  
    **→ [DEPLOY.md — Step 1](../../DEPLOY.md#step-1-bootstrap-one-time-cluster-admin)**
 
-2. **Deploy the application (each release)** — Ensure the ConfigMap is current, then from the `reson8/` Maven module:  
-   `./mvnw package -Dquarkus.openshift.deploy=true`  
+2. **Deploy the application (each release)** — Use the top-level mode wrapper from repo root:  
+   `./deploy/run.sh cluster-test`  
+   (this targets `${BASE_NS}-dev-$USER`, deploys all modules listed in `deploy/deploy.conf` `MODULE_IDS` — currently **`reson8` and `disson8`** — reconciles builder/config resources, generates module-relative manifests (for example `<module>/.generated/quarkus`), then applies and waits for rollout)  
    **→ [DEPLOY.md — Step 2](../../DEPLOY.md#step-2-deploy-developer-every-release)**
+
+   Preview only (no mutations):
+   `./deploy/run.sh cluster-test --dry-run`
 
 3. **Confirm rollout** — Wait for the deployment and readiness (Kubernetes API + Thanos checks as documented).  
    **→ [DEPLOY.md — Readiness gate](../../DEPLOY.md#readiness-gate)**

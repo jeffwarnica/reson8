@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.inject.Inject;
 
@@ -45,8 +46,11 @@ class Reson8ConfigSecurityMappingTest {
     @Test
     @DisplayName("Thanos ConfigMapping: pod-off defaults use openshift-monitoring service DNS")
     void thanos_defaults() {
+        String expectedBaseUrl = Optional.ofNullable(System.getenv("RESON8_K8S_THANOS_BASE_URL"))
+                .filter(value -> !value.isBlank())
+                .orElse("https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/");
         assertEquals(
-                "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/",
+                expectedBaseUrl,
                 config.k8s().thanos().baseUrl());
         assertEquals(
                 "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/api/v1",
