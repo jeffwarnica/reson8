@@ -4,6 +4,10 @@ This page is a short **proof-of-concept** path for operators who already have an
 
 **→ [DEPLOY.md](../../DEPLOY.md)**
 
+For concept-only external evaluation from prebuilt Quay images, use:
+
+**→ [Helm evaluator install](helm-evaluator.md)**
+
 The steps below are the order of operations only; detailed commands and verification live in DEPLOY.
 
 ---

@@ -9,6 +9,18 @@ Use this as a command cheat-sheet. Full detail lives in `CONTRIBUTING.md` and `D
 Quick paths
 -----------
 
+1) External evaluator path (Helm + Quay, concept feedback)
+
+```bash
+helm upgrade --install reson8-eval ./helm/reson8 \
+  -n reson8-eval \
+  --create-namespace \
+  --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
+  --set image.tag=latest
+```
+
+See `docs/poc/helm-evaluator.md` for the full 15-minute evaluator flow.
+
 1) Local only (no cluster writes)
 
 ```bash

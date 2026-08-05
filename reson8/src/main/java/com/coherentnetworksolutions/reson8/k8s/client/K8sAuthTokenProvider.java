@@ -35,7 +35,7 @@ public class K8sAuthTokenProvider {
                         .withName("reson8")
                         .tokenRequest(new TokenRequest());
                 token = tr.getStatus().getToken();
-                Log.info("K8sAuthTokenProvider: exchanged certs for service account token.");
+                Log.debug("K8sAuthTokenProvider: exchanged certs for service account token.");
             } catch (Exception e) {
                 Log.error("K8sAuthTokenProvider: failed to request token: " + e.getMessage());
             }

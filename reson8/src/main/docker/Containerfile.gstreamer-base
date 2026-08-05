@@ -10,6 +10,9 @@ RUN set -eux \
          gstreamer1-plugins-base \
          gstreamer1-plugins-good \
          gstreamer1-plugins-bad-free \
+    && microdnf update -y \
+         p11-kit \
+         p11-kit-trust \
     && if ! gst-inspect-1.0 audiocheblimit >/dev/null 2>&1; then \
          echo "ERROR: required GStreamer plugin 'audiocheblimit' not found after install." >&2; \
          echo "ERROR: ensure gstreamer1-plugins-good is available from enabled repositories." >&2; \

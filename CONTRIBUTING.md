@@ -164,6 +164,37 @@ Raw Maven equivalent:
 ./mvnw package -pl reson8 -Dquarkus.openshift.deploy=true
 ```
 
+## Quay publish loop (maintainers, shareable builds)
+
+Use this when you need evaluator-friendly images that do not depend on in-cluster
+BuildConfigs or a tester-owned RHEL host.
+
+`deploy/publish-quay.sh` publishes:
+
+- `quay.io/rhn_gps_jwarnica/reson8-base:<base-tag>` (unless `--skip-base`), then
+- `quay.io/rhn_gps_jwarnica/reson8:<app-tag>` built from that base.
+
+Prerequisites:
+
+- `podman`
+- Quay credentials (`QUAY_USERNAME`, `QUAY_PASSWORD`) unless already logged in
+- RHEL-subscription access only when rebuilding `reson8-base`
+
+Examples:
+
+```bash
+# Full publish: rebuild base + runtime image
+deploy/publish-quay.sh --tag v0.1.0
+
+# Runtime-only publish: consume an existing base tag
+deploy/publish-quay.sh --tag v0.1.1 --skip-base --base-tag latest
+
+# Preview commands without running
+deploy/publish-quay.sh --tag v0.1.0 --dry-run
+```
+
+The script fails fast when it can detect Quay repository read-only state.
+
 ## When to use which
 
 Use `oc start-build ...` when:

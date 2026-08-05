@@ -9,6 +9,9 @@
 #
 # podman build -f src/main/docker/Dockerfile.jvm -t quarkus/reson8-jvm .
 #
+# To override the runtime base image (for example Quay-published reson8-base), pass:
+# --build-arg BASE_IMAGE=quay.io/<org>/reson8-base:<tag>
+#
 # Then run the container using:
 #
 # podman run -i --rm -p 8090:8090 quarkus/reson8-jvm
@@ -80,7 +83,8 @@
 # You can find more information about the UBI base runtime images and their configuration here:
 # https://rh-openjdk.github.io/redhat-openjdk-containers/
 ###
-FROM image-registry.openshift-image-registry.svc:5000/reson8-build/reson8-base:latest
+ARG BASE_IMAGE=image-registry.openshift-image-registry.svc:5000/reson8-build/reson8-base:latest
+FROM ${BASE_IMAGE}
 
 ENV LANGUAGE='en_US:en'
 ENV RESON8_AUDIO_PATH=/opt/reson8

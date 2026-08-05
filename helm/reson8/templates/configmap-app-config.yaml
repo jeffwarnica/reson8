@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appConfig.name }}
+  labels:
+    {{- include "reson8.labels" . | nindent 4 }}
+data:
+  {{ .Values.appConfig.fileName }}: |
+    {{- $inline := .Values.appConfig.inlineYaml | trim -}}
+    {{- if $inline }}
+{{ $inline | nindent 4 }}
+    {{- else }}
+{{ .Files.Get "files/application.yaml" | nindent 4 }}
+    {{- end }}

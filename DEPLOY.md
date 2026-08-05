@@ -7,6 +7,9 @@ a custom GStreamer base image and cluster-scoped RBAC.
 
 For day-to-day contributor code/test/build/deploy loops, see `CONTRIBUTING.md`.
 
+For concept-first external evaluation with prebuilt Quay images and Helm, see
+`docs/poc/helm-evaluator.md`.
+
 ---
 
 ## Prerequisites

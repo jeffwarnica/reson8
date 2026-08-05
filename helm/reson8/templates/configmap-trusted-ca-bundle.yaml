@@ -1,0 +1,10 @@
+{{- if .Values.trustedCaBundle.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.trustedCaBundle.name }}
+  labels:
+    {{ .Values.trustedCaBundle.injectLabel }}: "true"
+    {{- include "reson8.labels" . | nindent 4 }}
+data: {}
+{{- end }}
