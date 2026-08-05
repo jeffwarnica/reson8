@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+# Some tools do not exist on this system
+
+The following tools do not exist, so do not recommend them, or use in generated scripts:
+
+rg
