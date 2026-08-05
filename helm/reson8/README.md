@@ -1,7 +1,7 @@
 # reson8 Helm chart (OpenShift MVP)
 
-This chart installs `reson8` for concept-first evaluation using prebuilt images
-from Quay. It is intentionally minimal and OpenShift-oriented.
+This chart installs `reson8` and `disson8` for concept-first evaluation using
+prebuilt images from Quay. It is intentionally minimal and OpenShift-oriented.
 
 ## Install
 
@@ -10,7 +10,9 @@ helm upgrade --install reson8-eval ./helm/reson8 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1
 ```
 
 ## Publish to Quay (OCI)
@@ -19,24 +21,26 @@ helm upgrade --install reson8-eval ./helm/reson8 \
 cd helm/reson8
 helm package .
 helm registry login quay.io -u 'your_username+your_username_robot' --password-stdin
-helm push reson8-helm-0.1.0.tgz oci://quay.io/rhn_gps_jwarnica
+helm push reson8-helm-0.1.1.tgz oci://quay.io/rhn_gps_jwarnica
 ```
 
 Verify pullability:
 
 ```bash
-helm pull oci://quay.io/rhn_gps_jwarnica/reson8-helm --version 0.1.0
+helm pull oci://quay.io/rhn_gps_jwarnica/reson8-helm --version 0.1.1
 ```
 
 Notes:
 
-- The archive version (`reson8-0.1.0.tgz`) must match `version` in `Chart.yaml`.
+- The archive version (`reson8-0.1.1.tgz`) must match `version` in `Chart.yaml`.
 - Helm auth is separate from Podman auth; `podman login` does not authenticate Helm OCI pulls.
 - Pre-create `quay.io/rhn_gps_jwarnica/reson8-helm` and grant robot push/write access.
 
 ## Important values
 
-- `image.repository`, `image.tag`: runtime image source.
+- `image.repository`, `image.tag`: reson8 runtime image source.
+- `disson8.enabled`: include/exclude disson8 deployment resources.
+- `disson8.image.repository`, `disson8.image.tag`: disson8 runtime image source.
 - `rbac.clusterScoped.create`: set `false` if cluster RBAC is pre-provisioned.
 - `appConfig.inlineYaml`: optional full override for mounted `application.yaml`.
 
@@ -46,9 +50,9 @@ Notes:
 - OAuth client token Secret
 - App config ConfigMap (`application.yaml`)
 - Trusted CA bundle injection ConfigMap
-- Deployment (CA projection + app config mount + probes)
-- Service
-- Route
+- Reson8 Deployment (CA projection + app config mount + probes)
+- Reson8 Service + Route
+- Disson8 Deployment + Service + Route (enabled by default)
 - Optional cluster-scoped RBAC
 
 ## Known constraints

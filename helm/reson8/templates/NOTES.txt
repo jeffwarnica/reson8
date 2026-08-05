@@ -1,8 +1,14 @@
 1. Check deployment rollout:
    oc rollout status deployment/{{ include "reson8.fullname" . }} -n {{ .Release.Namespace }}
+{{- if .Values.disson8.enabled }}
+   oc rollout status deployment/{{ include "reson8.fullname" . }}-disson8 -n {{ .Release.Namespace }}
+{{- end }}
 
 2. Get route host:
    oc get route {{ include "reson8.fullname" . }} -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- if and .Values.disson8.enabled .Values.disson8.route.enabled }}
+   oc get route {{ include "reson8.fullname" . }}-disson8 -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- end }}
 
 3. Stream endpoint:
    https://<route-host>/audio/stream

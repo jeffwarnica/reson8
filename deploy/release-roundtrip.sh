@@ -10,6 +10,7 @@ BASE_TAG="${BASE_TAG:-latest}"
 CHART_VERSION_OVERRIDE="${CHART_VERSION_OVERRIDE:-}"
 CHART_APP_VERSION_OVERRIDE="${CHART_APP_VERSION_OVERRIDE:-}"
 CHART_IMAGE_TAG_OVERRIDE="${CHART_IMAGE_TAG_OVERRIDE:-}"
+CHART_DISSON8_IMAGE_TAG_OVERRIDE="${CHART_DISSON8_IMAGE_TAG_OVERRIDE:-}"
 
 QUAY_REGISTRY="${QUAY_REGISTRY:-quay.io}"
 QUAY_NAMESPACE="${QUAY_NAMESPACE:-rhn_gps_jwarnica}"
@@ -38,6 +39,7 @@ CHART_NAME=""
 CHART_VERSION=""
 CHART_APP_VERSION=""
 VALUES_IMAGE_TAG=""
+VALUES_DISSON8_IMAGE_TAG=""
 
 usage() {
   cat <<'EOF'
@@ -57,6 +59,8 @@ Options:
   --chart-version <version>  Require Chart.yaml version to match this value.
   --chart-app-version <ver>  Require Chart.yaml appVersion to match this value.
   --chart-image-tag <tag>    Require values.yaml image.tag to match this value.
+  --chart-disson8-image-tag <tag>
+                            Require values.yaml disson8.image.tag to match this value.
   --push-chart               Package and push chart to oci://<registry>/<namespace>.
   --quay-registry <host>     Registry host (default: quay.io).
   --quay-namespace <name>    Quay namespace/org (default: rhn_gps_jwarnica).
@@ -66,8 +70,8 @@ Options:
 
 Examples:
   deploy/release-roundtrip.sh snapshot --app-tag latest --skip-base --also-latest
-  deploy/release-roundtrip.sh release --app-tag v0.1.0 --skip-base --push-chart
-  deploy/release-roundtrip.sh chart-release --push-chart --chart-version 0.1.0
+  deploy/release-roundtrip.sh release --app-tag v0.1.1 --skip-base --push-chart
+  deploy/release-roundtrip.sh chart-release --push-chart --chart-version 0.1.1
 EOF
 }
 
@@ -183,6 +187,21 @@ extract_values_image_tag() {
   ' "${VALUES_FILE}"
 }
 
+extract_values_disson8_image_tag() {
+  awk '
+    /^disson8:[[:space:]]*$/ { in_disson8 = 1; next }
+    in_disson8 && /^[^[:space:]]/ { in_disson8 = 0 }
+    in_disson8 && /^[[:space:]]+image:[[:space:]]*$/ { in_image = 1; next }
+    in_disson8 && in_image && /^[[:space:]]{2}[^[:space:]]/ { in_image = 0 }
+    in_disson8 && in_image && /^[[:space:]]+tag:[[:space:]]*/ {
+      line = $0
+      sub(/^[[:space:]]+tag:[[:space:]]*/, "", line)
+      print line
+      exit
+    }
+  ' "${VALUES_FILE}"
+}
+
 load_metadata() {
   require_file "${ROOT_POM}"
   require_file "${RESON8_POM}"
@@ -198,6 +217,7 @@ load_metadata() {
   CHART_VERSION="$(strip_quotes "$(extract_chart_field "version")")"
   CHART_APP_VERSION="$(strip_quotes "$(extract_chart_field "appVersion")")"
   VALUES_IMAGE_TAG="$(strip_quotes "$(extract_values_image_tag)")"
+  VALUES_DISSON8_IMAGE_TAG="$(strip_quotes "$(extract_values_disson8_image_tag)")"
 
   if [[ -z "${ROOT_MAVEN_VERSION}" || -z "${RESON8_PARENT_VERSION}" || -z "${DISSON8_PARENT_VERSION}" ]]; then
     log_error "failed to resolve Maven versions from pom.xml files."
@@ -209,6 +229,10 @@ load_metadata() {
   fi
   if [[ -z "${VALUES_IMAGE_TAG}" ]]; then
     log_error "failed to resolve image.tag from ${VALUES_FILE}."
+    exit 3
+  fi
+  if [[ -z "${VALUES_DISSON8_IMAGE_TAG}" ]]; then
+    log_error "failed to resolve disson8.image.tag from ${VALUES_FILE}."
     exit 3
   fi
 }
@@ -229,6 +253,9 @@ validate_common_consistency() {
   fi
   if [[ -n "${CHART_IMAGE_TAG_OVERRIDE}" && "${VALUES_IMAGE_TAG}" != "${CHART_IMAGE_TAG_OVERRIDE}" ]]; then
     warn_or_fail "values.yaml image.tag (${VALUES_IMAGE_TAG}) does not match requested --chart-image-tag (${CHART_IMAGE_TAG_OVERRIDE})."
+  fi
+  if [[ -n "${CHART_DISSON8_IMAGE_TAG_OVERRIDE}" && "${VALUES_DISSON8_IMAGE_TAG}" != "${CHART_DISSON8_IMAGE_TAG_OVERRIDE}" ]]; then
+    warn_or_fail "values.yaml disson8.image.tag (${VALUES_DISSON8_IMAGE_TAG}) does not match requested --chart-disson8-image-tag (${CHART_DISSON8_IMAGE_TAG_OVERRIDE})."
   fi
 }
 
@@ -261,6 +288,9 @@ validate_release_mode() {
   if [[ "${PUSH_CHART}" == "1" && "${VALUES_IMAGE_TAG}" != "${expected_chart_tag}" ]]; then
     warn_or_fail "release + --push-chart expects values.yaml image.tag (${VALUES_IMAGE_TAG}) to match ${expected_chart_tag}."
   fi
+  if [[ "${PUSH_CHART}" == "1" && "${VALUES_DISSON8_IMAGE_TAG}" != "${expected_chart_tag}" ]]; then
+    warn_or_fail "release + --push-chart expects values.yaml disson8.image.tag (${VALUES_DISSON8_IMAGE_TAG}) to match ${expected_chart_tag}."
+  fi
 }
 
 validate_chart_release_mode() {
@@ -274,6 +304,9 @@ validate_chart_release_mode() {
   fi
   if [[ "${VALUES_IMAGE_TAG}" == "latest" ]]; then
     warn_or_fail "chart-release should not default to mutable image.tag=latest."
+  fi
+  if [[ "${VALUES_DISSON8_IMAGE_TAG}" == "latest" ]]; then
+    warn_or_fail "chart-release should not default to mutable disson8.image.tag=latest."
   fi
   if [[ "${CHART_APP_VERSION}" != "${ROOT_MAVEN_VERSION}" ]]; then
     warn_or_fail "chart-release expects Chart.yaml appVersion (${CHART_APP_VERSION}) to match Maven version (${ROOT_MAVEN_VERSION})."
@@ -369,6 +402,10 @@ parse_args() {
         ;;
       --chart-image-tag)
         CHART_IMAGE_TAG_OVERRIDE="${2:-}"
+        shift 2
+        ;;
+      --chart-disson8-image-tag)
+        CHART_DISSON8_IMAGE_TAG_OVERRIDE="${2:-}"
         shift 2
         ;;
       --push-chart)

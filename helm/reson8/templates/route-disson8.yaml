@@ -1,0 +1,22 @@
+{{- if and .Values.disson8.enabled .Values.disson8.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "reson8.fullname" . }}-disson8
+  labels:
+    {{- include "reson8.labels" . | nindent 4 }}
+    app.kubernetes.io/name: disson8
+    app.kubernetes.io/component: disson8
+spec:
+  {{- if .Values.disson8.route.host }}
+  host: {{ .Values.disson8.route.host }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "reson8.fullname" . }}-disson8
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.disson8.route.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ .Values.disson8.route.tls.insecureEdgeTerminationPolicy }}
+{{- end }}

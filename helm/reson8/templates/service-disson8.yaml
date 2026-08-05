@@ -1,0 +1,21 @@
+{{- if .Values.disson8.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reson8.fullname" . }}-disson8
+  labels:
+    {{- include "reson8.labels" . | nindent 4 }}
+    app.kubernetes.io/name: disson8
+    app.kubernetes.io/component: disson8
+spec:
+  type: {{ .Values.disson8.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.disson8.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: disson8
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: disson8
+{{- end }}

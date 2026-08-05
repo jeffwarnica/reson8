@@ -6,8 +6,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 QUAY_REGISTRY="${QUAY_REGISTRY:-quay.io}"
 QUAY_NAMESPACE="${QUAY_NAMESPACE:-rhn_gps_jwarnica}"
 APP_IMAGE_NAME="${APP_IMAGE_NAME:-reson8}"
+DISSON8_IMAGE_NAME="${DISSON8_IMAGE_NAME:-disson8}"
 BASE_IMAGE_NAME="${BASE_IMAGE_NAME:-reson8-base}"
 APP_TAG="${APP_TAG:-}"
+DISSON8_TAG="${DISSON8_TAG:-}"
 BASE_TAG="${BASE_TAG:-latest}"
 SKIP_BASE_BUILD="${SKIP_BASE_BUILD:-0}"
 NO_CACHE_BASE_BUILD="${NO_CACHE_BASE_BUILD:-1}"
@@ -21,6 +23,7 @@ Usage:
 
 Options:
   --tag <tag>                 Runtime image tag to push (required unless APP_TAG is set).
+  --disson8-tag <tag>         Optional disson8 runtime image tag (defaults to --tag).
   --base-tag <tag>            Base image tag (default: latest).
   --skip-base                 Skip base build/push and consume an existing base tag.
   --quay-namespace <name>     Quay namespace/org (default: rhn_gps_jwarnica).
@@ -34,9 +37,9 @@ Environment:
   unless already logged in to Podman for the target Quay registry.
 
 Examples:
-  deploy/publish-quay.sh --tag v0.1.0
-  deploy/publish-quay.sh --tag v0.1.0 --skip-base --base-tag stable
-  deploy/publish-quay.sh --tag v0.1.0 --also-latest
+  deploy/publish-quay.sh --tag v0.1.1
+  deploy/publish-quay.sh --tag v0.1.1 --skip-base --base-tag stable
+  deploy/publish-quay.sh --tag v0.1.1 --also-latest
 EOF
 }
 
@@ -83,6 +86,10 @@ parse_args() {
         ;;
       --base-tag)
         BASE_TAG="${2:-}"
+        shift 2
+        ;;
+      --disson8-tag)
+        DISSON8_TAG="${2:-}"
         shift 2
         ;;
       --skip-base)
@@ -148,11 +155,16 @@ main() {
   require_cmd curl
   require_cmd "${ROOT}/mvnw"
 
+  if [[ -z "${DISSON8_TAG}" ]]; then
+    DISSON8_TAG="${APP_TAG}"
+  fi
+
   check_quay_writable
   ensure_login
 
   local base_image_ref="${QUAY_REGISTRY}/${QUAY_NAMESPACE}/${BASE_IMAGE_NAME}:${BASE_TAG}"
   local app_image_ref="${QUAY_REGISTRY}/${QUAY_NAMESPACE}/${APP_IMAGE_NAME}:${APP_TAG}"
+  local disson8_image_ref="${QUAY_REGISTRY}/${QUAY_NAMESPACE}/${DISSON8_IMAGE_NAME}:${DISSON8_TAG}"
   local app_latest_ref="${QUAY_REGISTRY}/${QUAY_NAMESPACE}/${APP_IMAGE_NAME}:latest"
 
   cd "${ROOT}"
@@ -171,7 +183,7 @@ main() {
     echo "Skipping base build; expecting pre-published base image: ${base_image_ref}"
   fi
 
-  run_cmd "${ROOT}/mvnw" -pl reson8 -DskipTests package
+  run_cmd "${ROOT}/mvnw" -pl reson8,disson8 -DskipTests package
 
   run_cmd podman build \
     --build-arg "BASE_IMAGE=${base_image_ref}" \
@@ -180,6 +192,12 @@ main() {
     "${ROOT}/reson8"
   run_cmd podman push "${app_image_ref}"
 
+  run_cmd podman build \
+    -f "${ROOT}/disson8/src/main/docker/Dockerfile.jvm" \
+    -t "${disson8_image_ref}" \
+    "${ROOT}/disson8"
+  run_cmd podman push "${disson8_image_ref}"
+
   if [[ "${PUSH_LATEST_ALIAS}" == "1" ]]; then
     run_cmd podman tag "${app_image_ref}" "${app_latest_ref}"
     run_cmd podman push "${app_latest_ref}"
@@ -187,9 +205,10 @@ main() {
 
   echo "Publish complete:"
   echo "  base: ${base_image_ref}"
-  echo "  app:  ${app_image_ref}"
+  echo "  app:      ${app_image_ref}"
+  echo "  disson8:  ${disson8_image_ref}"
   if [[ "${PUSH_LATEST_ALIAS}" == "1" ]]; then
-    echo "  app:  ${app_latest_ref}"
+    echo "  app:      ${app_latest_ref}"
   fi
 }
 
