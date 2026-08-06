@@ -18,7 +18,7 @@ Choosing the right loop keeps iteration fast and avoids unnecessary rebuilds.
 | --- | --- | --- |
 | Local workstation only | No cluster write access | Use local run loop (`quarkus:dev`) and local tests; optionally use local container run path below |
 | Cluster stream/observe only | Can read cluster metrics/streams, cannot modify BuildConfigs | Run locally for code/test; if allowed to push images, use local base-image fallback then app deploy by someone with namespace rights |
-| Runtime namespace admin (`reson8`) | Can deploy app resources, may not control builder namespace | Use `deploy-reson8.sh` for app loop; request or coordinate `reson8-base` refresh with builder-capable user |
+| Runtime namespace admin (`reson8`) | Can deploy app resources, may not control builder namespace | Use `deploy/run.sh` (`prod` or `cluster-test`) for app loop; request or coordinate `reson8-base` refresh with builder-capable user |
 | Builder namespace admin (`reson8-build`) | Can run base BuildConfigs/ImageStreams | Use `oc start-build reson8-base -n reson8-build --wait` for base refresh + app deploy loop |
 | Cluster admin | Full bootstrap rights | Use `DEPLOY.md` step-by-step bootstrap + standard contributor loops |
 
@@ -184,16 +184,41 @@ Examples:
 
 ```bash
 # Full publish: rebuild base + runtime image
-deploy/publish-quay.sh --tag v0.1.0
+deploy/publish-quay.sh --tag v0.1.1
 
 # Runtime-only publish: consume an existing base tag
 deploy/publish-quay.sh --tag v0.1.1 --skip-base --base-tag latest
 
 # Preview commands without running
-deploy/publish-quay.sh --tag v0.1.0 --dry-run
+deploy/publish-quay.sh --tag v0.1.1 --dry-run
 ```
 
 The script fails fast when it can detect Quay repository read-only state.
+
+## Canonical release helper (maintainers)
+
+Use `deploy/release-roundtrip.sh` as the primary release entrypoint. It validates Maven/chart metadata consistency and can invoke image/chart publish flows.
+
+Modes:
+
+- `snapshot`: fast lane for mutable/testing tags.
+- `release`: stricter lane for immutable release tags.
+- `chart-release`: chart packaging + OCI push checks.
+
+Examples:
+
+```bash
+# Snapshot lane
+deploy/release-roundtrip.sh snapshot --app-tag v0.1.1 --skip-base
+
+# Full release lane with chart push
+deploy/release-roundtrip.sh release --app-tag v0.1.1 --skip-base --push-chart
+
+# Chart-only release checks + push
+deploy/release-roundtrip.sh chart-release --push-chart --chart-version 0.1.1
+```
+
+`deploy/publish-quay.sh` remains useful as the lower-level image publishing utility when you intentionally want to bypass roundtrip checks.
 
 ## When to use which
 

@@ -49,22 +49,26 @@ Without cloning this Git repository (OCI chart from Quay). Helm and Podman keep 
 ```bash
 helm registry login quay.io -u 'your_username+your_username_robot' --password-stdin
 helm install reson8-eval oci://quay.io/rhn_gps_jwarnica/reson8-helm \
-  --version 0.1.0 \
+  --version 0.1.1 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1
 ```
 
 If your platform team pre-provisioned cluster RBAC:
 
 ```bash
 helm install reson8-eval oci://quay.io/rhn_gps_jwarnica/reson8-helm \
-  --version 0.1.0 \
+  --version 0.1.1 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest \
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1 \
   --set rbac.clusterScoped.create=false
 ```
 
@@ -75,7 +79,9 @@ helm upgrade --install reson8-eval ./helm/reson8 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1
 ```
 
 If your platform team pre-provisioned cluster RBAC, disable chart-managed cluster RBAC:
@@ -85,7 +91,9 @@ helm upgrade --install reson8-eval ./helm/reson8 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest \
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1 \
   --set rbac.clusterScoped.create=false
 ```
 
@@ -97,18 +105,18 @@ From a local clone of this repository:
 cd helm/reson8
 helm package .
 helm registry login quay.io -u 'your_username+your_username_robot' --password-stdin
-helm push reson8-helm-0.1.0.tgz oci://quay.io/rhn_gps_jwarnica
+helm push reson8-helm-0.1.1.tgz oci://quay.io/rhn_gps_jwarnica
 ```
 
 Notes:
 
-- `0.1.0` must match the chart `version` in `helm/reson8/Chart.yaml`.
-- `reson8-helm-0.1.0.tgz` comes from chart `name: reson8-helm` and `version: 0.1.0`.
+- `0.1.1` must match the chart `version` in `helm/reson8/Chart.yaml`.
+- `reson8-helm-0.1.1.tgz` comes from chart `name: reson8-helm` and `version: 0.1.1`.
 - Pre-create `quay.io/rhn_gps_jwarnica/reson8-helm` and grant robot push/write access.
 - Verify pullability before sharing:
 
 ```bash
-helm pull oci://quay.io/rhn_gps_jwarnica/reson8-helm --version 0.1.0
+helm pull oci://quay.io/rhn_gps_jwarnica/reson8-helm --version 0.1.1
 ```
 
 ---
@@ -141,5 +149,5 @@ https://<route-host>/audio/stream
 
 - Single-replica runtime shape.
 - CA trust setup is mandatory; missing ingress CA causes hard startup failure.
-- Default chart config disables OIDC and Thanos readiness check for faster concept evaluation.
+- Default chart config enables OIDC and disables the Thanos readiness check for first-pass concept evaluation.
 - For production posture and full security/tiering, use the full workflow in [DEPLOY.md](../../DEPLOY.md).

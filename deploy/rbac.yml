@@ -1,4 +1,11 @@
 ---
+# Cluster-scoped access baseline for the default included soundscape/signal-map.
+# The baseline is primarily about reading metrics/signals across namespaces,
+# including source namespaces other than the app's own namespace.
+# This checked-in binding targets the shared prod-style runtime lane:
+#   system:serviceaccount:reson8:reson8
+# For per-user cluster-test namespaces (${BASE_NS}-dev-${USER}), use an equivalent
+# binding whose subject namespace matches that test namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

@@ -47,7 +47,8 @@ See [DEPLOY.md — Prerequisites](../../DEPLOY.md#prerequisites) for the full ta
 After the route exists:
 
 ```bash
-oc get route reson8 -n reson8
+TEST_NS="${BASE_NS:-reson8}-dev-${USER}"
+oc get route reson8 -n "${TEST_NS}"
 ```
 
 Open an HTTPS audio client (many browsers can play the stream directly) at:

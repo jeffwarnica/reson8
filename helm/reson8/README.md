@@ -32,7 +32,7 @@ helm pull oci://quay.io/rhn_gps_jwarnica/reson8-helm --version 0.1.1
 
 Notes:
 
-- The archive version (`reson8-0.1.1.tgz`) must match `version` in `Chart.yaml`.
+- The archive version (`reson8-helm-0.1.1.tgz`) must match `version` in `Chart.yaml`.
 - Helm auth is separate from Podman auth; `podman login` does not authenticate Helm OCI pulls.
 - Pre-create `quay.io/rhn_gps_jwarnica/reson8-helm` and grant robot push/write access.
 
@@ -58,5 +58,23 @@ Notes:
 ## Known constraints
 
 - One-time cluster CA setup is still required.
-- Default chart config disables OIDC and Thanos readiness check for first-pass evaluation.
+- Default chart config enables OIDC and disables Thanos readiness check for first-pass evaluation.
 - Single-replica topology.
+
+## Maintainer release lane
+
+Use `deploy/release-roundtrip.sh` as the canonical release helper for image + chart publish checks:
+
+- `snapshot`: mutable/fast lane for shared testing.
+- `release`: immutable app-tag lane with stricter consistency checks.
+- `chart-release`: chart packaging and OCI push checks.
+
+Examples from repo root:
+
+```bash
+deploy/release-roundtrip.sh snapshot --app-tag v0.1.1 --skip-base
+deploy/release-roundtrip.sh release --app-tag v0.1.1 --skip-base --push-chart
+deploy/release-roundtrip.sh chart-release --push-chart --chart-version 0.1.1
+```
+
+For lower-level image publishing details, see `deploy/publish-quay.sh`.

@@ -16,7 +16,9 @@ helm upgrade --install reson8-eval ./helm/reson8 \
   -n reson8-eval \
   --create-namespace \
   --set image.repository=quay.io/rhn_gps_jwarnica/reson8 \
-  --set image.tag=latest
+  --set image.tag=v0.1.1 \
+  --set disson8.image.repository=quay.io/rhn_gps_jwarnica/disson8 \
+  --set disson8.image.tag=v0.1.1
 ```
 
 See `docs/poc/helm-evaluator.md` for the full 15-minute evaluator flow.
@@ -48,6 +50,14 @@ cp deploy/openshift/runtime_config/application-cluster-overlay.example.yaml \
 
 # Deploy (sync ConfigMap + build/deploy app)
 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
+```
+
+1) In-cluster test lane (per-user namespace)
+
+```bash
+./deploy/run.sh cluster-test
+TEST_NS="${BASE_NS:-reson8}-dev-${USER}"
+oc get route reson8 -n "${TEST_NS}"
 ```
 
 1) Local from-scratch base fallback (RHSM/Satellite workstation)

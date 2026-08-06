@@ -15,7 +15,7 @@ For concept-first external evaluation with prebuilt Quay images and Helm, see
 ## Prerequisites
 
 | Tool | Why |
-|------|-----|
+| ------ | ----- |
 | `oc` CLI, logged in | Applies manifests and drives BuildConfigs |
 | Project-admin rights on runtime (`reson8`) and builder (`reson8-build`) namespaces | Applies generated Quarkus manifests and builder resources |
 | Cluster-admin rights (bootstrap only) | Creates `ClusterRole` / `ClusterRoleBinding` |
@@ -45,10 +45,12 @@ Run the builder bootstrap script from repo root:
 ```
 
 Defaults:
+
 - Builder namespace: `reson8-build` (`OPENSHIFT_BUILD_PROJECT`)
 - Runtime namespace that pulls base image: `reson8` (`OPENSHIFT_PROJECT`)
 
 The script:
+
 1. Creates the builder namespace if missing.
 2. Applies `deploy/openshift/cluster_build_config/*.yaml.tmpl` with `envsubst`.
 3. Installs:
@@ -125,16 +127,26 @@ deployments cluster-wide, plus the ability to create `ServiceAccount` token requ
 (used to authenticate with Thanos). A second binding grants `cluster-monitoring-view`
 so the app can reach the Thanos querier in `openshift-monitoring`.
 
+This cluster-scoped posture is the **tested default** for the included `application.yml`
+signal-map and soundscape definitions. Less-privileged access can work, but only when
+paired with intentionally narrower signal/query configuration.
+
 ```bash
 # Requires cluster-admin
 oc apply -f deploy/rbac.yml
 ```
 
 Verify:
+
 ```bash
 oc get clusterrole reson8-cluster-observer
 oc get clusterrolebinding reson8-cluster-observer reson8-monitoring-view
 ```
+
+For `cluster-test` namespaces (`${BASE_NS}-dev-${USER}`), ensure the ServiceAccount
+subject in any ClusterRoleBinding targets that namespace/SA identity. The checked-in
+`deploy/rbac.yml` binds `system:serviceaccount:reson8:reson8` for the shared `reson8`
+runtime lane.
 
 ### 1d. Register the OIDC OAuth client (namespace-admin, one time)
 
@@ -153,7 +165,7 @@ automatically by `./mvnw … -Dquarkus.openshift.deploy=true` — **no manual st
 The Deployment receives two env vars wired by `application.properties`:
 
 | Env var | Source | Value |
-|---------|--------|-------|
+| ------- | ------ | ----- |
 | `OIDC_CLIENT_ID` | Hard-coded in Deployment | `system:serviceaccount:reson8:reson8` |
 | `OIDC_CLIENT_SECRET` | `reson8-oauth-client-secret` Secret, key `token` | Long-lived SA token, auto-populated by the token controller |
 
@@ -228,11 +240,13 @@ oc create configmap reson8-config \
 > **CI/CD note**: sync the ConfigMap *before* the Maven deploy step so the ConfigMap is current
 > before the new pod starts. If you change `application.yml` or the overlay on a running cluster
 > without a full redeploy, roll the deployment to pick up the new values:
+>
 > ```bash
 > oc rollout restart deployment/reson8 -n reson8
 > ```
 
 Verify:
+
 ```bash
 oc get configmap reson8-config -n reson8
 oc describe configmap reson8-config -n reson8
@@ -243,7 +257,7 @@ oc describe configmap reson8-config -n reson8
 Three deliberately different setups:
 
 | Situation | OIDC | Tier simulation | Typical tier enforcement |
-|-----------|------|-----------------|---------------------------|
+| ----------- | ------ | ----------------- | --------------------------- |
 | **`quarkus:dev`** (`%dev`) | Off — `%dev.quarkus.oidc.enabled=false` | `reson8-dev-tier` cookie when the dev toolbar is on | Defaults stay **on**; use tier-simulation cookie or relax **`reson8.security.endpoint-authorization-enabled`** in local overrides if you want a completely open REST surface. **Thanos:** outside the cluster set **`RESON8_K8S_THANOS_BASE_URL`** to your monitoring Route (template **`reson8/application-local-DIST.properties`**); avoid committing cluster-specific URLs. |
 | **`mvn package` / image build** (`%prod` bundle) | Unqualified key unset (Quarkus default true) | N/A | Bootstrap resolves issuer **at runtime** in-cluster once pods set **`quarkus.oidc.enabled=true`** (see OIDC subsection). |
 | **Pod on OpenShift** (mounted `application.yaml`) | **`quarkus.oidc.enabled: true`** — mounted config source ordinal **>** JAR | **`dev-tier-cookie-enabled`** must stay **false** | Merge **`quarkus.oidc`** from [`deploy/openshift/runtime_config/application-cluster-overlay.example.yaml`](deploy/openshift/runtime_config/application-cluster-overlay.example.yaml). |
@@ -296,7 +310,7 @@ Use the top-level mode wrapper from repo root:
 7. Waits for rollout/readiness and performs a route health check for `reson8`.
 8. Generates/applies `disson8` in the same namespace and waits for `disson8` rollout/readiness.
 
-Runtime image tags follow the Maven project version (currently `1.0.0-SNAPSHOT`), not `latest`.
+Runtime image tags follow the current Maven project version from `pom.xml`, not `latest`.
 In `cluster-test`, the image group/namespace is `${BASE_NS}-dev-${USER}` for both modules.
 
 Generation-only Maven flags used by the wrapper:
@@ -346,7 +360,7 @@ This is intentional — traffic is not routed until the app can reach the cluste
 At pod startup the entrypoint script (`run-with-ca-update.sh`) projects three auto-created OpenShift ConfigMaps into `/etc/pki/ca-trust/source/anchors/` and calls `update-ca-trust extract` before the JVM starts. The JVM inherits a fully-populated OS trust store. **No application-level TLS configuration is needed or permitted.**
 
 | File projected into anchors | Source ConfigMap | Auto-created? | Trusts |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `service-ca.crt` | `openshift-service-ca.crt` | Yes — OpenShift creates in every namespace | All `*.svc.cluster.local` serving certs (Thanos, k8s API) |
 | `ingress-ca.crt` | `reson8-trusted-ca-bundle` key `ca-bundle.crt` | Via label `config.openshift.io/inject-trusted-cabundle: "true"` — populated after the one-time cluster-admin setup below | Router/ingress CA for `*.apps.*` (OIDC endpoint) |
 | `kube-ca.crt` | `kube-root-ca.crt` | Yes — OpenShift creates in every namespace | Kubernetes API server certificate |
@@ -372,6 +386,7 @@ oc patch proxy cluster --type=merge -p '{"spec":{"trustedCA":{"name":"custom-ca"
 After step 3, the cluster-network-operator injects the router CA into any namespace-scoped ConfigMap labelled `config.openshift.io/inject-trusted-cabundle: "true"` — including `reson8-trusted-ca-bundle` — as the key `ca-bundle.crt`. The application code assumes this has been done; it fails hard on startup if the file is missing.
 
 **This is a one-time cluster operation.** Once configured, all namespaces with the label automatically receive the router CA. Verify with:
+
 ```bash
 oc get configmap reson8-trusted-ca-bundle -n reson8 \
   -o jsonpath='{.data.ca-bundle\.crt}' | openssl x509 -noout -subject
@@ -380,6 +395,8 @@ oc get configmap reson8-trusted-ca-bundle -n reson8 \
 The code also assumes `openshift-service-ca.crt` is available 100% of the time. If it is absent, the code fails hard — no workaround or configuration override exists or is allowed.
 
 ### Checking the deployment
+
+Use namespace `reson8` for `prod`, or `${BASE_NS}-dev-${USER}` for `cluster-test`.
 
 ```bash
 # Watch rollout
@@ -393,7 +410,8 @@ oc get route reson8 -n reson8
 ```
 
 The audio stream is available at:
-```
+
+```text
 https://<route-host>/audio/stream
 ```
 
@@ -401,18 +419,18 @@ https://<route-host>/audio/stream
 
 ## Image layout
 
-```
+```text
 image-registry.../reson8-build/reson8-base:latest
   └── ubi10/openjdk-21:latest
       └── gstreamer1 + gstreamer1-plugins-base + gstreamer1-plugins-good + gstreamer1-plugins-bad-free
 
-image-registry.../<runtime-namespace>/reson8:1.0.0-SNAPSHOT
+image-registry.../<runtime-namespace>/reson8:<maven-project-version>
   └── reson8-base:latest
       ├── /opt/reson8/sounds/   (WAV assets extracted from app JAR during image build)
       ├── /deployments/config/  (ConfigMap reson8-config mounted here at pod start)
       └── /deployments/         (Quarkus fast-JAR layers)
 
-image-registry.../<runtime-namespace>/disson8:1.0.0-SNAPSHOT
+image-registry.../<runtime-namespace>/disson8:<maven-project-version>
   └── UBI9 OpenJDK 21 S2I builder chain (does not consume reson8-base)
 ```
 
@@ -424,7 +442,7 @@ All deployment config lives in `reson8/src/main/resources/application.properties
 under the `# --- OpenShift deployment ---` block. Key values:
 
 | Property | Value | Notes |
-|----------|-------|-------|
+| ---------- | ------- | ------- |
 | `quarkus.container-image.registry` | `image-registry.openshift-image-registry.svc:5000` | Internal registry in-cluster address |
 | `quarkus.container-image.group` | `reson8` | Wrapper scripts override this to the active target namespace (for `cluster-test`: `${BASE_NS}-dev-${USER}`) |
 | `quarkus.openshift.build-strategy` | `docker` | OpenShift **Dockerfile** strategy (fixed API value `docker`). Uses `Dockerfile.jvm`; required for GStreamer base + sounds. Cluster performs the build |
@@ -441,7 +459,7 @@ under the `# --- OpenShift deployment ---` block. Key values:
 Tune these keys in the mounted `application.yml` (or equivalent properties) when OIDC / tiered UI is enabled:
 
 | Key | Purpose |
-|-----|---------|
+| ----- | --------- |
 | `reson8.security.admin-groups` | IdP group names for full operator control |
 | `reson8.security.viewer-groups` | Read + stream; no mutations |
 | `reson8.security.stream-groups` | Stream-only tier; may include the anonymous sentinel |
@@ -486,7 +504,7 @@ Do **not** use a bare **`Deployment`** fragment that only tweaks **`spec.templat
 JWT **`groups`** → roles align with **`AccessTierResolver`**. Fine-tune via **`reson8.oidc.*`** in mounted config or ConfigMap.
 
 | Key | Purpose |
-|-----|---------|
+| ----- | --------- |
 | `reson8.oidc.*` | Mirrors **`quarkus.oidc.*`** defaults (enabled, application type, redirect-HTTPS, client id/secret) |
 | `reson8.openshift-oauth.discovery-enabled` | **`true`** by default — query OAuth authorization server metadata for `issuer` |
 | `reson8.openshift-oauth.metadata-url` | Override full metadata URL when not using the in-cluster API server default |
@@ -501,7 +519,6 @@ If an ingress OAuth sidecar forces authentication on **all** paths, anonymous st
 
 ---
 
-
 ## Troubleshooting
 
 **`Deployment ... spec.template.spec.containers: Required value` when running `mvn ... -Dquarkus.openshift.deploy=true`**
@@ -510,10 +527,13 @@ Usually caused by a **`Deployment`** fragment in **`openshift.yml`** that specif
 
 **Pod stuck in `NotReady`**
 Check the readiness probe failure reason:
+
 ```bash
 oc describe pod -l app.kubernetes.io/name=reson8 -n reson8
 ```
+
 Most likely cause: RBAC not yet applied. Confirm with:
+
 ```bash
 oc auth can-i list nodes --as=system:serviceaccount:reson8:reson8
 ```
@@ -535,10 +555,13 @@ If **`pod-http-status`** is **`200`** (or **`302`** on **`/login`** when OIDC is
 **`Forbidden` / `401 Unauthorized` errors in pod logs against Thanos**
 
 The `cluster-monitoring-view` ClusterRoleBinding may be missing:
+
 ```bash
 oc get clusterrolebinding reson8-monitoring-view
 ```
+
 If missing, re-apply RBAC:
+
 ```bash
 APPLY_CLUSTER_RBAC=1 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 # or: oc apply -f deploy/rbac.yml
@@ -547,12 +570,14 @@ APPLY_CLUSTER_RBAC=1 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod
 `cluster-monitoring-view` covers the Thanos querier API (`/api/v1/labels`, basic queries) across the cluster.
 However, **cross-namespace `sum(rate(...))` aggregation queries** (like the `Web Crashes` signal) may require
 additional `view` access on the source namespaces:
+
 ```bash
 # Grant view on a specific source namespace (repeat per namespace as needed)
 oc adm policy add-role-to-user view \
   system:serviceaccount:reson8:reson8 \
   -n <source-namespace>
 ```
+
 Check the pod logs for the signal name that returned 401 to identify which namespaces are affected.
 
 **GStreamer `WARN` or plugin-not-found errors**
@@ -562,12 +587,14 @@ The base image may be stale. Re-run `./deploy/openshift/deploy-reson8-builder.sh
 **`WavCache` file-not-found at startup**
 The OpenShift **container build** did not place sounds under `/opt/reson8/sounds/`. Confirm the
 sounds were copied by inspecting the image:
+
 ```bash
 oc debug deployment/reson8 -n reson8 -- ls /opt/reson8/sounds/
 ```
 
 **Config changes not taking effect after `application.yml` edit**
 The pod caches the mounted ConfigMap. Re-sync and roll the deployment:
+
 ```bash
 # Preferred — merges cluster overlay (OIDC, groups) automatically:
 SYNC_CONFIGMAP=1 CONFIRM_PROD_DEPLOY=1 ./deploy/run.sh prod -DskipTests

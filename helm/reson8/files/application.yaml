@@ -107,6 +107,8 @@ reson8:
             generator: WIND
             output-scale: 1.0
 quarkus:
+  # Helm evaluator defaults: OIDC on, Thanos readiness-check off for easier concept validation.
+  # Production posture should follow DEPLOY.md overlay guidance.
   oidc:
     enabled: true
   log:
