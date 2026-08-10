@@ -8,11 +8,13 @@
 
 ### P0 - Must do first
 
-- [ ] **Platform/Security: baseline network policies** — Add `NetworkPolicy` defaults (default-deny plus explicit allow rules) so only required ingress/egress remains open (router ingress, kube API, Thanos, OAuth endpoints).
-- [ ] **Reliability/Operations: default resource requests and limits** — Set non-empty CPU/memory `resources.requests` and `resources.limits` defaults for `reson8` and `disson8` in `helm/reson8/values.yaml`.
-- [ ] **Security: harden pod/container security context** — Add baseline security context defaults in Helm templates (for example `runAsNonRoot`, `allowPrivilegeEscalation: false`, dropped capabilities, and `seccompProfile: RuntimeDefault`).
-- [ ] **CI/Quality gate: add baseline pipeline** — Create CI checks for Maven test/verify, Helm lint/template render, and manifest sanity checks so PRs get pass/fail gates.
-- [ ] **Configuration safety: split evaluator and production posture** — Separate demo/evaluator defaults from production defaults in Helm values/files to avoid accidental low-security or low-readiness settings in production installs.
+- [X] **Validate ability to test in-cluster with local code** -- Ensure build scripts can do the necessary to test active code (java, CRs, etc), on cluster. This may or may not leverage local, churning, Helm. Explicitly should not rely on quay.io hosted images.
+- [X] **Versions in SPA** — Authenticated callers may `GET /q/info` (Quarkus HTTP policy); SPA shows build/git identity. Image digests deferred (not in stock `/q/info`).
+- [X] **Platform/Security: baseline network policies** — Add `NetworkPolicy` defaults (default-deny plus explicit allow rules) so only required ingress/egress remains open (router ingress, kube API, Thanos, OAuth endpoints).
+- [X] **Reliability/Operations: default resource requests and limits** — Set non-empty CPU/memory `resources.requests` and `resources.limits` defaults for `reson8` and `disson8` in `helm/reson8/values.yaml`.
+- [X] **Security: harden pod/container security context** — Add baseline security context defaults in Helm templates (for example `runAsNonRoot`, `allowPrivilegeEscalation: false`, dropped capabilities, and `seccompProfile: RuntimeDefault`).
+- [X] **Configuration safety: split evaluator and production posture** — Separate demo/evaluator defaults from production defaults in Helm values/files to avoid accidental low-security or low-readiness settings in production installs.
+- [X] **CI/Quality gate: add baseline pipeline** — Create CI checks for Maven test/verify, Helm lint/template render, and manifest sanity checks so PRs get pass/fail gates.
 
 ### P1 - Next wave
 

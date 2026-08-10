@@ -149,5 +149,5 @@ https://<route-host>/audio/stream
 
 - Single-replica runtime shape.
 - CA trust setup is mandatory; missing ingress CA causes hard startup failure.
-- Default chart config enables OIDC and disables the Thanos readiness check for first-pass concept evaluation.
-- For production posture and full security/tiering, use the full workflow in [DEPLOY.md](../../DEPLOY.md).
+- Default chart config enables OIDC and disables the Thanos readiness check for first-pass concept evaluation (`appConfig.profile: evaluator`).
+- For production Helm app-config posture, add `-f values-production.yaml` (see [helm/reson8/README.md](../../helm/reson8/README.md)). For the full Quarkus/OpenShift operator workflow, use [DEPLOY.md](../../DEPLOY.md).

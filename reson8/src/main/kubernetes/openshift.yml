@@ -46,6 +46,9 @@ data: {}
 #                               carries the router/ingress CA after cluster-admin setup.
 #   kube-root-ca.crt          — auto-created by OpenShift in every namespace;
 #                               signs the Kubernetes API server certificate.
+#
+# Also carries baseline securityContext and resource requests/limits (mirrors helm/reson8).
+# Container name "reson8" must remain so Dekorate can merge volumeMounts.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,6 +56,10 @@ metadata:
 spec:
   template:
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: ca-trust-anchors
           projected:
@@ -74,7 +81,93 @@ spec:
                       path: kube-ca.crt
       containers:
         - name: reson8
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
           volumeMounts:
             - name: ca-trust-anchors
               mountPath: /etc/pki/ca-trust/source/anchors
               readOnly: true
+---
+# Baseline NetworkPolicy: default-deny plus router ingress, DNS, kube API, Thanos, OAuth.
+# Matches helm/reson8/templates/networkpolicy-reson8.yaml. Requires a CNI that enforces
+# NetworkPolicy (OpenShift SDN/OVN). Pod selector matches the Dekorate-generated app label.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reson8
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: reson8
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 8090
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-kube-apiserver
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+      ports:
+        - protocol: TCP
+          port: 9091
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-authentication
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 443

@@ -219,6 +219,10 @@ configuration you added manually.
 Any keys not in the source file — including `quarkus.oidc.enabled: true` — are lost.
 The overlay file is the safe, repeatable way to supply those keys.
 
+**Helm installs:** the chart default is evaluator posture. For production app-config via Helm,
+pass `-f helm/reson8/values-production.yaml` (see `helm/reson8/README.md`). The ConfigMap overlay
+path above remains the canonical approach for Quarkus/OpenShift deploys via `./deploy/run.sh`.
+
 #### Syncing the ConfigMap
 
 Use the deploy script (preferred — merges overlay automatically):
@@ -467,6 +471,8 @@ Tune these keys in the mounted `application.yml` (or equivalent properties) when
 | `reson8.security.login-available` | Advertised to the SPA (`GET /api/capabilities`); set `true` in production when OIDC login is wired |
 | `reson8.security.dev-tier-cookie-enabled` | Enables `reson8-dev-tier` cookie simulation — **`false` in production** |
 | `reson8.security.endpoint-authorization-enabled` | Enforces tiers on `/audio/control`, `/audio/drop`, `/api/debug`, and `/audio/stream`; defaults **`true`** on `Reson8Config.SecurityConfig` |
+
+**Build identity (`/q/info`):** packaged defaults require **authentication** (`quarkus.http.auth.permission.info.policy=authenticated`). The SPA loads this after capabilities and shows version / git commit when the call succeeds. `%dev` / `%test` use `permit` so local work without OIDC. Do not put `/q/*` under a blanket authenticated policy — readiness (`/q/health/ready`) must stay probe-open.
 
 Lists may be empty. The **same group must not appear in more than one** of the three lists — the application fails fast at startup if they overlap. When resolving a subject, tier precedence is **admin > viewer > stream**.
 

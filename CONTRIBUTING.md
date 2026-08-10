@@ -35,6 +35,25 @@ Use this while writing code:
 
 Use this loop for most Java and configuration behavior changes before cluster deploy.
 
+### CI gates (run before opening a PR)
+
+GitHub Actions runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml) on pull requests and
+pushes to `main`. Match those gates locally:
+
+```bash
+# Same Maven gate as CI (native GStreamer required for GsTestProfile ITs)
+./mvnw -B -pl reson8,disson8 -am test
+
+# Helm lint + template both evaluator and production postures
+./deploy/ci-helm-check.sh
+```
+
+Heavier local check (SpotBugs + PITest; not required on every PR):
+
+```bash
+./mvnw -pl reson8 verify
+```
+
 ### Cursor / VS Code (Remote-SSH)
 
 Workspace IDE config lives under [`.vscode/`](.vscode/). Coverage follows Quarkus **Path A**: Maven + `quarkus-jacoco` write the report; the editor does not rely on **Test: Run all with coverage**.
@@ -48,7 +67,7 @@ Workspace IDE config lives under [`.vscode/`](.vscode/). Coverage follows Quarku
 
 Artifacts after a successful test run:
 
-- `reson8/target/site/jacoco/jacoco.xml` — gutters / future CI
+- `reson8/target/site/jacoco/jacoco.xml` — gutters / CI artifact source
 - `reson8/target/site/jacoco/index.html` — human summary (needs sibling `jacoco-resources/`)
 
 Remote-SSH Fedora client: merge [`.vscode/cursor-client-settings.json`](.vscode/cursor-client-settings.json) into local Cursor **User** settings so `remote.SSH.defaultExtensions` installs the Java/Quarkus/Gutters set on new hosts.

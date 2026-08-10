@@ -1,0 +1,9 @@
+# Production app-config posture for the reson8 Helm chart.
+# Usage (from repo root or with chart path adjusted):
+#   helm upgrade --install reson8 ./helm/reson8 -f helm/reson8/values-production.yaml ...
+#
+# Chart defaults remain evaluator-oriented; this overlay only flips appConfig.profile.
+# Replace IdP group names in files/application-production.yaml (or via appConfig.inlineYaml)
+# to match your cluster before production use.
+appConfig:
+  profile: production

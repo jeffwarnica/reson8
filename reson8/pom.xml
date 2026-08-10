@@ -104,6 +104,10 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-info</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-kubernetes-client</artifactId>
             <scope>test</scope>
         </dependency>
@@ -302,8 +306,8 @@
                                 <requireJavaVersion>
                                     <version>[21,)</version>
                                 </requireJavaVersion>
-                                <dependencyConvergence/>
-                                <banDuplicatePomDependencyVersions/>
+                                <dependencyConvergence />
+                                <banDuplicatePomDependencyVersions />
                             </rules>
                         </configuration>
                     </execution>
@@ -370,7 +374,7 @@
                                         <versionRange>[0,)</versionRange>
                                         <goals><goal>check</goal></goals>
                                     </pluginExecutionFilter>
-                                    <action><ignore/></action>
+                                    <action><ignore /></action>
                                 </pluginExecution>
                                 <pluginExecution>
                                     <pluginExecutionFilter>
@@ -379,7 +383,7 @@
                                         <versionRange>[0,)</versionRange>
                                         <goals><goal>mutationCoverage</goal></goals>
                                     </pluginExecutionFilter>
-                                    <action><ignore/></action>
+                                    <action><ignore /></action>
                                 </pluginExecution>
                             </pluginExecutions>
                         </lifecycleMappingMetadata>

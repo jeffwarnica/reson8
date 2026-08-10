@@ -1,3 +1,10 @@
+App config profile: {{ .Values.appConfig.profile | default "evaluator" }}
+{{- if eq (.Values.appConfig.profile | default "evaluator") "evaluator" }}
+
+WARNING: evaluator posture (default). Thanos readiness-check is off, demo admin groups,
+and DEBUG logging. For production Helm installs add: -f values-production.yaml
+{{- end }}
+
 1. Check deployment rollout:
    oc rollout status deployment/{{ include "reson8.fullname" . }} -n {{ .Release.Namespace }}
 {{- if .Values.disson8.enabled }}

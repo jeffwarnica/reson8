@@ -1,19 +1,24 @@
 ---
-# Helm evaluator posture only (default chart install). Not production-safe:
-# Thanos readiness-check is off, demo admin-groups, DEBUG logging.
-# For production Helm installs use: -f values-production.yaml
+# Helm production posture: Thanos readiness on, explicit security keys, quieter logs.
+# Install with: helm upgrade --install ... -f values-production.yaml
+# Replace admin/viewer group names to match your IdP claims.
 reson8:
   audio-path: ${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}
   security:
+    login-available: true
+    endpoint-authorization-enabled: true
+    dev-tier-cookie-enabled: false
     admin-groups:
-      - admins
+      - cluster-admins
+    viewer-groups:
+      - reson8-viewers
     stream-groups:
       - __anonymous__
   k8s:
     cluster: self
     map: cool_project_map
     thanos:
-      readiness-check: false
+      readiness-check: true
   signal-map:
     name: cool_project_map
     default-soundscape: forest
@@ -110,10 +115,9 @@ reson8:
             generator: WIND
             output-scale: 1.0
 quarkus:
-  # Evaluator defaults: OIDC on; readiness-check is off above. See values-production.yaml.
   oidc:
     enabled: true
   log:
     category:
       "com.coherentnetworksolutions":
-        level: DEBUG
+        level: INFO
