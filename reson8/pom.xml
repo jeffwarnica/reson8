@@ -309,24 +309,34 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+                Quarkus Path A coverage: quarkus-jacoco owns the combined report
+                (HTML+XML under quarkus.jacoco.report-location). The Maven plugin
+                only prepare-agents non-@QuarkusTest classes into the same exec
+                file; exclClassLoaders avoids double-instrumenting QuarkusClassLoader.
+                See https://quarkus.io/guides/tests-with-coverage
+            -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.14</version>
                 <executions>
                     <execution>
+                        <id>default-prepare-agent</id>
                         <goals>
                             <goal>prepare-agent</goal>
-                            <goal>report</goal>
                         </goals>
+                        <configuration>
+                            <exclClassLoaders>*QuarkusClassLoader</exclClassLoaders>
+                            <destFile>${project.build.directory}/jacoco-quarkus.exec</destFile>
+                            <append>true</append>
+                            <excludes>
+                                <exclude>org/freedesktop/gstreamer/**</exclude>
+                                <exclude>com/sun/jna/**</exclude>
+                            </excludes>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <excludes>
-                        <exclude>org/freedesktop/gstreamer/**</exclude>
-                        <exclude>com/sun/jna/**</exclude>
-                    </excludes>
-                </configuration>
             </plugin>
         </plugins>
 

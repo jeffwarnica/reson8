@@ -28,7 +28,7 @@ Use it when you need synthetic load/events quickly.
 - `deploy/openshift/` — deployment scripts and manifests
 - `docs/poc/` — POC install and troubleshooting guides
 - `DEPLOY.md` — full OpenShift deployment runbook
-- `CONTRIBUTING.md` — developer workflows
+- `CONTRIBUTING.md` — developer workflows (including Cursor/VS Code tests + coverage)
 
 ## Quick start
 

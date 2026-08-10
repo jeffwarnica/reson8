@@ -35,6 +35,40 @@ Use this while writing code:
 
 Use this loop for most Java and configuration behavior changes before cluster deploy.
 
+### Cursor / VS Code (Remote-SSH)
+
+Workspace IDE config lives under [`.vscode/`](.vscode/). Coverage follows Quarkus **Path A**: Maven + `quarkus-jacoco` write the report; the editor does not rely on **Test: Run all with coverage**.
+
+| Goal | How |
+| --- | --- |
+| Run `reson8` tests + regenerate coverage | **Terminal → Run Task…** → `reson8: test + coverage` (default test task), or `./mvnw -pl reson8 -am test` |
+| Run / debug a single test | Testing view, or the **Run Test** / **Debug Test** gutter above the method (uses `java.test.config`; not the coverage agent) |
+| Line coverage in the editor | [Coverage Gutters](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters) reads `reson8/target/site/jacoco/jacoco.xml` (watch enabled in workspace settings) |
+| Package / % summaries | Open the JaCoCo HTML report (below) — entry point is `reson8/target/site/jacoco/index.html` |
+
+Artifacts after a successful test run:
+
+- `reson8/target/site/jacoco/jacoco.xml` — gutters / future CI
+- `reson8/target/site/jacoco/index.html` — human summary (needs sibling `jacoco-resources/`)
+
+Remote-SSH Fedora client: merge [`.vscode/cursor-client-settings.json`](.vscode/cursor-client-settings.json) into local Cursor **User** settings so `remote.SSH.defaultExtensions` installs the Java/Quarkus/Gutters set on new hosts.
+
+#### View the HTML coverage report (SSH remote)
+
+The report files stay on the remote. Prefer a small HTTP server plus port forward so CSS/JS under `jacoco-resources/` load correctly:
+
+1. After tests have produced the report, in a **remote** terminal:
+
+```bash
+cd reson8/target/site/jacoco
+python3 -m http.server 8765
+```
+
+2. In Cursor/VS Code: **Ports** view → forward port `8765` (or accept the auto-forward prompt).
+3. On the local machine, open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) (serves `index.html`).
+
+Stop the server with `Ctrl+C` when finished. Re-run the test task whenever you need an updated report, then refresh the browser.
+
 ### Local from-scratch run (no cluster required)
 
 If you only need to develop and run locally, you do not need builder namespace access.

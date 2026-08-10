@@ -14,6 +14,7 @@ This may or may not be useful in practice. But it will look, or rather, *sound* 
 - **POC install (happy path):** [docs/poc/install.md](../docs/poc/install.md)
 - **POC troubleshooting:** [docs/poc/troubleshooting.md](../docs/poc/troubleshooting.md)
 - **OpenShift deploy (full detail):** [DEPLOY.md](../DEPLOY.md)
+- **Developer loop / IDE tests + coverage:** [CONTRIBUTING.md](../CONTRIBUTING.md#cursor--vs-code-remote-ssh)
 - **HTTP event generator module:** [disson8/README.md](../disson8/README.md)
 
 ## Soundscape
