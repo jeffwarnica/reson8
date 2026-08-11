@@ -81,6 +81,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Code Coverage
           update-comment: true
+          min-coverage-overall: 80
+          min-coverage-changed-lines: 80
 
   helm-check:
     name: Helm lint and template
