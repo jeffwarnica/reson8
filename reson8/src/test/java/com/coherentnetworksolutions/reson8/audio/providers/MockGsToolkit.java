@@ -17,6 +17,7 @@ import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.Pad;
 import org.freedesktop.gstreamer.State;
+import org.freedesktop.gstreamer.elements.AppSink;
 import org.freedesktop.gstreamer.elements.AppSrc;
 import org.freedesktop.gstreamer.elements.PlayBin;
 import org.freedesktop.gstreamer.elements.PlayBin.ABOUT_TO_FINISH;
@@ -45,6 +46,7 @@ public class MockGsToolkit implements GsToolkit {
             new ConcurrentHashMap<>();
 
     public volatile AppSrc lastCreatedAppSrc;
+    public volatile AppSink lastCreatedAppSink;
     public final Queue<AppSrc.NEED_DATA> allCapturedNeedData = new ConcurrentLinkedQueue<>();
     public volatile AppSrc.NEED_DATA capturedNeedData;
     public volatile Runnable capturedCleanupTask;
@@ -95,6 +97,17 @@ public class MockGsToolkit implements GsToolkit {
         this.lastCreatedAppSrc = mockSrc;
         this.createdElements.put(name, mockSrc);
         return mockSrc;
+    }
+
+    @Override
+    public AppSink makeAppSink(String name) {
+        AppSink mockSink = mock(AppSink.class);
+        when(mockSink.getName()).thenReturn(name);
+        when(mockSink.getStaticPad(anyString())).thenAnswer(inv ->
+                getStaticPad(mockSink, inv.getArgument(0)));
+        this.lastCreatedAppSink = mockSink;
+        this.createdElements.put(name, mockSink);
+        return mockSink;
     }
 
     @Override
