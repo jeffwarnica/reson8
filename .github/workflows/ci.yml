@@ -16,10 +16,14 @@ jobs:
   maven-test:
     name: Maven test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     container:
       image: fedora:41
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Java 21 and GStreamer
         run: |
@@ -42,13 +46,49 @@ jobs:
       - name: Run tests
         run: ./mvnw -B -pl reson8,disson8 -am test
 
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ !cancelled() }}
+        with:
+          files: |
+            **/target/surefire-reports/TEST-*.xml
+          check_name: Maven unit tests
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-reports
+          path: '**/target/surefire-reports/'
+          retention-days: 30
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-reports
+          path: reson8/target/site/jacoco/
+          retention-days: 30
+
+      - name: Publish coverage report
+        uses: madrapps/jacoco-report@v1.6.1
+        if: >-
+          github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && !cancelled()
+        with:
+          paths: reson8/target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: Code Coverage
+          update-comment: true
+
   helm-check:
     name: Helm lint and template
     runs-on: ubuntu-latest
     container:
       image: fedora:41
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Helm
         run: |
