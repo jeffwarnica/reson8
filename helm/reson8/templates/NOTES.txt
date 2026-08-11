@@ -20,4 +20,4 @@ and DEBUG logging. For production Helm installs add: -f values-production.yaml
 3. Stream endpoint:
    https://<route-host>/audio/stream
 
-If pods fail at startup with ingress CA errors, complete the one-time cluster trust setup in DEPLOY.md.
+If pods fail at startup with ingress CA errors, complete the one-time cluster trust setup in docs/reference/platform/cluster-ca-setup.md.

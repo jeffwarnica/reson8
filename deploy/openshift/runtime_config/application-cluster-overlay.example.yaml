@@ -2,7 +2,7 @@
 # Example overlay for mounted ConfigMap application.yaml (production-like cluster).
 #
 # Quarkus reads /deployments/config/application.yaml at higher priority than the
-# JAR. Merge these keys into your real ConfigMap (see DEPLOY.md §1e).
+# JAR. Merge these keys into your real ConfigMap (see docs/reference/configuration/cluster-overlay.md).
 #
 # OIDC: the bundled application.properties leaves quarkus.oidc.enabled unset (Quarkus default=true)
 # but %dev/%test set it false. In-cluster config should still set it explicitly for operator clarity.

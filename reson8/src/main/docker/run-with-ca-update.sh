@@ -11,7 +11,7 @@
 #                     cluster-network-operator because the ConfigMap carries the label
 #                     config.openshift.io/inject-trusted-cabundle=true. Populated with the
 #                     router/ingress CA only after a cluster administrator has run the one-time
-#                     cluster trust setup documented in DEPLOY.md.
+#                     cluster trust setup documented in docs/reference/platform/cluster-ca-setup.md.
 #
 #   kube-ca.crt     — from ConfigMap kube-root-ca.crt (auto-created by OpenShift in every
 #                     namespace); signs the Kubernetes API server certificate.
@@ -22,7 +22,7 @@
 #
 # Failure policy (no configuration overrides):
 #   - service-ca.crt missing/empty → FATAL, namespace is broken (should never happen on OpenShift).
-#   - ingress-ca.crt missing/empty → FATAL, cluster-admin setup has not been done (see DEPLOY.md).
+#   - ingress-ca.crt missing/empty → FATAL, cluster-admin setup has not been done (see docs/reference/platform/cluster-ca-setup.md).
 #   - kube-ca.crt missing/empty → FATAL, namespace is broken (should never happen on OpenShift).
 set -uo pipefail
 
@@ -39,7 +39,7 @@ fi
 if [[ ! -s "${ANCHORS_DIR}/ingress-ca.crt" ]]; then
     echo "FATAL: Ingress/router CA not available at ${ANCHORS_DIR}/ingress-ca.crt" >&2
     echo "FATAL: A cluster administrator must run the one-time cluster trust setup." >&2
-    echo "FATAL: See DEPLOY.md section 'Cluster CA Setup (one-time, cluster-admin)'." >&2
+    echo "FATAL: See docs/reference/platform/cluster-ca-setup.md (Cluster CA Setup)." >&2
     exit 1
 fi
 

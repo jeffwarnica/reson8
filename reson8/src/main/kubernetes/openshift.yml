@@ -24,7 +24,7 @@ type: kubernetes.io/service-account-token
 ---
 # The cluster-network-operator injects ca-bundle.crt (the cluster proxy trust bundle) into this
 # ConfigMap because of the label below. After the one-time cluster-admin setup documented in
-# DEPLOY.md, ca-bundle.crt contains the router/ingress CA. The service CA (for *.svc.cluster.local)
+# docs/reference/platform/cluster-ca-setup.md — ca-bundle.crt contains the router/ingress CA. The service CA (for *.svc.cluster.local)
 # comes from the auto-created ConfigMap openshift-service-ca.crt — no annotation needed here.
 apiVersion: v1
 kind: ConfigMap

@@ -131,7 +131,7 @@ public interface Reson8Config {
          * {@link ThanosApiBaseUri} appends {@code /api/v1} when needed.
          * <p>
          * Outside-cluster {@code quarkus:dev}: set env {@code RESON8_K8S_THANOS_BASE_URL} to your cluster Route (see
-         * {@code application-local-DIST.properties} / {@code DEPLOY.md}); do not commit that URL.
+         * {@code application-local-DIST.properties} / docs/reference/configuration/application-properties.md); do not commit that URL.
          */
         @WithDefault("https://thanos-querier.openshift-monitoring.svc.cluster.local:9091/")
         @WithName("base-url")

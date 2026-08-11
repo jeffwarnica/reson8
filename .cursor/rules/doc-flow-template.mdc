@@ -1,0 +1,37 @@
+---
+description: Structure and constraints for docs/flows/*.md procedure pages
+globs: docs/flows/**
+alwaysApply: false
+---
+
+# Flow documentation template
+
+When creating or editing files under `docs/flows/`, follow this structure.
+
+## Required sections (in order)
+
+1. **Title** — `# <Flow name>` (procedure name, not persona name alone)
+2. **Audience** — one line: `Developer`, `Evaluator`, `Operator`, or `Maintainer`
+3. **You need** — bullet list of tools, permissions, and credentials
+4. **Prerequisites** — links only to `docs/reference/` pages; no bootstrap essays inline
+5. **Happy path** — numbered steps with one primary copy-paste command block
+6. **Useful variants** — at most three alternatives (e.g. pre-provisioned RBAC, dry-run)
+7. **Troubleshooting** — table (5–10 rows) linking to `docs/reference/troubleshooting.md` anchors
+8. **Reference** — bullet list of config files and scripts touched; link to reference topics
+
+## Constraints
+
+- Use **relative links** for publishability (`../reference/...` from flows).
+- **Operator flows** are Helm OCI install only — no `run.sh prod`, Quarkus deploy, or cluster overlay paths.
+- **Developer flows** may use `deploy/run.sh`, Quarkus OpenShift deploy, and in-cluster builds.
+- Commands use placeholders (`<tag>`, `<namespace>`) plus a footnote with one example version when needed.
+- Do not duplicate full configuration reference — link to `docs/reference/configuration/`.
+- Deploy script flag details belong in script `--help`; flow docs name the script and mode only.
+
+## Troubleshooting table format
+
+```markdown
+| Symptom | Likely cause | What to do |
+| --- | --- | --- |
+| ... | ... | Short fix; see [troubleshooting](../reference/troubleshooting.md#anchor) |
+```

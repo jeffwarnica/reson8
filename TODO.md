@@ -21,10 +21,10 @@
 - [ ] **Security/Auth: authorization edge-case tests** — Extend tier auth tests for method/path edge cases, malformed dev-tier cookie values, and expected `403` behavior on protected routes.
 - [ ] **Release hygiene: drift guardrails** — Add automation to validate alignment across chart `version`, chart `appVersion`, image tags, and install/docs examples.
 - [ ] **Deploy robustness: preflight checks** — Add deploy-time checks for required ConfigMap keys and projected CA files before rollout wait.
-- [ ] **Docs/Runbook: production checklist** — Create a single operator-facing readiness checklist with binary gates (RBAC, CA trust setup, OIDC groups, resources, network policy, CI).
+- [X] **Docs/Runbook: production checklist** — Operator production gates in `docs/flows/operator-install.md` and `docs/reference/platform/prerequisites.md`.
 
 ### P2 - Cleanup and maturity
 
-- [ ] **Docs: tighten reson8 README positioning** — Replace stale prototype/template language with concise production, evaluator, and contributor paths that point to authoritative docs.
-- [ ] **Architecture/Operations: single-replica guidance** — Document the one-replica operating model, safe restart/drain workflow, and scaling constraints clearly.
+- [X] **Docs: tighten reson8 README positioning** — Persona-based doc map in root README; flows and reference under `docs/`.
+- [X] **Architecture/Operations: single-replica guidance** — Documented in `docs/reference/platform/readiness.md` and operator install flow.
 - [ ] **Observability: SLO-focused telemetry/runbook notes** — Document the minimal log/metric signals to confirm startup, readiness, auth flow health, and stream availability.

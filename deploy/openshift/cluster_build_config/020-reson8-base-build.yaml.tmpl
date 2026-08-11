@@ -34,7 +34,7 @@ spec:
         && if [ -n "${missing_pkgs}" ]; then \
              echo "ERROR: missing required GStreamer RPMs:${missing_pkgs}" >&2; \
              echo "ERROR: enabled repos in this cluster build are insufficient for reson8-base." >&2; \
-             echo "ERROR: use subscribed-host local base build + push (DEPLOY.md Step 1b-alt), or fix cluster entitlement/repo access." >&2; \
+             echo "ERROR: use subscribed-host local base build + push (docs/reference/platform/bootstrap-builder.md), or fix cluster entitlement/repo access." >&2; \
              exit 42; \
            fi \
         && microdnf install -y ${required_pkgs} \
