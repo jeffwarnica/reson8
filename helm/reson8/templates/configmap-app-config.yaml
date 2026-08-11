@@ -9,6 +9,13 @@ data:
     {{- $inline := .Values.appConfig.inlineYaml | trim -}}
     {{- if $inline }}
 {{ $inline | nindent 4 }}
-    {{- else }}
+    {{- else -}}
+    {{- $profile := .Values.appConfig.profile | default "evaluator" -}}
+    {{- if eq $profile "evaluator" }}
 {{ .Files.Get "files/application.yaml" | nindent 4 }}
+    {{- else if eq $profile "production" }}
+{{ .Files.Get "files/application-production.yaml" | nindent 4 }}
+    {{- else }}
+    {{- fail (printf "appConfig.profile must be 'evaluator' or 'production', got %q" $profile) }}
+    {{- end }}
     {{- end }}

@@ -648,6 +648,109 @@
             return res.json();
         }
 
+        function gitCommitId(git) {
+            if (!git || !git.commit) {
+                return null;
+            }
+            const id = git.commit.id;
+            if (typeof id === 'string') {
+                return id;
+            }
+            if (id && typeof id === 'object') {
+                return id.abbrev || id.full || null;
+            }
+            return null;
+        }
+
+        function formatBuildIdentitySummary(info) {
+            const parts = [];
+            if (info.build && info.build.version) {
+                parts.push(info.build.version);
+            }
+            const commit = gitCommitId(info.git);
+            if (commit) {
+                parts.push(commit);
+            }
+            if (info.git && info.git.branch) {
+                parts.push(info.git.branch);
+            }
+            if (info.build && info.build.time) {
+                parts.push('built ' + info.build.time);
+            }
+            return parts.join(' · ');
+        }
+
+        function formatBuildIdentityDetail(info) {
+            const lines = [];
+            if (info.build) {
+                if (info.build.version) {
+                    lines.push('version: ' + info.build.version);
+                }
+                if (info.build.time) {
+                    lines.push('build time: ' + info.build.time);
+                }
+                if (info.build.artifact) {
+                    lines.push('artifact: ' + info.build.artifact);
+                }
+                if (info.build.quarkusVersion) {
+                    lines.push('quarkus: ' + info.build.quarkusVersion);
+                }
+            }
+            if (info.git) {
+                const commit = gitCommitId(info.git);
+                if (info.git.branch) {
+                    lines.push('git branch: ' + info.git.branch);
+                }
+                if (commit) {
+                    lines.push('git commit: ' + commit);
+                }
+                if (info.git.commit && info.git.commit.time) {
+                    lines.push('commit time: ' + info.git.commit.time);
+                }
+            }
+            if (info.java) {
+                if (info.java.version) {
+                    lines.push('java: ' + info.java.version);
+                }
+                if (info.java.vendor) {
+                    lines.push('java vendor: ' + info.java.vendor);
+                }
+            }
+            return lines.join('\n');
+        }
+
+        async function loadAndShowBuildIdentity() {
+            const bar = document.getElementById('buildIdentityBar');
+            const summaryEl = document.getElementById('buildIdentitySummary');
+            const detailEl = document.getElementById('buildIdentityDetail');
+            if (!bar || !summaryEl || !detailEl) {
+                return;
+            }
+            try {
+                const res = await fetch('/q/info', { credentials: 'same-origin' });
+                if (!res.ok) {
+                    bar.style.display = 'none';
+                    bar.hidden = true;
+                    return;
+                }
+                const info = await res.json();
+                const summary = formatBuildIdentitySummary(info);
+                if (!summary) {
+                    bar.style.display = 'none';
+                    bar.hidden = true;
+                    return;
+                }
+                summaryEl.textContent = summary;
+                detailEl.textContent = formatBuildIdentityDetail(info);
+                bar.hidden = false;
+                bar.style.display = '';
+            } catch (err) {
+                console.warn('build identity unavailable', err);
+                bar.style.display = 'none';
+                bar.hidden = true;
+            }
+        }
+
         function applyOperatorVisibility(cap) {
             const op = document.getElementById('operatorControlsCard');
             const chOuter = document.getElementById('channelsOuter');
@@ -768,6 +871,7 @@
             setupLogoutButton();
             const cap = await loadCapabilities();
             applyCapabilities(cap);
+            await loadAndShowBuildIdentity();
             if (syncTimer) {
                 clearInterval(syncTimer);
                 syncTimer = null;

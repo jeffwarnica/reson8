@@ -30,6 +30,23 @@ route:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
 
+# OpenShift NetworkPolicy baselines (default-deny + explicit allows).
+# Requires a CNI that enforces NetworkPolicy (OpenShift SDN/OVN).
+# Override namespaceSelectors if your cluster uses nonstandard labels.
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector:
+    network.openshift.io/policy-group: ingress
+  dnsNamespaceSelector:
+    network.openshift.io/policy-group: dns
+  kubeApiNamespaces:
+    - default
+    - openshift-kube-apiserver
+  thanosNamespace: openshift-monitoring
+  thanosPort: 9091
+  oauthNamespaces:
+    - openshift-authentication
+
 disson8:
   enabled: true
   image:
@@ -46,7 +63,24 @@ disson8:
     tls:
       termination: edge
       insecureEdgeTerminationPolicy: Redirect
-  resources: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
   probes:
     liveness:
       initialDelaySeconds: 5
@@ -67,7 +101,26 @@ disson8:
 config:
   reson8AudioPath: /opt/reson8
 
-resources: {}
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
 
 probes:
   liveness:
@@ -103,5 +156,8 @@ appConfig:
   name: reson8-config
   mountPath: /deployments/config
   fileName: application.yaml
-  # Set this to a YAML block to override the chart's default app config.
+  # evaluator (default): readiness-check off, demo groups, DEBUG — concept validation.
+  # production: use -f values-production.yaml (Thanos readiness on, explicit security, INFO).
+  profile: evaluator
+  # Set this to a YAML block to override the chart's bundled profile file entirely.
   inlineYaml: ""

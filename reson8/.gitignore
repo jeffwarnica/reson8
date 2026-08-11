@@ -47,5 +47,3 @@ nb-configuration.xml
 #JVM Crashes
 hs_e*
 
-# vscode UML plugin (likely more) dumps stuff to
-output/

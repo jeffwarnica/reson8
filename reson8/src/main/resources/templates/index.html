@@ -28,6 +28,15 @@
         <button type="button" id="logoutBtn" class="btn-logout">Sign out</button>
     </div>
 
+    <div class="card build-identity-bar" id="buildIdentityBar" style="display: none;" hidden>
+        <span class="build-identity-label">Running</span>
+        <span id="buildIdentitySummary" class="build-identity-summary"></span>
+        <details class="build-identity-details">
+            <summary>Details</summary>
+            <pre id="buildIdentityDetail" class="build-identity-detail"></pre>
+        </details>
+    </div>
+
     <div class="card" id="loginStubCard" style="display: none;">
         <button type="button" id="loginBtn" class="btn-play">Log in</button>
         <span id="loginHint" style="margin-left:12px;color:#666;font-size:0.9em;"></span>

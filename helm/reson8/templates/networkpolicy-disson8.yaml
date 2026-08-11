@@ -1,0 +1,38 @@
+{{- if and .Values.disson8.enabled .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "reson8.fullname" . }}-disson8
+  labels:
+    {{- include "reson8.labels" . | nindent 4 }}
+    app.kubernetes.io/name: disson8
+    app.kubernetes.io/component: disson8
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: disson8
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: disson8
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.disson8.service.targetPort }}
+  egress:
+    # Cluster DNS only — disson8 has no Thanos/API/OIDC dependency
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.dnsNamespaceSelector | nindent 14 }}
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+{{- end }}

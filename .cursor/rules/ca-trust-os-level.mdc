@@ -45,17 +45,17 @@ Three ConfigMaps are projected into the anchors directory. Their availability is
 | Anchors file | Source ConfigMap | Availability |
 |---|---|---|
 | `service-ca.crt` | `openshift-service-ca.crt` | Auto-created by OpenShift in every namespace — 100% available; if absent, the pod must fail. |
-| `ingress-ca.crt` | `reson8-trusted-ca-bundle` key `ca-bundle.crt` | Injected by `cluster-network-operator` after the one-time cluster-admin setup in `DEPLOY.md`. The application assumes this has been done; it fails hard if the file is missing. |
+| `ingress-ca.crt` | `reson8-trusted-ca-bundle` key `ca-bundle.crt` | Injected by `cluster-network-operator` after the one-time cluster-admin setup in `docs/reference/platform/cluster-ca-setup.md`. The application assumes this has been done; it fails hard if the file is missing. |
 | `kube-ca.crt` | `kube-root-ca.crt` | Auto-created by OpenShift in every namespace. |
 
 ## Ingress/router CA — one-time cluster-admin operation (assumed done)
 
 The router CA for `*.apps.*` (required for OIDC) does not inject automatically. A cluster admin
-must run the three-step setup documented in `DEPLOY.md § Cluster CA Setup`. The application
+must run the three-step setup documented in `docs/reference/platform/cluster-ca-setup.md`. The application
 **assumes this has been done** and fails on startup if `ingress-ca.crt` is absent.
 
 Do **not** suggest workarounds (disabling TLS, mounting the cert manually, adding config
-overrides) if the ingress CA is missing. Fail hard and direct the operator to `DEPLOY.md`.
+overrides) if the ingress CA is missing. Fail hard and direct the operator to `docs/reference/platform/cluster-ca-setup.md`.
 
 ## Anti-patterns
 

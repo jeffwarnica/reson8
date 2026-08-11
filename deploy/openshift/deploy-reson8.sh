@@ -94,7 +94,7 @@ reson8_verify_ca_bundle_if_enabled() {
 
   if [[ "${injected}" == "0" ]]; then
     echo "ERROR: reson8-trusted-ca-bundle ca-bundle.crt was not populated after $((ca_wait_attempts * 3)) s." >&2
-    echo "       Ensure the one-time cluster-admin CA setup has been run (see DEPLOY.md):" >&2
+    echo "       Ensure the one-time cluster-admin CA setup has been run (see docs/reference/platform/cluster-ca-setup.md):" >&2
     echo "       oc describe configmap reson8-trusted-ca-bundle -n ${ns}" >&2
     exit 1
   fi

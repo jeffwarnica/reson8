@@ -11,11 +11,12 @@ This may or may not be useful in practice. But it will look, or rather, *sound* 
 
 ## Documentation
 
-- **POC install (happy path):** [docs/poc/install.md](../docs/poc/install.md)
-- **POC troubleshooting:** [docs/poc/troubleshooting.md](../docs/poc/troubleshooting.md)
-- **OpenShift deploy (full detail):** [DEPLOY.md](../DEPLOY.md)
-- **Developer loop / IDE tests + coverage:** [CONTRIBUTING.md](../CONTRIBUTING.md#cursor--vs-code-remote-ssh)
-- **HTTP event generator module:** [disson8/README.md](../disson8/README.md)
+- **Doc map:** [README.md](../README.md)
+- **Developer flows:** [docs/flows/](../docs/flows/) — [local-development](../docs/flows/local-development.md), [cluster-test](../docs/flows/cluster-test.md)
+- **Evaluator / Operator:** [evaluator-install](../docs/flows/evaluator-install.md), [operator-install](../docs/flows/operator-install.md)
+- **Reference:** [docs/reference/](../docs/reference/) — [OIDC](../docs/reference/configuration/oidc.md), [security tiers](../docs/reference/configuration/security-tiers.md)
+- **Contributing / IDE:** [CONTRIBUTING.md](../CONTRIBUTING.md)
+- **disson8:** [disson8/README.md](../disson8/README.md)
 
 ## Soundscape
 
@@ -91,7 +92,7 @@ Security posture is environment-dependent:
 - **OpenShift deployment**: OIDC can be enabled via mounted `application.yaml` overlay (`quarkus.oidc.enabled: true`), and endpoint tier authorization is enforced through `AccessTierResolver` + `TierEndpointAuthorizationFilter`.
 - **Anonymous listeners**: stream-only access can be allowed via the `__anonymous__` sentinel in `reson8.security.stream-groups`, but only when ingress/proxy allows tokenless requests to `/audio/stream`.
 
-Use [`DEPLOY.md`](../DEPLOY.md) as the source of truth for production OIDC and tier configuration.
+Use [OIDC](../docs/reference/configuration/oidc.md) and [security tiers](../docs/reference/configuration/security-tiers.md) for production configuration. Operators install via [operator-install](../docs/flows/operator-install.md).
 
 ### Wishlist
 * Consider k8s influenced channels configured by name

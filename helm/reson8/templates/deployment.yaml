@@ -15,6 +15,8 @@ spec:
         {{- include "reson8.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "reson8.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- range .Values.image.pullSecrets }}
@@ -25,6 +27,8 @@ spec:
         - name: reson8
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           env:
             - name: RESON8_AUDIO_PATH
               value: {{ .Values.config.reson8AudioPath | quote }}
@@ -73,10 +77,8 @@ spec:
             - name: app-config
               mountPath: {{ .Values.appConfig.mountPath }}
               readOnly: true
-          {{- with .Values.resources }}
           resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: ca-trust-anchors
           projected:

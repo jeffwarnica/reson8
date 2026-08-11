@@ -81,3 +81,5 @@ oc apply -f disson8/crs/dashboard.yaml
 
 `disson8` is a sibling utility module under the same Maven parent. It has no runtime
 dependency on the `reson8` audio pipeline and is intended as a standalone traffic harness.
+
+Deployed by default with [cluster-test](../docs/flows/cluster-test.md) and [evaluator-install](../docs/flows/evaluator-install.md) for synthetic HTTP traffic during development and evaluation.

@@ -1,4 +1,7 @@
 ---
+# Helm evaluator posture only (default chart install). Not production-safe:
+# Thanos readiness-check is off, demo admin-groups, DEBUG logging.
+# For production Helm installs use: -f values-production.yaml
 reson8:
   audio-path: ${RESON8_AUDIO_PATH:${user.dir}/src/main/resources}
   security:
@@ -107,8 +110,7 @@ reson8:
             generator: WIND
             output-scale: 1.0
 quarkus:
-  # Helm evaluator defaults: OIDC on, Thanos readiness-check off for easier concept validation.
-  # Production posture should follow DEPLOY.md overlay guidance.
+  # Evaluator defaults: OIDC on; readiness-check is off above. See values-production.yaml.
   oidc:
     enabled: true
   log:

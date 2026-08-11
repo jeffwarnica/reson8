@@ -12,6 +12,7 @@ import org.freedesktop.gstreamer.Pad;
 import org.freedesktop.gstreamer.PadProbeReturn;
 import org.freedesktop.gstreamer.PadProbeType;
 import org.freedesktop.gstreamer.State;
+import org.freedesktop.gstreamer.elements.AppSink;
 import org.freedesktop.gstreamer.elements.AppSrc;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
@@ -39,6 +40,11 @@ public class NativeGstToolkit implements GsToolkit {
     @Override
     public AppSrc makeAppSrc(String name) {
         return (AppSrc) ElementFactory.make("appsrc", name);
+    }
+
+    @Override
+    public AppSink makeAppSink(String name) {
+        return (AppSink) ElementFactory.make("appsink", name);
     }
 
     @Override
