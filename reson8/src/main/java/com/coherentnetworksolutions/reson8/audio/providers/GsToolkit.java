@@ -7,6 +7,7 @@ import org.freedesktop.gstreamer.Element;
 import org.freedesktop.gstreamer.GhostPad;
 import org.freedesktop.gstreamer.Pad;
 import org.freedesktop.gstreamer.State;
+import org.freedesktop.gstreamer.elements.AppSink;
 import org.freedesktop.gstreamer.elements.AppSrc;
 import org.freedesktop.gstreamer.elements.PlayBin;
 
@@ -14,6 +15,7 @@ public interface GsToolkit {
     Bin createBin(String name);
     Element makeElement(String factory, String name);
     AppSrc makeAppSrc(String name);
+    AppSink makeAppSink(String name);
     
     // Lifecycle and side-effect wrappers
     void setElementState(Element element, State state);
